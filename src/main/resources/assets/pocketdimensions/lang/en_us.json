@@ -1,0 +1,12 @@
+{
+    "itemGroup.pocketdimensions": "Pocket Dimensions",
+
+    "block.pocketdimensions.boundary_block": "Boundary Block",
+    "block.pocketdimensions.pocket_anchor": "Pocket Anchor",
+    "block.pocketdimensions.world_anchor": "World Anchor",
+    "block.pocketdimensions.world_breaker": "World Breacher",
+    "block.pocketdimensions.world_core": "World Core",
+
+    "item.pocketdimensions.pocket_item": "Pocket Item",
+    "item.pocketdimensions.world_seed": "World Seed"
+}
