@@ -150,12 +150,9 @@ public class RealmEventHandler {
         UUID realmOwner = mgr.getPlayerRealm(playerUUID);
         if (realmOwner == null) {
             // Auto-recover after server restart (transient map was wiped)
-            LOGGER.info("[RealmBorder] playerRealm null for {}, scanning position ({},{})",
-                    serverPlayer.getName().getString(), (int)serverPlayer.getX(), (int)serverPlayer.getZ());
             realmOwner = mgr.findRealmAtPosition(serverPlayer.getX(), serverPlayer.getZ());
             if (realmOwner == null) {
                 // No realm found — eject to entry location or spawn
-                LOGGER.info("[RealmBorder] No realm found at position, ejecting {}", serverPlayer.getName().getString());
                 mgr.teleportToEntryOrSpawn(serverPlayer, server);
                 return;
             }
@@ -163,14 +160,7 @@ public class RealmEventHandler {
         }
 
         // Enforce bounds — teleport back to spawn pos if outside
-        int[] bounds = mgr.getRealmBounds(realmOwner);
-        boolean inside = mgr.isWithinRealm(realmOwner, serverPlayer.getX(), serverPlayer.getZ());
-        LOGGER.info("[RealmBorder] {} pos=({},{}) bounds=[{},{},{},{}] inside={}",
-                serverPlayer.getName().getString(),
-                (int)serverPlayer.getX(), (int)serverPlayer.getZ(),
-                bounds[0], bounds[1], bounds[2], bounds[3], inside);
-
-        if (!inside) {
+        if (!mgr.isWithinRealm(realmOwner, serverPlayer.getX(), serverPlayer.getZ())) {
             BlockPos spawnPos = mgr.getSpawnPos(realmOwner);
             LOGGER.info("[RealmBorder] Snapping {} back to {}", serverPlayer.getName().getString(), spawnPos);
             serverPlayer.displayClientMessage(Component.literal(
