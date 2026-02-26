@@ -371,4 +371,10 @@ public class RealmManager extends SavedData {
     public boolean realmExistsFor(UUID ownerUUID) {
         return realms.containsKey(ownerUUID);
     }
+
+    @Nullable
+    public BlockPos getWorldCorePos(UUID ownerUUID) {
+        RealmData data = realms.get(ownerUUID);
+        return data != null ? data.worldCorePos : null;
+    }
 }

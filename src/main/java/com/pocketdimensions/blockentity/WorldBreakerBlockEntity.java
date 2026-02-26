@@ -1,6 +1,8 @@
 package com.pocketdimensions.blockentity;
 
+import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.init.ModBlockEntityTypes;
+import com.pocketdimensions.manager.RealmManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -8,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -16,6 +19,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 /**
  * World Breacher block entity — tracks siege progress and lapis fuel.
@@ -65,9 +70,12 @@ public class WorldBreakerBlockEntity extends BlockEntity {
             be.setChanged();
         }
 
-        // Consume fuel: 1 lapis per 200 ticks (~10 seconds) — adjust for balance
+        // Every 200 ticks: drain 1 attacker lapis; if defender is active, drain 1 defender lapis too
         if (level.getGameTime() % 200 == 0) {
             be.fuel = Math.max(0, be.fuel - 1);
+            if (defenderSlowed) {
+                be.consumeDefenderFuel(serverLevel, anchor);
+            }
             be.setChanged();
         }
     }
@@ -86,13 +94,30 @@ public class WorldBreakerBlockEntity extends BlockEntity {
                 "[WorldBreacher] Siege progress: " + pct + "% | Fuel: " + fuel + " lapis"), false);
     }
 
-    /**
-     * Checks whether the realm's WorldCore has defensive fuel active.
-     * TODO (Phase 3/4): query RealmManager for the WorldCore of this anchor's owner realm.
-     */
+    /** Returns true if the realm's WorldCore has defense fuel, without consuming it. */
     private boolean isDefenderCoreActive(ServerLevel level, WorldAnchorBlockEntity anchor) {
-        // Stub — always returns false until WorldCore fueling is implemented
-        return false;
+        WorldCoreBlockEntity wc = findWorldCore(level, anchor);
+        return wc != null && wc.hasDefenseFuel();
+    }
+
+    /** Consumes one unit of defense fuel from the realm's WorldCore. */
+    private void consumeDefenderFuel(ServerLevel level, WorldAnchorBlockEntity anchor) {
+        WorldCoreBlockEntity wc = findWorldCore(level, anchor);
+        if (wc != null) wc.consumeDefenseFuel();
+    }
+
+    /** Looks up the WorldCoreBlockEntity for the realm owned by this anchor's owner. */
+    @Nullable
+    private WorldCoreBlockEntity findWorldCore(ServerLevel level, WorldAnchorBlockEntity anchor) {
+        UUID ownerUUID = anchor.getOwnerUUID();
+        if (ownerUUID == null) return null;
+        MinecraftServer server = level.getServer();
+        if (server == null) return null;
+        BlockPos corePos = RealmManager.get(server).getWorldCorePos(ownerUUID);
+        if (corePos == null) return null;
+        ServerLevel realmLevel = server.getLevel(PocketDimensionsMod.REALM_DIM);
+        if (realmLevel == null) return null;
+        return realmLevel.getBlockEntity(corePos) instanceof WorldCoreBlockEntity wc ? wc : null;
     }
 
     // -------------------------------------------------------------------------

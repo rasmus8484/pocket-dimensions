@@ -66,9 +66,8 @@ public class WorldAnchorBlockEntity extends BlockEntity {
             return;
         }
 
-        // Phase 3: owner only
-        if (!player.getUUID().equals(ownerUUID)) {
-            LOGGER.info("[WorldAnchor] Access denied — playerUUID={} ownerUUID={}", player.getUUID(), ownerUUID);
+        // Phase 4: owner always; anyone else only if a completed WorldBreaker with fuel is on top
+        if (!canAccess(player, level, worldPosition)) {
             player.displayClientMessage(Component.literal("[PocketDimensions] Access denied."), false);
             return;
         }
