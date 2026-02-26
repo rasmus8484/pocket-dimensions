@@ -56,9 +56,11 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
         BeaconRenderer.submitBeaconBeam(
                 poseStack, collector,
                 BeaconRenderer.BEAM_LOCATION,
-                state.animationTime, 1.0f,
-                BEAM_COLOR,
-                0, state.beamHeight + 1,
+                1.0f,                          // textureScale
+                state.animationTime,           // animationTime (drives rotation)
+                0,                             // yOffset
+                state.beamHeight + 1,          // height
+                BEAM_COLOR,                    // color (RGB)
                 BeaconRenderer.SOLID_BEAM_RADIUS,
                 BeaconRenderer.BEAM_GLOW_RADIUS);
     }

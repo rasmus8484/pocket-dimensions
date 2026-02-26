@@ -5,6 +5,7 @@ import com.pocketdimensions.init.ModBlocks;
 import com.pocketdimensions.init.ModItems;
 import com.pocketdimensions.manager.RealmManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -149,9 +150,12 @@ public class RealmEventHandler {
         UUID realmOwner = mgr.getPlayerRealm(playerUUID);
         if (realmOwner == null) {
             // Auto-recover after server restart (transient map was wiped)
+            LOGGER.info("[RealmBorder] playerRealm null for {}, scanning position ({},{})",
+                    serverPlayer.getName().getString(), (int)serverPlayer.getX(), (int)serverPlayer.getZ());
             realmOwner = mgr.findRealmAtPosition(serverPlayer.getX(), serverPlayer.getZ());
             if (realmOwner == null) {
                 // No realm found — eject to entry location or spawn
+                LOGGER.info("[RealmBorder] No realm found at position, ejecting {}", serverPlayer.getName().getString());
                 mgr.teleportToEntryOrSpawn(serverPlayer, server);
                 return;
             }
@@ -159,8 +163,18 @@ public class RealmEventHandler {
         }
 
         // Enforce bounds — teleport back to spawn pos if outside
-        if (!mgr.isWithinRealm(realmOwner, serverPlayer.getX(), serverPlayer.getZ())) {
+        int[] bounds = mgr.getRealmBounds(realmOwner);
+        boolean inside = mgr.isWithinRealm(realmOwner, serverPlayer.getX(), serverPlayer.getZ());
+        LOGGER.info("[RealmBorder] {} pos=({},{}) bounds=[{},{},{},{}] inside={}",
+                serverPlayer.getName().getString(),
+                (int)serverPlayer.getX(), (int)serverPlayer.getZ(),
+                bounds[0], bounds[1], bounds[2], bounds[3], inside);
+
+        if (!inside) {
             BlockPos spawnPos = mgr.getSpawnPos(realmOwner);
+            LOGGER.info("[RealmBorder] Snapping {} back to {}", serverPlayer.getName().getString(), spawnPos);
+            serverPlayer.displayClientMessage(Component.literal(
+                    "[Realm] Outside boundary — snapping back!"), true);
             Vec3 dest = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
             serverPlayer.teleport(new TeleportTransition(
                     (ServerLevel) serverPlayer.level(), dest, Vec3.ZERO, 0f, 0f,
