@@ -1,10 +1,13 @@
 package com.pocketdimensions.block;
 
+import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
-import com.pocketdimensions.init.ModBlockEntityTypes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -14,20 +17,17 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Pocket Anchor — the physical entry point for a pocket room.
- * <p>
- * Interactions (server-side):
- * - Right-click               → enter the linked pocket room (anyone)
- * - Crouch + right-click      → silently steal the anchor back to inventory as a PocketItem
- * - Mining (netherite tier)   → destroy the room permanently; eject occupants
- * <p>
- * The block entity stores: pocket_id (UUID), owner UUID.
- */
 public class PocketAnchorBlock extends BaseEntityBlock {
+
+    public static final MapCodec<PocketAnchorBlock> CODEC = simpleCodec(PocketAnchorBlock::new);
 
     public PocketAnchorBlock(BlockBehaviour.Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Nullable
@@ -42,23 +42,30 @@ public class PocketAnchorBlock extends BaseEntityBlock {
     }
 
     @Override
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
+        ItemStack tool = player.getMainHandItem();
+        // Allow any pickaxe (vanilla or mod-added) that meets diamond tier
+        if (tool.is(ItemTags.PICKAXES) && tool.isCorrectToolForDrops(state)) {
+            return super.getDestroyProgress(state, player, level, pos);
+        }
+        return 0.0f;
+    }
+
+    @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
 
         PocketAnchorBlockEntity be = (PocketAnchorBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
 
         if (player.isShiftKeyDown()) {
-            // Crouch + right-click: silent theft — convert anchor back to PocketItem
             be.stealAnchor(player, level, pos, state);
         } else {
-            // Right-click: enter the pocket room
             be.enterRoom(player, level, pos);
         }
 
-        return InteractionResult.CONSUME;
+        return InteractionResult.SUCCESS;
     }
+
 }

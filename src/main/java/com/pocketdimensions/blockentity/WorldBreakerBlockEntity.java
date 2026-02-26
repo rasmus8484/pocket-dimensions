@@ -13,6 +13,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -70,20 +72,18 @@ public class WorldBreakerBlockEntity extends BlockEntity {
         }
     }
 
-    /**
-     * Called when the breacher is destroyed (via onRemove in WorldBreakerBlock).
-     * Resets siege progress to 0.
-     */
-    public void onDestroyed() {
+    /** Reset progress when the block is removed from the world. */
+    @Override
+    public void setRemoved() {
         progressTicks = 0;
-        // No setChanged needed — block is being removed
+        super.setRemoved();
     }
 
     /** Shows siege status message to the interacting player. */
     public void sendStatusTo(Player player) {
         int pct = (int) ((progressTicks / (double) BASE_DURATION_TICKS) * 100);
-        player.sendSystemMessage(Component.literal(
-                "[WorldBreacher] Siege progress: " + pct + "% | Fuel: " + fuel + " lapis"));
+        player.displayClientMessage(Component.literal(
+                "[WorldBreacher] Siege progress: " + pct + "% | Fuel: " + fuel + " lapis"), false);
     }
 
     /**
@@ -100,17 +100,17 @@ public class WorldBreakerBlockEntity extends BlockEntity {
     // -------------------------------------------------------------------------
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        tag.putInt("progress_ticks", progressTicks);
-        tag.putInt("fuel", fuel);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("progress_ticks", progressTicks);
+        output.putInt("fuel", fuel);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        progressTicks = tag.getInt("progress_ticks");
-        fuel = tag.getInt("fuel");
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        progressTicks = input.getIntOr("progress_ticks", 0);
+        fuel = input.getIntOr("fuel", 0);
     }
 
     @Override

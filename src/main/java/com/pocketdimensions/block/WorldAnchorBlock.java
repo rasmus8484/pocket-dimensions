@@ -1,9 +1,14 @@
 package com.pocketdimensions.block;
 
+import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import net.minecraft.core.BlockPos;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -13,19 +18,19 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * World Anchor — realm entry point.  Placeable in any dimension.
- * <p>
- * Access check (server-side, at interaction time only):
- * - If no breach active → owner only.
- * - If breach at 100% AND WorldBreacher above AND breacher has ≥1 lapis → anyone.
- * <p>
- * The block entity stores: owner UUID, breach progress reference.
- */
 public class WorldAnchorBlock extends BaseEntityBlock {
+
+    private static final Logger LOGGER = LogManager.getLogger();
+
+    public static final MapCodec<WorldAnchorBlock> CODEC = simpleCodec(WorldAnchorBlock::new);
 
     public WorldAnchorBlock(BlockBehaviour.Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Nullable
@@ -39,17 +44,28 @@ public class WorldAnchorBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    /**
+     * Delegate item-in-hand right-clicks to useWithoutItem so the anchor works regardless
+     * of what the player is holding (WorldSeed is excluded via RealmEventHandler and handles
+     * itself through Item#useOn; all other held items are routed here).
+     */
+    @Override
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                       Player player, InteractionHand hand, BlockHitResult hit) {
+        return useWithoutItem(state, level, pos, player, hit);
+    }
+
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        }
+        LOGGER.info("[WorldAnchor] useWithoutItem clientSide={}", level.isClientSide());
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
 
         WorldAnchorBlockEntity be = (WorldAnchorBlockEntity) level.getBlockEntity(pos);
+        LOGGER.info("[WorldAnchor] be={}", be);
         if (be == null) return InteractionResult.FAIL;
 
         be.tryEnterRealm(player, level, pos);
-        return InteractionResult.CONSUME;
+        return InteractionResult.SUCCESS;
     }
 }

@@ -17,27 +17,34 @@ public class ModItems {
     // ---- Block items ----
 
     public static final RegistryObject<Item> BOUNDARY_BLOCK_ITEM = ITEMS.register("boundary_block",
-            () -> new BlockItem(ModBlocks.BOUNDARY_BLOCK.get(), new Item.Properties()));
+            () -> new BlockItem(ModBlocks.BOUNDARY_BLOCK.get(),
+                    new Item.Properties().setId(ITEMS.key("boundary_block"))));
 
     public static final RegistryObject<Item> POCKET_ANCHOR_ITEM = ITEMS.register("pocket_anchor",
-            () -> new BlockItem(ModBlocks.POCKET_ANCHOR.get(), new Item.Properties()));
+            () -> new BlockItem(ModBlocks.POCKET_ANCHOR.get(),
+                    new Item.Properties().setId(ITEMS.key("pocket_anchor"))));
 
     public static final RegistryObject<Item> WORLD_ANCHOR_ITEM = ITEMS.register("world_anchor",
-            () -> new BlockItem(ModBlocks.WORLD_ANCHOR.get(), new Item.Properties()));
+            () -> new BlockItem(ModBlocks.WORLD_ANCHOR.get(),
+                    new Item.Properties().setId(ITEMS.key("world_anchor"))));
 
     public static final RegistryObject<Item> WORLD_BREAKER_ITEM = ITEMS.register("world_breaker",
-            () -> new BlockItem(ModBlocks.WORLD_BREAKER.get(), new Item.Properties()));
+            () -> new BlockItem(ModBlocks.WORLD_BREAKER.get(),
+                    new Item.Properties().setId(ITEMS.key("world_breaker"))));
 
     public static final RegistryObject<Item> WORLD_CORE_ITEM = ITEMS.register("world_core",
-            () -> new BlockItem(ModBlocks.WORLD_CORE.get(), new Item.Properties()));
+            () -> new BlockItem(ModBlocks.WORLD_CORE.get(),
+                    new Item.Properties().setId(ITEMS.key("world_core"))));
 
     // ---- Functional items ----
 
-    // Pocket Item — creates/enters a pocket room; stackSize=1, each carries a pocket_id via NBT
     public static final RegistryObject<Item> POCKET_ITEM = ITEMS.register("pocket_item",
-            () -> new PocketItem(new Item.Properties().stacksTo(1)));
+            () -> new PocketItem(new Item.Properties()
+                    .setId(ITEMS.key("pocket_item"))
+                    .stacksTo(1)));
 
-    // World Seed — creates or rekeys a realm binding when used on a WorldAnchor
     public static final RegistryObject<Item> WORLD_SEED = ITEMS.register("world_seed",
-            () -> new WorldSeedItem(new Item.Properties().stacksTo(1)));
+            () -> new WorldSeedItem(new Item.Properties()
+                    .setId(ITEMS.key("world_seed"))
+                    .stacksTo(1)));
 }

@@ -1,7 +1,8 @@
 package com.pocketdimensions.block;
 
+import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldBreakerBlockEntity;
-import com.pocketdimensions.init.ModBlocks;
+import com.pocketdimensions.init.ModBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -16,24 +17,21 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-import com.pocketdimensions.init.ModBlockEntityTypes;
-
 /**
- * World Breacher — siege add-on placed on top of a WorldAnchor.
- * <p>
- * Placement rules (enforced in WorldSeedItem / placement event):
- * - Must be placed directly on top of a WorldAnchor block.
- * - Realm owner must currently be inside their realm at placement time.
- * - Only one per anchor.
- * <p>
- * Ticks only while the chunk is loaded (standard Minecraft behaviour).
- * Siege progress advances per tick while: breacher exists, anchor below exists,
- * lapis fuel > 0, chunk loaded.
+ * WorldBreacher — siege add-on placed on top of a WorldAnchor.
+ * Cleanup (progress reset) is handled in WorldBreakerBlockEntity.setRemoved().
  */
 public class WorldBreakerBlock extends BaseEntityBlock {
 
+    public static final MapCodec<WorldBreakerBlock> CODEC = simpleCodec(WorldBreakerBlock::new);
+
     public WorldBreakerBlock(BlockBehaviour.Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Nullable
@@ -64,20 +62,7 @@ public class WorldBreakerBlock extends BaseEntityBlock {
         WorldBreakerBlockEntity be = (WorldBreakerBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
 
-        // Right-click: show siege progress info to the interacting player
         be.sendStatusTo(player);
-        return InteractionResult.CONSUME;
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos,
-                         BlockState newState, boolean movedByPiston) {
-        if (!level.isClientSide() && !state.is(newState.getBlock())) {
-            WorldBreakerBlockEntity be = (WorldBreakerBlockEntity) level.getBlockEntity(pos);
-            if (be != null) {
-                be.onDestroyed();
-            }
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
+        return InteractionResult.SUCCESS;
     }
 }

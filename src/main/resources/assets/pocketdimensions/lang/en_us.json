@@ -7,6 +7,12 @@
     "block.pocketdimensions.world_breaker": "World Breacher",
     "block.pocketdimensions.world_core": "World Core",
 
+    "item.pocketdimensions.boundary_block": "Boundary Block",
+    "item.pocketdimensions.pocket_anchor": "Pocket Anchor",
+    "item.pocketdimensions.world_anchor": "World Anchor",
+    "item.pocketdimensions.world_breaker": "World Breacher",
+    "item.pocketdimensions.world_core": "World Core",
+
     "item.pocketdimensions.pocket_item": "Pocket Item",
     "item.pocketdimensions.world_seed": "World Seed"
 }

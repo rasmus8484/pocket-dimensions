@@ -1,9 +1,13 @@
 package com.pocketdimensions.block;
 
+import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -13,20 +17,17 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * World Core — permanent indestructible structure at the center of each realm region.
- * <p>
- * Responsibilities:
- * - Defines the realm's region center (used by border enforcement).
- * - Provides the guaranteed exit point (even if WorldAnchor is destroyed).
- * - Accepts lapis fuel from the realm owner to slow active breach attempts (3× slowdown).
- * <p>
- * The block entity stores: ownerUUID, fuel count, region center reference.
- */
 public class WorldCoreBlock extends BaseEntityBlock {
+
+    public static final MapCodec<WorldCoreBlock> CODEC = simpleCodec(WorldCoreBlock::new);
 
     public WorldCoreBlock(BlockBehaviour.Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Nullable
@@ -40,22 +41,29 @@ public class WorldCoreBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    /** Right-click with any item: shift+lapis inserts defense fuel (owner only); everything else exits the realm. */
+    @Override
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                       Player player, InteractionHand hand, BlockHitResult hit) {
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
+        WorldCoreBlockEntity be = (WorldCoreBlockEntity) level.getBlockEntity(pos);
+        if (be == null) return InteractionResult.FAIL;
+        if (player.isShiftKeyDown() && stack.is(Items.LAPIS_LAZULI)) {
+            be.tryInsertFuel(player, stack, level);
+        } else {
+            be.exitRealm(player, level);
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    /** Empty-hand right-click always exits the realm. */
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
         if (level.isClientSide()) return InteractionResult.SUCCESS;
-
         WorldCoreBlockEntity be = (WorldCoreBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
-
-        if (player.isShiftKeyDown()) {
-            // Crouch + right-click: exit the realm
-            be.exitRealm(player, level);
-        } else {
-            // Right-click: insert lapis fuel (owner only) or show status
-            be.tryInsertFuel(player, level);
-        }
-
-        return InteractionResult.CONSUME;
+        be.exitRealm(player, level);
+        return InteractionResult.SUCCESS;
     }
 }

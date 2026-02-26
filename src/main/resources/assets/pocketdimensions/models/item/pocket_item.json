@@ -1,6 +1,6 @@
 {
-    "parent": "minecraft:item/generated",
+    "parent": "minecraft:block/cube_all",
     "textures": {
-        "layer0": "minecraft:item/ender_eye"
+        "all": "minecraft:block/iron_block"
     }
 }

@@ -10,6 +10,8 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
+import java.util.Set;
+
 public class ModBlockEntityTypes {
 
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
@@ -17,25 +19,21 @@ public class ModBlockEntityTypes {
 
     public static final RegistryObject<BlockEntityType<PocketAnchorBlockEntity>> POCKET_ANCHOR =
             BLOCK_ENTITY_TYPES.register("pocket_anchor",
-                    () -> BlockEntityType.Builder
-                            .of(PocketAnchorBlockEntity::new, ModBlocks.POCKET_ANCHOR.get())
-                            .build(null));
+                    () -> new BlockEntityType<>(PocketAnchorBlockEntity::new,
+                            Set.of(ModBlocks.POCKET_ANCHOR.get())));
 
     public static final RegistryObject<BlockEntityType<WorldAnchorBlockEntity>> WORLD_ANCHOR =
             BLOCK_ENTITY_TYPES.register("world_anchor",
-                    () -> BlockEntityType.Builder
-                            .of(WorldAnchorBlockEntity::new, ModBlocks.WORLD_ANCHOR.get())
-                            .build(null));
+                    () -> new BlockEntityType<>(WorldAnchorBlockEntity::new,
+                            Set.of(ModBlocks.WORLD_ANCHOR.get())));
 
     public static final RegistryObject<BlockEntityType<WorldBreakerBlockEntity>> WORLD_BREAKER =
             BLOCK_ENTITY_TYPES.register("world_breaker",
-                    () -> BlockEntityType.Builder
-                            .of(WorldBreakerBlockEntity::new, ModBlocks.WORLD_BREAKER.get())
-                            .build(null));
+                    () -> new BlockEntityType<>(WorldBreakerBlockEntity::new,
+                            Set.of(ModBlocks.WORLD_BREAKER.get())));
 
     public static final RegistryObject<BlockEntityType<WorldCoreBlockEntity>> WORLD_CORE =
             BLOCK_ENTITY_TYPES.register("world_core",
-                    () -> BlockEntityType.Builder
-                            .of(WorldCoreBlockEntity::new, ModBlocks.WORLD_CORE.get())
-                            .build(null));
+                    () -> new BlockEntityType<>(WorldCoreBlockEntity::new,
+                            Set.of(ModBlocks.WORLD_CORE.get())));
 }
