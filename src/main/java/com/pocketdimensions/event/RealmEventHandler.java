@@ -175,10 +175,11 @@ public class RealmEventHandler {
             LOGGER.info("[RealmBorder] Snapping {} back to {}", serverPlayer.getName().getString(), spawnPos);
             serverPlayer.displayClientMessage(Component.literal(
                     "[Realm] Outside boundary — snapping back!"), true);
-            Vec3 dest = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-            serverPlayer.teleport(new TeleportTransition(
-                    (ServerLevel) serverPlayer.level(), dest, Vec3.ZERO, 0f, 0f,
-                    TeleportTransition.DO_NOTHING));
+            // Use connection.teleport() directly — serverPlayer.teleport(TeleportTransition) fires
+            // EntityTravelToDimensionEvent even for same-dimension moves, and our handler cancels
+            // it (player is in REALM_DIM with no pending exit queued).
+            serverPlayer.connection.teleport(
+                    spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, 0f, 0f);
         }
     }
 
