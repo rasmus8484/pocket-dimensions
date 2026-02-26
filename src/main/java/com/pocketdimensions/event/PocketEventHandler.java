@@ -39,13 +39,8 @@ import java.util.UUID;
  */
 public class PocketEventHandler {
 
-    /** server tickCount when the player started continuously crouching. */
-    private static final Map<UUID, Integer> crouchStartTick = new HashMap<>();
-
-    /** Exit cooldown — prevents double-trigger. */
+    /** Exit cooldown — prevents double-trigger on the same jump. */
     private static final Map<UUID, Integer> exitCooldownExpiry = new HashMap<>();
-
-    private static final int CROUCH_HOLD_TICKS = 20; // 1 second
 
     public PocketEventHandler() {
         TickEvent.PlayerTickEvent.Post.BUS.addListener(this::onPlayerTick);
@@ -66,7 +61,6 @@ public class PocketEventHandler {
 
         // ── Only act for players inside the pocket dimension ──
         if (!serverPlayer.level().dimension().equals(PocketDimensionsMod.POCKET_DIM)) {
-            crouchStartTick.remove(uuid);
             return;
         }
 
@@ -79,32 +73,13 @@ public class PocketEventHandler {
 
         if (pocketId == null) return; // not tracked as an occupant — do nothing
 
-        // ── Crouch-hold exit trigger ──
+        // ── Crouch + jump exit trigger ──
         Integer expiry = exitCooldownExpiry.get(uuid);
-        if (expiry != null && now < expiry) {
-            // On cooldown — still track crouch so it doesn't feel laggy after cooldown expires
-            if (!serverPlayer.isShiftKeyDown()) crouchStartTick.remove(uuid);
-            return;
-        }
+        if (expiry != null && now < expiry) return; // cooldown active
 
-        if (serverPlayer.isShiftKeyDown()) {
-            int since = crouchStartTick.computeIfAbsent(uuid, k -> now);
-            int heldFor = now - since;
-
-            // Show hold progress every 8 ticks (0.5s) as action bar hint
-            if (heldFor > 0 && heldFor % 8 == 0 && heldFor < CROUCH_HOLD_TICKS) {
-                int pct = (heldFor * 100) / CROUCH_HOLD_TICKS;
-                serverPlayer.displayClientMessage(
-                        Component.literal("[PocketDimensions] Hold sneak to exit... " + pct + "%"), true);
-            }
-
-            if (heldFor >= CROUCH_HOLD_TICKS) {
-                crouchStartTick.remove(uuid);
-                exitCooldownExpiry.put(uuid, now + 40);
-                performExit(serverPlayer, pocketId, mgr, server);
-            }
-        } else {
-            crouchStartTick.remove(uuid); // reset if they let go
+        if (serverPlayer.isShiftKeyDown() && serverPlayer.getDeltaMovement().y > 0.1) {
+            exitCooldownExpiry.put(uuid, now + 40);
+            performExit(serverPlayer, pocketId, mgr, server);
         }
     }
 
@@ -160,7 +135,6 @@ public class PocketEventHandler {
 
         // Clean up per-player state
         UUID uuid = serverPlayer.getUUID();
-        crouchStartTick.remove(uuid);
         exitCooldownExpiry.remove(uuid);
 
         PocketRoomManager mgr = PocketRoomManager.get(server);
