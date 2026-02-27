@@ -31,14 +31,14 @@ import java.util.UUID;
  * Registers all "/pd" sub-commands.
  *
  * Syntax:
- *   /pd owner <name>           — transfer realm ownership by player name
- *   /pd owner uuid:<uuid>      — transfer realm ownership by explicit UUID
+ *   /pd owner <name>                               — resolve by player name
+ *   /pd owner 550e8400-e29b-41d4-a716-446655440000 — resolve by raw UUID
  *
- * Name resolution order:
+ * The argument is auto-detected: if it parses as a UUID it is used directly;
+ * otherwise it is treated as a player name and resolved via:
  *   1. Online players
- *   2. Op list (covers previously-joined opped players)
+ *   2. Op list  (covers previously-joined opped players stored in ops.json)
  *   3. Whitelist (covers previously-joined whitelisted players)
- *   If still not found, instruct the admin to use uuid: prefix.
  *
  * All sub-commands require OP level 2 (GAMEMASTERS).
  */
@@ -97,20 +97,12 @@ public class PocketDimensionsCommand {
         UUID newOwner;
         String newOwnerName;
 
-        if (arg.startsWith("uuid:")) {
-            // Explicit UUID — e.g. /pd owner uuid:550e8400-e29b-41d4-a716-446655440000
-            String uuidStr = arg.substring(5);
-            try {
-                newOwner = UUID.fromString(uuidStr);
-            } catch (IllegalArgumentException e) {
-                src.sendFailure(Component.literal("[PD] Invalid UUID format: " + uuidStr
-                        + " — expected xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"));
-                return 0;
-            }
-            // Try to look up a display name; fall back to the UUID string itself
+        // Auto-detect: if the argument parses as a UUID, use it directly; otherwise resolve by name.
+        UUID parsedDirectly = tryParseUUID(arg);
+        if (parsedDirectly != null) {
+            newOwner = parsedDirectly;
             ServerPlayer online = server.getPlayerList().getPlayer(newOwner);
-            newOwnerName = (online != null) ? online.getName().getString() : uuidStr;
-
+            newOwnerName = (online != null) ? online.getName().getString() : arg;
         } else {
             // Name lookup: online → ops list → whitelist
             newOwner = resolveByName(server, arg);
@@ -118,7 +110,8 @@ public class PocketDimensionsCommand {
                 src.sendFailure(Component.literal(
                         "[PD] Player '" + arg + "' not found."
                         + " They must be online, opped, or whitelisted for name lookup."
-                        + " Use 'uuid:<uuid>' to set by UUID directly."));
+                        + " Alternatively, pass their UUID directly:"
+                        + " /pd owner xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"));
                 return 0;
             }
             newOwnerName = arg;
@@ -169,6 +162,11 @@ public class PocketDimensionsCommand {
 
         // 3. Whitelist (covers previously-joined whitelisted offline players)
         return findInEntries(server.getPlayerList().getWhiteList().getEntries(), name);
+    }
+
+    /** Returns the UUID if {@code s} is a valid UUID string, otherwise null. */
+    private static UUID tryParseUUID(String s) {
+        try { return UUID.fromString(s); } catch (IllegalArgumentException e) { return null; }
     }
 
     /** Scans a StoredUserList entry collection for a case-insensitive name match. */
