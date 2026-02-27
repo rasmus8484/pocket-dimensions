@@ -13,7 +13,9 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 
@@ -33,6 +35,9 @@ public class PocketDimensionsMod {
     );
 
     public PocketDimensionsMod(FMLJavaModLoadingContext context) {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, PocketDimensionsConfig.SPEC,
+                "pocketdimensions-common.toml");
+
         var modBusGroup = context.getModBusGroup();
         ModBlocks.BLOCKS.register(modBusGroup);
         ModItems.ITEMS.register(modBusGroup);

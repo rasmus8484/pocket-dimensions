@@ -2,6 +2,7 @@ package com.pocketdimensions.manager;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.pocketdimensions.PocketDimensionsConfig;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -28,11 +29,11 @@ import java.util.stream.Collectors;
  * Stored in overworld data storage under "realm_manager".
  *
  * Plot geometry (constants, easy to scale):
- *   REALM_SIZE       = 48    playable XZ area (3x3 chunks)
- *   REALM_PADDING    = 8     buffer between plot edge and usable realm edge
- *   REALM_STRIDE     = REALM_SIZE + 2*REALM_PADDING = 64   distance between plot origins
- *   Plot origin: ((plotIndex % PLOTS_PER_ROW) * REALM_STRIDE, 0, (plotIndex / PLOTS_PER_ROW) * REALM_STRIDE)
- *   Realm area:  plotOrigin + (REALM_PADDING, 0, REALM_PADDING) to plotOrigin + (REALM_PADDING+REALM_SIZE, *, REALM_PADDING+REALM_SIZE)
+ *   realmSize()       = 48    playable XZ area (3x3 chunks)
+ *   realmPadding()    = 8     buffer between plot edge and usable realm edge
+ *   realmStride()     = realmSize() + 2*realmPadding() = 64   distance between plot origins
+ *   Plot origin: ((plotIndex % PLOTS_PER_ROW) * realmStride(), 0, (plotIndex / PLOTS_PER_ROW) * realmStride())
+ *   Realm area:  plotOrigin + (realmPadding(), 0, realmPadding()) to plotOrigin + (realmPadding()+realmSize(), *, realmPadding()+realmSize())
  *   WorldCore:   realm area center at (surfaceY)
  *   Spawn pos:   WorldCore + (1, 0, 0)
  */
@@ -42,12 +43,14 @@ public class RealmManager extends SavedData {
     // Constants
     // -------------------------------------------------------------------------
 
-    private static final String DATA_KEY      = "realm_manager";
-    private static final int REALM_SIZE       = 48;
-    private static final int REALM_PADDING    = 8;
-    private static final int REALM_STRIDE     = REALM_SIZE + 2 * REALM_PADDING;
-    private static final int PLOTS_PER_ROW    = 10000;
-    private static final int REALM_BASE_Y     = 64;
+    private static final String DATA_KEY   = "realm_manager";
+    private static final int PLOTS_PER_ROW = 10000;
+    private static final int REALM_BASE_Y  = 64;
+
+    // Read from config — not cached, so hot-reloads work (though changing mid-game is discouraged)
+    private static int realmSize()    { return PocketDimensionsConfig.REALM_SIZE.get(); }
+    private static int realmPadding() { return PocketDimensionsConfig.REALM_PADDING.get(); }
+    private static int realmStride()  { return realmSize() + 2 * realmPadding(); }
 
     // -------------------------------------------------------------------------
     // Inner data classes
@@ -213,16 +216,16 @@ public class RealmManager extends SavedData {
     private int[] plotOriginXZ(int plotIndex) {
         int px = plotIndex % PLOTS_PER_ROW;
         int pz = plotIndex / PLOTS_PER_ROW;
-        return new int[]{ px * REALM_STRIDE, pz * REALM_STRIDE };
+        return new int[]{ px * realmStride(), pz * realmStride() };
     }
 
     public int[] getRealmBounds(UUID ownerUUID) {
         RealmData data = realms.get(ownerUUID);
         if (data == null) return new int[]{0, 0, 0, 0};
         int[] orig = plotOriginXZ(data.plotIndex);
-        int minX = orig[0] + REALM_PADDING;
-        int minZ = orig[1] + REALM_PADDING;
-        return new int[]{ minX, minZ, minX + REALM_SIZE, minZ + REALM_SIZE };
+        int minX = orig[0] + realmPadding();
+        int minZ = orig[1] + realmPadding();
+        return new int[]{ minX, minZ, minX + realmSize(), minZ + realmSize() };
     }
 
     public boolean isWithinRealm(UUID ownerUUID, double x, double z) {
@@ -246,8 +249,8 @@ public class RealmManager extends SavedData {
         }
         // Fallback: computed center + 1
         int[] orig = plotOriginXZ(data.plotIndex);
-        int centerX = orig[0] + REALM_PADDING + REALM_SIZE / 2;
-        int centerZ = orig[1] + REALM_PADDING + REALM_SIZE / 2;
+        int centerX = orig[0] + realmPadding() + realmSize() / 2;
+        int centerZ = orig[1] + realmPadding() + realmSize() / 2;
         return new BlockPos(centerX + 1, REALM_BASE_Y, centerZ);
     }
 
@@ -260,8 +263,8 @@ public class RealmManager extends SavedData {
         if (data == null || data.generated) return;
 
         int[] orig = plotOriginXZ(data.plotIndex);
-        int centerX = orig[0] + REALM_PADDING + REALM_SIZE / 2;
-        int centerZ = orig[1] + REALM_PADDING + REALM_SIZE / 2;
+        int centerX = orig[0] + realmPadding() + realmSize() / 2;
+        int centerZ = orig[1] + realmPadding() + realmSize() / 2;
 
         // Force-load the 3×3 chunks around the realm center
         int cx = centerX >> 4;
