@@ -28,12 +28,12 @@ import java.util.stream.Collectors;
  * Stored in overworld data storage under "realm_manager".
  *
  * Plot geometry (constants, easy to scale):
- *   REALM_STRIDE     = 64    distance between plot origins
  *   REALM_SIZE       = 48    playable XZ area (3x3 chunks)
- *   REALM_OFFSET_XZ  = 8     buffer from plot edge to realm edge
- *   Plot origin: ((plotIndex % PLOTS_PER_ROW) * 64, 0, (plotIndex / PLOTS_PER_ROW) * 64)
- *   Realm area:  plotOrigin + (8, 0, 8) to plotOrigin + (56, *, 56)
- *   WorldCore:   plotOrigin + (32, surfaceY, 32)   (center of the 48x48 area)
+ *   REALM_PADDING    = 8     buffer between plot edge and usable realm edge
+ *   REALM_STRIDE     = REALM_SIZE + 2*REALM_PADDING = 64   distance between plot origins
+ *   Plot origin: ((plotIndex % PLOTS_PER_ROW) * REALM_STRIDE, 0, (plotIndex / PLOTS_PER_ROW) * REALM_STRIDE)
+ *   Realm area:  plotOrigin + (REALM_PADDING, 0, REALM_PADDING) to plotOrigin + (REALM_PADDING+REALM_SIZE, *, REALM_PADDING+REALM_SIZE)
+ *   WorldCore:   realm area center at (surfaceY)
  *   Spawn pos:   WorldCore + (1, 0, 0)
  */
 public class RealmManager extends SavedData {
@@ -43,9 +43,9 @@ public class RealmManager extends SavedData {
     // -------------------------------------------------------------------------
 
     private static final String DATA_KEY      = "realm_manager";
-    private static final int REALM_STRIDE     = 64;
     private static final int REALM_SIZE       = 48;
-    private static final int REALM_OFFSET_XZ  = 8;
+    private static final int REALM_PADDING    = 8;
+    private static final int REALM_STRIDE     = REALM_SIZE + 2 * REALM_PADDING;
     private static final int PLOTS_PER_ROW    = 10000;
     private static final int REALM_BASE_Y     = 64;
 
@@ -220,8 +220,8 @@ public class RealmManager extends SavedData {
         RealmData data = realms.get(ownerUUID);
         if (data == null) return new int[]{0, 0, 0, 0};
         int[] orig = plotOriginXZ(data.plotIndex);
-        int minX = orig[0] + REALM_OFFSET_XZ;
-        int minZ = orig[1] + REALM_OFFSET_XZ;
+        int minX = orig[0] + REALM_PADDING;
+        int minZ = orig[1] + REALM_PADDING;
         return new int[]{ minX, minZ, minX + REALM_SIZE, minZ + REALM_SIZE };
     }
 
@@ -246,8 +246,8 @@ public class RealmManager extends SavedData {
         }
         // Fallback: computed center + 1
         int[] orig = plotOriginXZ(data.plotIndex);
-        int centerX = orig[0] + REALM_OFFSET_XZ + REALM_SIZE / 2;
-        int centerZ = orig[1] + REALM_OFFSET_XZ + REALM_SIZE / 2;
+        int centerX = orig[0] + REALM_PADDING + REALM_SIZE / 2;
+        int centerZ = orig[1] + REALM_PADDING + REALM_SIZE / 2;
         return new BlockPos(centerX + 1, REALM_BASE_Y, centerZ);
     }
 
@@ -260,8 +260,8 @@ public class RealmManager extends SavedData {
         if (data == null || data.generated) return;
 
         int[] orig = plotOriginXZ(data.plotIndex);
-        int centerX = orig[0] + REALM_OFFSET_XZ + REALM_SIZE / 2;
-        int centerZ = orig[1] + REALM_OFFSET_XZ + REALM_SIZE / 2;
+        int centerX = orig[0] + REALM_PADDING + REALM_SIZE / 2;
+        int centerZ = orig[1] + REALM_PADDING + REALM_SIZE / 2;
 
         // Force-load the 3×3 chunks around the realm center
         int cx = centerX >> 4;
