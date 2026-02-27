@@ -59,6 +59,13 @@ public class WorldAnchorBlockEntity extends BlockEntity {
             return;
         }
 
+        // No use inside a pocket room
+        if (level.dimension().equals(PocketDimensionsMod.POCKET_DIM)) {
+            player.displayClientMessage(Component.literal(
+                    "[PocketDimensions] Cannot enter a realm from inside a pocket room."), false);
+            return;
+        }
+
         // No re-entry from inside the realm
         if (level.dimension().equals(PocketDimensionsMod.REALM_DIM)) {
             player.displayClientMessage(Component.literal(

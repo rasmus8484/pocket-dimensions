@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityTeleportEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.fml.LogicalSide;
@@ -46,6 +47,19 @@ public class PocketEventHandler {
         TickEvent.PlayerTickEvent.Post.BUS.addListener(this::onPlayerTick);
         PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(this::onPlayerLogout);
         BlockEvent.BreakEvent.BUS.addListener((BlockEvent.BreakEvent event) -> onBlockBreak(event));
+        EntityTeleportEvent.ChorusFruit.BUS.addListener(this::onChorusFruitTeleport);
+    }
+
+    /** Cancels chorus fruit teleportation inside pocket rooms. */
+    private boolean onChorusFruitTeleport(EntityTeleportEvent.ChorusFruit event) {
+        if (event.getEntityLiving().level().dimension().equals(PocketDimensionsMod.POCKET_DIM)) {
+            if (event.getEntityLiving() instanceof net.minecraft.world.entity.player.Player p) {
+                p.displayClientMessage(
+                        Component.literal("[PocketDimensions] Chorus fruit doesn't work in here."), true);
+            }
+            return true; // cancel
+        }
+        return false;
     }
 
     // -------------------------------------------------------------------------

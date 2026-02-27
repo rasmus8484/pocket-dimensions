@@ -372,6 +372,23 @@ public class RealmManager extends SavedData {
         return realms.containsKey(ownerUUID);
     }
 
+    /**
+     * Transfers realm ownership from oldOwner to newOwner.
+     * Moves the RealmData entry (plot index, positions) to the new UUID key.
+     * The caller is responsible for updating WorldAnchorBlockEntity and WorldCoreBlockEntity.
+     */
+    public void transferOwnership(UUID oldOwner, UUID newOwner) {
+        RealmData old = realms.remove(oldOwner);
+        if (old == null) return;
+        RealmData fresh = new RealmData(old.plotIndex, newOwner);
+        fresh.generated    = old.generated;
+        fresh.anchorDimKey = old.anchorDimKey;
+        fresh.anchorPos    = old.anchorPos;
+        fresh.worldCorePos = old.worldCorePos;
+        realms.put(newOwner, fresh);
+        setDirty();
+    }
+
     @Nullable
     public BlockPos getWorldCorePos(UUID ownerUUID) {
         RealmData data = realms.get(ownerUUID);

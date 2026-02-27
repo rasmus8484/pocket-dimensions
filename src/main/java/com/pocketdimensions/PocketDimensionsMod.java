@@ -1,6 +1,7 @@
 package com.pocketdimensions;
 
 import com.pocketdimensions.client.ClientSetup;
+import com.pocketdimensions.command.PocketDimensionsCommand;
 import com.pocketdimensions.event.PocketEventHandler;
 import com.pocketdimensions.event.RealmEventHandler;
 import com.pocketdimensions.init.ModBlockEntityTypes;
@@ -11,6 +12,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -39,6 +41,8 @@ public class PocketDimensionsMod {
 
         new PocketEventHandler();
         new RealmEventHandler();
+        RegisterCommandsEvent.BUS.addListener(event ->
+                PocketDimensionsCommand.register(event.getDispatcher()));
 
         if (FMLEnvironment.dist.isClient()) {
             new ClientSetup();
