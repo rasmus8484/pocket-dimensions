@@ -8,6 +8,7 @@ import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -343,6 +344,7 @@ public class RealmManager extends SavedData {
                 if (realmLevel.getBlockEntity(landPos) instanceof WorldCoreBlockEntity wc) {
                     wc.setOwnerUUID(ownerUUID);
                 }
+                clearColumnAbove(realmLevel, landPos);
                 data.worldCorePos = landPos;
                 data.generated = true;
                 setDirty();
@@ -368,9 +370,18 @@ public class RealmManager extends SavedData {
         if (realmLevel.getBlockEntity(corePos) instanceof WorldCoreBlockEntity wc) {
             wc.setOwnerUUID(ownerUUID);
         }
+        clearColumnAbove(realmLevel, corePos);
         data.worldCorePos = corePos;
         data.generated = true;
         setDirty();
+    }
+
+    /** Clears all blocks in the column directly above corePos up to the world surface. */
+    private void clearColumnAbove(ServerLevel level, BlockPos corePos) {
+        int topY = level.getHeight(Heightmap.Types.WORLD_SURFACE, corePos.getX(), corePos.getZ());
+        for (int y = corePos.getY() + 1; y < topY; y++) {
+            level.setBlock(new BlockPos(corePos.getX(), y, corePos.getZ()), Blocks.AIR.defaultBlockState(), 3);
+        }
     }
 
     /**
@@ -402,10 +413,12 @@ public class RealmManager extends SavedData {
                             if (surfaceState.getFluidState().isEmpty() && surfaceState.isSolid()) {
                                 // If the surface is leaves or logs, scan downward for the forest floor
                                 int placementY = y;
-                                if (surfaceState.is(BlockTags.LEAVES) || surfaceState.is(BlockTags.LOGS)) {
+                                if (surfaceState.is(BlockTags.LEAVES) || surfaceState.is(BlockTags.LOGS)
+                                        || surfaceState.is(BlockTags.REPLACEABLE)) {
                                     for (int scanY = y - 2; scanY >= level.getMinY(); scanY--) {
                                         BlockState scanState = level.getBlockState(new BlockPos(x, scanY, z));
-                                        if (!scanState.is(BlockTags.LEAVES) && !scanState.is(BlockTags.LOGS)) {
+                                        if (!scanState.is(BlockTags.LEAVES) && !scanState.is(BlockTags.LOGS)
+                                                && !scanState.is(BlockTags.REPLACEABLE)) {
                                             placementY = scanY + 1;
                                             break;
                                         }
