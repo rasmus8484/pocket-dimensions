@@ -13,6 +13,7 @@ src/generated/
 .project
 .settings/
 bin/
+*.launch
 
 # IntelliJ
 .idea/
