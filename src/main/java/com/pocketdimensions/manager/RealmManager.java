@@ -83,6 +83,24 @@ public class RealmManager extends SavedData {
         }
     }
 
+    public static class PlayerRealmInfo {
+        public final UUID realmOwner;
+        public final int minX, maxX, minZ, maxZ;
+        public final int spawnX, spawnY, spawnZ;
+
+        public PlayerRealmInfo(UUID realmOwner, int minX, int maxX, int minZ, int maxZ,
+                               int spawnX, int spawnY, int spawnZ) {
+            this.realmOwner = realmOwner;
+            this.minX = minX; this.maxX = maxX;
+            this.minZ = minZ; this.maxZ = maxZ;
+            this.spawnX = spawnX; this.spawnY = spawnY; this.spawnZ = spawnZ;
+        }
+
+        public boolean contains(double x, double z) {
+            return x >= minX && x < maxX && z >= minZ && z < maxZ;
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Codec helpers
     // -------------------------------------------------------------------------
@@ -132,6 +150,22 @@ public class RealmManager extends SavedData {
         ).apply(instance, EntryLocEntry::new));
     }
 
+    private record PlayerRealmInfoEntry(UUID playerUUID, UUID realmOwner,
+                                        int minX, int maxX, int minZ, int maxZ,
+                                        int spawnX, int spawnY, int spawnZ) {
+        static final Codec<PlayerRealmInfoEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                UUIDUtil.CODEC.fieldOf("playerUUID").forGetter(PlayerRealmInfoEntry::playerUUID),
+                UUIDUtil.CODEC.fieldOf("realmOwner").forGetter(PlayerRealmInfoEntry::realmOwner),
+                Codec.INT.fieldOf("minX").forGetter(PlayerRealmInfoEntry::minX),
+                Codec.INT.fieldOf("maxX").forGetter(PlayerRealmInfoEntry::maxX),
+                Codec.INT.fieldOf("minZ").forGetter(PlayerRealmInfoEntry::minZ),
+                Codec.INT.fieldOf("maxZ").forGetter(PlayerRealmInfoEntry::maxZ),
+                Codec.INT.fieldOf("spawnX").forGetter(PlayerRealmInfoEntry::spawnX),
+                Codec.INT.fieldOf("spawnY").forGetter(PlayerRealmInfoEntry::spawnY),
+                Codec.INT.fieldOf("spawnZ").forGetter(PlayerRealmInfoEntry::spawnZ)
+        ).apply(instance, PlayerRealmInfoEntry::new));
+    }
+
     // -------------------------------------------------------------------------
     // Main codec and SavedDataType
     // -------------------------------------------------------------------------
@@ -152,13 +186,23 @@ public class RealmManager extends SavedData {
                                         loc.dimension.identifier().toString(),
                                         loc.x, loc.y, loc.z, loc.yaw, loc.pitch);
                             })
+                            .collect(Collectors.toList())),
+            PlayerRealmInfoEntry.CODEC.listOf().optionalFieldOf("playerRealmInfos", List.of()).forGetter(m ->
+                    m.playerRealmInfos.entrySet().stream()
+                            .map(e -> {
+                                PlayerRealmInfo pri = e.getValue();
+                                return new PlayerRealmInfoEntry(e.getKey(), pri.realmOwner,
+                                        pri.minX, pri.maxX, pri.minZ, pri.maxZ,
+                                        pri.spawnX, pri.spawnY, pri.spawnZ);
+                            })
                             .collect(Collectors.toList()))
     ).apply(instance, RealmManager::fromCodecData));
 
     private static RealmManager fromCodecData(int nextPlotIndex,
                                               List<Integer> freePlotIndexList,
                                               List<RealmEntry> realmEntries,
-                                              List<EntryLocEntry> entryLocEntries) {
+                                              List<EntryLocEntry> entryLocEntries,
+                                              List<PlayerRealmInfoEntry> playerRealmInfoEntries) {
         RealmManager mgr = new RealmManager();
         mgr.nextPlotIndex = nextPlotIndex;
         mgr.freePlotIndices.addAll(freePlotIndexList);
@@ -169,6 +213,11 @@ public class RealmManager extends SavedData {
             ResourceKey<Level> dim = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, rl);
             mgr.entryLocations.put(e.playerUUID(),
                     new EntryLocation(dim, e.x(), e.y(), e.z(), e.yaw(), e.pitch()));
+        }
+        for (PlayerRealmInfoEntry e : playerRealmInfoEntries) {
+            mgr.playerRealmInfos.put(e.playerUUID(), new PlayerRealmInfo(
+                    e.realmOwner(), e.minX(), e.maxX(), e.minZ(), e.maxZ(),
+                    e.spawnX(), e.spawnY(), e.spawnZ()));
         }
         return mgr;
     }
@@ -185,11 +234,10 @@ public class RealmManager extends SavedData {
     // -------------------------------------------------------------------------
 
     private int nextPlotIndex = 0;
-    private final TreeSet<Integer>         freePlotIndices = new TreeSet<>();
-    private final Map<UUID, RealmData>     realms          = new HashMap<>();
-    private final Map<UUID, EntryLocation> entryLocations  = new HashMap<>();
-    /** Transient — NOT persisted. playerUUID → realmOwnerUUID */
-    private final Map<UUID, UUID>          playerRealms    = new HashMap<>();
+    private final TreeSet<Integer>              freePlotIndices  = new TreeSet<>();
+    private final Map<UUID, RealmData>          realms           = new HashMap<>();
+    private final Map<UUID, EntryLocation>      entryLocations   = new HashMap<>();
+    private final Map<UUID, PlayerRealmInfo>    playerRealmInfos = new HashMap<>();
 
     // -------------------------------------------------------------------------
     // Access
@@ -231,14 +279,6 @@ public class RealmManager extends SavedData {
     public boolean isWithinRealm(UUID ownerUUID, double x, double z) {
         int[] b = getRealmBounds(ownerUUID);
         return x >= b[0] && x < b[2] && z >= b[1] && z < b[3];
-    }
-
-    @Nullable
-    public UUID findRealmAtPosition(double x, double z) {
-        for (UUID ownerUUID : realms.keySet()) {
-            if (isWithinRealm(ownerUUID, x, z)) return ownerUUID;
-        }
-        return null;
     }
 
     public BlockPos getSpawnPos(UUID ownerUUID) {
@@ -351,20 +391,24 @@ public class RealmManager extends SavedData {
     }
 
     // -------------------------------------------------------------------------
-    // Player→realm transient tracking (not persisted)
+    // Player realm info tracking (persisted)
     // -------------------------------------------------------------------------
 
-    public void setPlayerRealm(UUID playerUUID, UUID realmOwnerUUID) {
-        playerRealms.put(playerUUID, realmOwnerUUID);
+    public void setPlayerRealmInfo(UUID playerUUID, UUID realmOwner,
+                                   int minX, int maxX, int minZ, int maxZ, BlockPos spawn) {
+        playerRealmInfos.put(playerUUID, new PlayerRealmInfo(realmOwner, minX, maxX, minZ, maxZ,
+                spawn.getX(), spawn.getY(), spawn.getZ()));
+        setDirty();
     }
 
     @Nullable
-    public UUID getPlayerRealm(UUID playerUUID) {
-        return playerRealms.get(playerUUID);
+    public PlayerRealmInfo getPlayerRealmInfo(UUID playerUUID) {
+        return playerRealmInfos.get(playerUUID);
     }
 
-    public void clearPlayerRealm(UUID playerUUID) {
-        playerRealms.remove(playerUUID);
+    public void clearPlayerRealmInfo(UUID playerUUID) {
+        playerRealmInfos.remove(playerUUID);
+        setDirty();
     }
 
     // -------------------------------------------------------------------------
