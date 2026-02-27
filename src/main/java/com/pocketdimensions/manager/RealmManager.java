@@ -7,6 +7,8 @@ import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -28,14 +30,16 @@ import java.util.stream.Collectors;
  * Server-side SavedData tracking all realm allocations, anchor bindings, and entry locations.
  * Stored in overworld data storage under "realm_manager".
  *
- * Plot geometry (constants, easy to scale):
- *   realmSize()       = 48    playable XZ area (3x3 chunks)
- *   realmPadding()    = 8     buffer between plot edge and usable realm edge
- *   realmStride()     = realmSize() + 2*realmPadding() = 64   distance between plot origins
- *   Plot origin: ((plotIndex % PLOTS_PER_ROW) * realmStride(), 0, (plotIndex / PLOTS_PER_ROW) * realmStride())
- *   Realm area:  plotOrigin + (realmPadding(), 0, realmPadding()) to plotOrigin + (realmPadding()+realmSize(), *, realmPadding()+realmSize())
- *   WorldCore:   realm area center at (surfaceY)
+ * Plot geometry (chunk-aligned):
+ *   radiusChunks()  r   — config, default 2
+ *   sideChunks()    2r-1 — chunks per plot side (default 3 → 48 blocks)
+ *   paddingChunks() p   — gap chunks between plots (default 1)
+ *   cellChunks()    sideChunks+paddingChunks — stride between plot origins in chunks
+ *   Plot origin (chunks): ((plotIndex % PLOTS_PER_ROW) * cellChunks(), (plotIndex / PLOTS_PER_ROW) * cellChunks())
+ *   Realm area (blocks):  originChunk*16 to (originChunk+sideChunks)*16
+ *   WorldCore:   closest dry-land surface within searchRadius chunks of plot center
  *   Spawn pos:   WorldCore + (1, 0, 0)
+ *   Plots with no dry land are added to invalidPlots and skipped on future allocation.
  */
 public class RealmManager extends SavedData {
 
@@ -48,9 +52,11 @@ public class RealmManager extends SavedData {
     private static final int REALM_BASE_Y  = 64;
 
     // Read from config — not cached, so hot-reloads work (though changing mid-game is discouraged)
-    private static int realmSize()    { return PocketDimensionsConfig.REALM_SIZE.get(); }
-    private static int realmPadding() { return PocketDimensionsConfig.REALM_PADDING.get(); }
-    private static int realmStride()  { return realmSize() + 2 * realmPadding(); }
+    private static int radiusChunks()    { return PocketDimensionsConfig.REALM_RADIUS_CHUNKS.get(); }
+    private static int paddingChunks()   { return PocketDimensionsConfig.REALM_PADDING_CHUNKS.get(); }
+    private static int sideChunks()      { return 2 * radiusChunks() - 1; }
+    private static int cellChunks()      { return sideChunks() + paddingChunks(); }
+    private static int maxSearchChunks() { return PocketDimensionsConfig.MAX_SPAWN_SEARCH_CHUNKS.get(); }
 
     // -------------------------------------------------------------------------
     // Inner data classes
@@ -195,17 +201,21 @@ public class RealmManager extends SavedData {
                                         pri.minX, pri.maxX, pri.minZ, pri.maxZ,
                                         pri.spawnX, pri.spawnY, pri.spawnZ);
                             })
-                            .collect(Collectors.toList()))
+                            .collect(Collectors.toList())),
+            Codec.INT.listOf().optionalFieldOf("invalidPlots", List.of()).forGetter(m ->
+                    new ArrayList<>(m.invalidPlots))
     ).apply(instance, RealmManager::fromCodecData));
 
     private static RealmManager fromCodecData(int nextPlotIndex,
                                               List<Integer> freePlotIndexList,
                                               List<RealmEntry> realmEntries,
                                               List<EntryLocEntry> entryLocEntries,
-                                              List<PlayerRealmInfoEntry> playerRealmInfoEntries) {
+                                              List<PlayerRealmInfoEntry> playerRealmInfoEntries,
+                                              List<Integer> invalidPlotList) {
         RealmManager mgr = new RealmManager();
         mgr.nextPlotIndex = nextPlotIndex;
         mgr.freePlotIndices.addAll(freePlotIndexList);
+        mgr.invalidPlots.addAll(invalidPlotList);
         for (RealmEntry e : realmEntries) mgr.realms.put(e.ownerUUID(), e.toData());
         for (EntryLocEntry e : entryLocEntries) {
             Identifier rl = Identifier.tryParse(e.dimKey());
@@ -235,6 +245,7 @@ public class RealmManager extends SavedData {
 
     private int nextPlotIndex = 0;
     private final TreeSet<Integer>              freePlotIndices  = new TreeSet<>();
+    private final Set<Integer>                  invalidPlots     = new HashSet<>();
     private final Map<UUID, RealmData>          realms           = new HashMap<>();
     private final Map<UUID, EntryLocation>      entryLocations   = new HashMap<>();
     private final Map<UUID, PlayerRealmInfo>    playerRealmInfos = new HashMap<>();
@@ -261,19 +272,21 @@ public class RealmManager extends SavedData {
     // Plot geometry
     // -------------------------------------------------------------------------
 
-    private int[] plotOriginXZ(int plotIndex) {
-        int px = plotIndex % PLOTS_PER_ROW;
-        int pz = plotIndex / PLOTS_PER_ROW;
-        return new int[]{ px * realmStride(), pz * realmStride() };
+    /** Returns [originChunkX, originChunkZ] for the given plot index. */
+    private int[] plotOriginChunkXZ(int plotIndex) {
+        int cell = cellChunks();
+        return new int[]{ (plotIndex % PLOTS_PER_ROW) * cell, (plotIndex / PLOTS_PER_ROW) * cell };
     }
 
+    /** Returns [minBlockX, minBlockZ, maxBlockX, maxBlockZ] (exclusive max). */
     public int[] getRealmBounds(UUID ownerUUID) {
         RealmData data = realms.get(ownerUUID);
         if (data == null) return new int[]{0, 0, 0, 0};
-        int[] orig = plotOriginXZ(data.plotIndex);
-        int minX = orig[0] + realmPadding();
-        int minZ = orig[1] + realmPadding();
-        return new int[]{ minX, minZ, minX + realmSize(), minZ + realmSize() };
+        int[] origChunk = plotOriginChunkXZ(data.plotIndex);
+        int minBlockX = origChunk[0] * 16;
+        int minBlockZ = origChunk[1] * 16;
+        int side = sideChunks() * 16;
+        return new int[]{ minBlockX, minBlockZ, minBlockX + side, minBlockZ + side };
     }
 
     public boolean isWithinRealm(UUID ownerUUID, double x, double z) {
@@ -287,10 +300,10 @@ public class RealmManager extends SavedData {
         if (data.worldCorePos != null) {
             return data.worldCorePos.east(); // worldCorePos + (1, 0, 0)
         }
-        // Fallback: computed center + 1
-        int[] orig = plotOriginXZ(data.plotIndex);
-        int centerX = orig[0] + realmPadding() + realmSize() / 2;
-        int centerZ = orig[1] + realmPadding() + realmSize() / 2;
+        // Fallback: chunk-based center + 1
+        int[] origChunk = plotOriginChunkXZ(data.plotIndex);
+        int centerX = (origChunk[0] + sideChunks() / 2) * 16 + 8;
+        int centerZ = (origChunk[1] + sideChunks() / 2) * 16 + 8;
         return new BlockPos(centerX + 1, REALM_BASE_Y, centerZ);
     }
 
@@ -302,31 +315,116 @@ public class RealmManager extends SavedData {
         RealmData data = realms.get(ownerUUID);
         if (data == null || data.generated) return;
 
-        int[] orig = plotOriginXZ(data.plotIndex);
-        int centerX = orig[0] + realmPadding() + realmSize() / 2;
-        int centerZ = orig[1] + realmPadding() + realmSize() / 2;
-
-        // Force-load the 3×3 chunks around the realm center
-        int cx = centerX >> 4;
-        int cz = centerZ >> 4;
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                realmLevel.getChunk(cx + dx, cz + dz);
+        for (int attempt = 0; attempt < 100; attempt++) {
+            // Skip any plot previously marked as having no dry land
+            if (invalidPlots.contains(data.plotIndex)) {
+                int nextIndex = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
+                data = new RealmData(nextIndex, ownerUUID);
+                realms.put(ownerUUID, data);
+                setDirty();
             }
+
+            int[] origChunk = plotOriginChunkXZ(data.plotIndex);
+            int centerChunkX = origChunk[0] + sideChunks() / 2;
+            int centerChunkZ = origChunk[1] + sideChunks() / 2;
+            int searchRadius = Math.max(1, Math.min(radiusChunks() / 3, maxSearchChunks()));
+
+            // Force-load all chunks in the search area
+            for (int dx = -searchRadius; dx <= searchRadius; dx++) {
+                for (int dz = -searchRadius; dz <= searchRadius; dz++) {
+                    realmLevel.getChunk(centerChunkX + dx, centerChunkZ + dz);
+                }
+            }
+
+            BlockPos landPos = findLandNearCenter(realmLevel, centerChunkX, centerChunkZ, searchRadius);
+
+            if (landPos != null) {
+                realmLevel.setBlock(landPos, ModBlocks.WORLD_CORE.get().defaultBlockState(), 3);
+                if (realmLevel.getBlockEntity(landPos) instanceof WorldCoreBlockEntity wc) {
+                    wc.setOwnerUUID(ownerUUID);
+                }
+                data.worldCorePos = landPos;
+                data.generated = true;
+                setDirty();
+                return;
+            }
+
+            // No dry land found — mark this plot invalid and try the next one
+            invalidPlots.add(data.plotIndex);
+            int nextIndex = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
+            data = new RealmData(nextIndex, ownerUUID);
+            realms.put(ownerUUID, data);
+            setDirty();
         }
 
-        // Find surface Y and place WorldCore on top of terrain
+        // Extreme fallback (100 consecutive water-only plots): force-place at center surface
+        int[] origChunk = plotOriginChunkXZ(data.plotIndex);
+        int centerX = (origChunk[0] + sideChunks() / 2) * 16 + 8;
+        int centerZ = (origChunk[1] + sideChunks() / 2) * 16 + 8;
+        realmLevel.getChunk(centerX >> 4, centerZ >> 4);
         int surfaceY = realmLevel.getHeight(Heightmap.Types.WORLD_SURFACE, centerX, centerZ);
         BlockPos corePos = new BlockPos(centerX, surfaceY, centerZ);
         realmLevel.setBlock(corePos, ModBlocks.WORLD_CORE.get().defaultBlockState(), 3);
-
         if (realmLevel.getBlockEntity(corePos) instanceof WorldCoreBlockEntity wc) {
             wc.setOwnerUUID(ownerUUID);
         }
-
         data.worldCorePos = corePos;
         data.generated = true;
         setDirty();
+    }
+
+    /**
+     * Scans chunks within searchRadius of center, sampling 4×4 points per chunk.
+     * Returns the closest BlockPos where the surface block is solid and fluid-free,
+     * or null if no such position exists in the search area.
+     * The returned Y is the surface height (first air above solid), suitable for WorldCore placement.
+     */
+    @Nullable
+    private BlockPos findLandNearCenter(ServerLevel level, int centerChunkX, int centerChunkZ, int searchRadius) {
+        int centerBlockX = centerChunkX * 16 + 8;
+        int centerBlockZ = centerChunkZ * 16 + 8;
+        BlockPos best = null;
+        double bestDistSq = Double.MAX_VALUE;
+        int[] offsets = {2, 6, 10, 14};
+
+        for (int cx = centerChunkX - searchRadius; cx <= centerChunkX + searchRadius; cx++) {
+            for (int cz = centerChunkZ - searchRadius; cz <= centerChunkZ + searchRadius; cz++) {
+                int baseX = cx * 16;
+                int baseZ = cz * 16;
+                for (int ox : offsets) {
+                    for (int oz : offsets) {
+                        int x = baseX + ox;
+                        int z = baseZ + oz;
+                        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+                        if (y > level.getMinY()) {
+                            BlockPos surfaceBlock = new BlockPos(x, y - 1, z);
+                            BlockState surfaceState = level.getBlockState(surfaceBlock);
+                            if (surfaceState.getFluidState().isEmpty() && surfaceState.isSolid()) {
+                                // If the surface is leaves or logs, scan downward for the forest floor
+                                int placementY = y;
+                                if (surfaceState.is(BlockTags.LEAVES) || surfaceState.is(BlockTags.LOGS)) {
+                                    for (int scanY = y - 2; scanY >= level.getMinY(); scanY--) {
+                                        BlockState scanState = level.getBlockState(new BlockPos(x, scanY, z));
+                                        if (!scanState.is(BlockTags.LEAVES) && !scanState.is(BlockTags.LOGS)) {
+                                            placementY = scanY + 1;
+                                            break;
+                                        }
+                                    }
+                                }
+                                double distSq = (x - centerBlockX) * (x - centerBlockX)
+                                        + (z - centerBlockZ) * (z - centerBlockZ);
+                                if (distSq < bestDistSq) {
+                                    bestDistSq = distSq;
+                                    best = new BlockPos(x, placementY, z);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return best;
     }
 
     // -------------------------------------------------------------------------
