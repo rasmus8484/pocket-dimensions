@@ -200,8 +200,10 @@ public class RealmEventHandler {
         if (stack.isEmpty()) return;                         // empty hand already reaches useWithoutItem
         if (stack.is(ModItems.WORLD_SEED.get())) return;    // WorldSeed handles itself via useOn
 
-        // For any other held item (block items, tools, etc.), prevent the item from acting
-        // so the block's useWithoutItem fires through the normal DEFAULT chain.
+        // Sneaking: let the item act normally so block items (e.g. WorldBreaker) can be placed.
+        if (event.getEntity().isShiftKeyDown()) return;
+
+        // Not sneaking: suppress the item so useWithoutItem fires and the player enters the realm.
         event.setUseItem(Result.DENY);
     }
 

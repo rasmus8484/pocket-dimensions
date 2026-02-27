@@ -40,8 +40,8 @@ public class WorldBreakerBlockEntity extends BlockEntity {
     /** Stack of lapis lazuli fuel. */
     private int fuel = 0;
 
-    /** 20 min × 20 tps × 60 s/min = 24 000 ticks for a full breach. */
-    public static final int BASE_DURATION_TICKS = 24000;
+    /** 30 seconds × 20 tps = 600 ticks (testing value; change to 24000 for production). */
+    public static final int BASE_DURATION_TICKS = 600;
 
     public WorldBreakerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntityTypes.WORLD_BREAKER.get(), pos, state);
