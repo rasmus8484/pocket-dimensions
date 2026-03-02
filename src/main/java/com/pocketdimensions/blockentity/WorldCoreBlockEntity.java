@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -183,4 +184,9 @@ public class WorldCoreBlockEntity extends BlockEntity {
 
     public UUID getOwnerUUID() { return ownerUUID; }
     public void setOwnerUUID(UUID uuid) { this.ownerUUID = uuid; setChanged(); }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        return INFINITE_EXTENT_AABB;
+    }
 }

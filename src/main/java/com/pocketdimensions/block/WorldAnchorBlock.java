@@ -2,6 +2,7 @@ package com.pocketdimensions.block;
 
 import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
+import com.pocketdimensions.init.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -42,12 +43,12 @@ public class WorldAnchorBlock extends BaseEntityBlock {
 
     /**
      * Delegate item-in-hand right-clicks to useWithoutItem so the anchor works regardless
-     * of what the player is holding (WorldSeed is excluded via RealmEventHandler and handles
-     * itself through Item#useOn; all other held items are routed here).
+     * of what the player is holding. WorldSeed is passed through so Item#useOn handles linking.
      */
     @Override
     public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                        Player player, InteractionHand hand, BlockHitResult hit) {
+        if (stack.is(ModItems.WORLD_SEED.get())) return InteractionResult.PASS;
         return useWithoutItem(state, level, pos, player, hit);
     }
 

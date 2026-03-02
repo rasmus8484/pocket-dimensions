@@ -5,6 +5,7 @@ import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BeaconRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
@@ -67,5 +68,16 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
     @Override
     public boolean shouldRenderOffScreen() {
         return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return Minecraft.getInstance().options.getEffectiveRenderDistance() * 16;
+    }
+
+    @Override
+    public boolean shouldRender(WorldCoreBlockEntity be, Vec3 cameraPos) {
+        return Vec3.atCenterOf(be.getBlockPos()).multiply(1.0, 0.0, 1.0)
+                .closerThan(cameraPos.multiply(1.0, 0.0, 1.0), this.getViewDistance());
     }
 }

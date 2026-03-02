@@ -22,11 +22,6 @@ minecraft {
         }
 
         register('client') {
-            args '--launchTarget', 'forge_userdev_client',
-                 '--version', 'MOD_DEV',
-                 '--assetIndex', '{asset_index}',
-                 '--assetsDir', '{assets_root}',
-                 '--gameDir', '.'
         }
 
         register('server') {
