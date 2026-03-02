@@ -219,7 +219,7 @@ public class RealmEventHandler {
                 double clampedX = Math.max(info.minX + M, Math.min(info.maxX - M, x));
                 double clampedZ = Math.max(info.minZ + M, Math.min(info.maxZ - M, z));
                 serverPlayer.displayClientMessage(Component.literal(
-                        "[Realm] Outside boundary - pushed back!"), true);
+                        "An unseen force grips you and pulls you back within the border."), true);
                 // Use connection.teleport() directly - serverPlayer.teleport(TeleportTransition) fires
                 // EntityTravelToDimensionEvent even for same-dimension moves, and our handler cancels
                 // it (player is in REALM_DIM with no pending exit queued).

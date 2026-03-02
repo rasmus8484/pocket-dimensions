@@ -60,7 +60,7 @@ public class WorldCoreBlock extends BaseEntityBlock {
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         WorldCoreBlockEntity be = (WorldCoreBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
-        if (player.isShiftKeyDown() && stack.is(Items.LAPIS_LAZULI)) {
+        if (stack.is(Items.LAPIS_LAZULI)) {
             be.tryInsertFuel(player, stack, level);
         } else {
             be.exitRealm(player, level);

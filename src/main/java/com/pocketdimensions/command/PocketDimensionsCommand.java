@@ -76,19 +76,19 @@ public class PocketDimensionsCommand {
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, executor));
 
         if (hit.getType() != HitResult.Type.BLOCK) {
-            src.sendFailure(Component.literal("[PD] Not looking at a block."));
+            src.sendFailure(Component.literal("You are not looking at a block."));
             return 0;
         }
 
         BlockPos targetPos = hit.getBlockPos();
         if (!(level.getBlockEntity(targetPos) instanceof WorldAnchorBlockEntity anchor)) {
-            src.sendFailure(Component.literal("[PD] Not looking at a WorldAnchor."));
+            src.sendFailure(Component.literal("That is not a World Anchor."));
             return 0;
         }
 
         UUID oldOwner = anchor.getOwnerUUID();
         if (oldOwner == null) {
-            src.sendFailure(Component.literal("[PD] This WorldAnchor has no owner (not linked to a realm)."));
+            src.sendFailure(Component.literal("This anchor has no owner - it has never been linked to a realm."));
             return 0;
         }
 
@@ -108,17 +108,16 @@ public class PocketDimensionsCommand {
             newOwner = resolveByName(server, arg);
             if (newOwner == null) {
                 src.sendFailure(Component.literal(
-                        "[PD] Player '" + arg + "' not found."
-                        + " They must be online, opped, or whitelisted for name lookup."
-                        + " Alternatively, pass their UUID directly:"
-                        + " /pd owner xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"));
+                        "No soul by the name '" + arg + "' could be found."
+                        + " They must be online, opped, or whitelisted."
+                        + " You may also pass a UUID: /pd owner xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"));
                 return 0;
             }
             newOwnerName = arg;
         }
 
         if (oldOwner.equals(newOwner)) {
-            src.sendFailure(Component.literal("[PD] " + newOwnerName + " already owns this anchor."));
+            src.sendFailure(Component.literal(newOwnerName + " already holds dominion over this anchor."));
             return 0;
         }
 
@@ -138,7 +137,7 @@ public class PocketDimensionsCommand {
 
         String finalName = newOwnerName;
         src.sendSuccess(() -> Component.literal(
-                "[PD] Realm ownership transferred to " + finalName + "."), true);
+                "Dominion over the realm has passed to " + finalName + "."), true);
         return 1;
     }
 

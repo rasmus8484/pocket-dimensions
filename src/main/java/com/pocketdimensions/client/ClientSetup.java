@@ -1,5 +1,6 @@
 package com.pocketdimensions.client;
 
+import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import net.minecraftforge.client.event.EntityRenderersEvent;
@@ -18,5 +19,8 @@ public class ClientSetup {
         event.<WorldCoreBlockEntity, WorldCoreRenderState>registerBlockEntityRenderer(
                 ModBlockEntityTypes.WORLD_CORE.get(),
                 ctx -> new WorldCoreBlockEntityRenderer(ctx));
+        event.<WorldBreacherBlockEntity, WorldCoreRenderState>registerBlockEntityRenderer(
+                ModBlockEntityTypes.WORLD_BREACHER.get(),
+                ctx -> new WorldBreacherBlockEntityRenderer(ctx));
     }
 }

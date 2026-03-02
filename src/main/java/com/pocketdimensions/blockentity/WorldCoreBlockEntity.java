@@ -11,10 +11,13 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,14 +37,15 @@ import java.util.UUID;
  * - Accepts lapis fuel from the realm owner to slow active breach attempts (3x slowdown).
  * - Fuel is only consumed while an active breach is running.
  * - Emits a beacon beam whose color reflects current siege state:
- *   blue = normal, pink = World Breacher active, red = Anchor Breaker active.
+ *   blue = normal, pink = World Breacher active, red = Anchor Breaker active or anchor destroyed.
  */
 public class WorldCoreBlockEntity extends BlockEntity {
 
     // Siege state constants
-    public static final int STATE_NORMAL    = 0;
-    public static final int STATE_BREACHING = 1;
-    public static final int STATE_BREAKING  = 2;
+    public static final int STATE_NORMAL      = 0;
+    public static final int STATE_BREACHING   = 1;
+    public static final int STATE_BREAKING    = 2;
+    public static final int STATE_ANCHOR_LOST = 3;
 
     private static final int COLOR_NORMAL    = 0xFF4488FF;  // blue
     private static final int COLOR_BREACHING = 0xFFFF44FF;  // pink
@@ -66,6 +70,20 @@ public class WorldCoreBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   WorldCoreBlockEntity be) {
         if (!(level instanceof ServerLevel serverLevel)) return;
+
+        // Force-load the anchor chunk in overworld so siege blocks can tick
+        if (level.getGameTime() % 200 == 0 && be.ownerUUID != null) {
+            var optAnchor = RealmManager.get(serverLevel.getServer()).getAnchorLocation(be.ownerUUID);
+            if (optAnchor.isPresent()) {
+                var entry = optAnchor.get();
+                ServerLevel anchorLevel = serverLevel.getServer().getLevel(entry.getKey());
+                if (anchorLevel != null) {
+                    ((ServerChunkCache) anchorLevel.getChunkSource())
+                            .addTicketWithRadius(TicketType.PORTAL, new ChunkPos(entry.getValue()), 2);
+                }
+            }
+        }
+
         if (level.getGameTime() % 20 != 0) return;
 
         int newState = computeSiegeState(be, serverLevel);
@@ -81,7 +99,7 @@ public class WorldCoreBlockEntity extends BlockEntity {
         MinecraftServer server = serverLevel.getServer();
         if (server == null) return STATE_NORMAL;
         var optAnchor = RealmManager.get(server).getAnchorLocation(be.ownerUUID);
-        if (optAnchor.isEmpty()) return STATE_NORMAL;
+        if (optAnchor.isEmpty()) return STATE_ANCHOR_LOST;
         var anchorEntry = optAnchor.get();
         ServerLevel anchorLevel = server.getLevel(anchorEntry.getKey());
         if (anchorLevel == null) return STATE_NORMAL;
@@ -111,7 +129,7 @@ public class WorldCoreBlockEntity extends BlockEntity {
     public void tryInsertFuel(Player player, ItemStack stack, Level level) {
         if (ownerUUID == null || !player.getUUID().equals(ownerUUID)) {
             player.displayClientMessage(Component.literal(
-                    "[WorldCore] Fuel: " + defenseFuel + " lapis | Only the realm owner can insert fuel."), false);
+                    "The core pulses faintly (" + defenseFuel + " lapis within) but refuses your hand. Only the realm's master may feed it."), false);
             return;
         }
         int toAdd = stack.getCount();
@@ -119,7 +137,7 @@ public class WorldCoreBlockEntity extends BlockEntity {
         stack.shrink(toAdd);
         setChanged();
         player.displayClientMessage(Component.literal(
-                "[WorldCore] Inserted " + toAdd + " lapis. Total defense fuel: " + defenseFuel), false);
+                "The core swallows the lapis whole - its light steadies. (" + defenseFuel + " stored)"), false);
     }
 
     /** Called by siege block entities to check if the defender slowdown is active. */
@@ -136,9 +154,10 @@ public class WorldCoreBlockEntity extends BlockEntity {
     /** Returns the ARGB beam colour for the current siege state. */
     public int getBeamColor() {
         return switch (siegeState) {
-            case STATE_BREACHING -> COLOR_BREACHING;
-            case STATE_BREAKING  -> COLOR_BREAKING;
-            default              -> COLOR_NORMAL;
+            case STATE_BREACHING   -> COLOR_BREACHING;
+            case STATE_BREAKING    -> COLOR_BREAKING;
+            case STATE_ANCHOR_LOST -> COLOR_BREAKING;
+            default                -> COLOR_NORMAL;
         };
     }
 

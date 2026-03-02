@@ -38,12 +38,12 @@ Each player can own one realm — a region of overworld-like terrain (no structu
 
 **How to use:**
 1. Place a **World Anchor** anywhere in the overworld
-2. Use a **World Seed** on the anchor — this allocates your realm and links the anchor as the entry point
+2. Use a **World Seed** on the anchor — the seed crumbles into the anchor and condenses a dimensional tunnel to your realm
 3. **Right-click** the linked anchor to enter your realm (owner always has access)
 4. **Right-click** the **World Core** (indestructible block at your realm's center) to exit back to where you entered
 5. As the owner, **crouch + right-click** the World Core with lapis lazuli to add defensive fuel
 
-The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, players inside can still exit via the World Core but nobody can re-enter until the owner links a new anchor.
+The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core's beacon turns red and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
@@ -72,9 +72,11 @@ Two siege blocks can be placed on top of a World Anchor, both fueled by lapis la
 **Beacon indicator:** The World Core emits a beacon beam visible from the realm:
 - **Blue** — no active siege
 - **Pink** — World Breacher is present on the anchor
-- **Red** — Anchor Breaker is active and fueled
+- **Red** — Anchor Breaker is active and fueled, or the anchor has been destroyed
 
 Both siege blocks require placement directly on top of a World Anchor and will drop if the anchor is removed.
+
+**Cross-dimension awareness:** Siege blocks and the World Core force-load each other's chunks across dimensions, so boss bars are visible to players inside the realm during an active siege and the beacon color stays accurate regardless of which dimension players are in.
 
 ### Configuration
 

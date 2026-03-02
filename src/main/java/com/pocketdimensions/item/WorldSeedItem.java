@@ -58,7 +58,7 @@ public class WorldSeedItem extends Item {
         if (level.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity anchorBe
                 && anchorBe.isLinked()) {
             player.displayClientMessage(Component.literal(
-                    "[PocketDimensions] This anchor is already linked to a realm."), false);
+                    "The anchor hums with an existing bond. It cannot accept another."), false);
             return InteractionResult.FAIL;
         }
 
@@ -77,7 +77,7 @@ public class WorldSeedItem extends Item {
                 if (existingDim != null
                         && existingDim.getBlockState(existing.getValue()).is(ModBlocks.WORLD_ANCHOR.get())) {
                     player.displayClientMessage(Component.literal(
-                            "[PocketDimensions] Your realm already has an anchor. Break it first to rekey."), false);
+                            "Your realm is still tethered to another anchor. Sever it first."), false);
                     return InteractionResult.FAIL;
                 }
             }
@@ -92,6 +92,10 @@ public class WorldSeedItem extends Item {
         if (!(level.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity be)) {
             return InteractionResult.FAIL;
         }
+
+        // Immediate feedback — the heavy generation work comes next
+        player.displayClientMessage(Component.literal(
+                "The seed crumbles into the anchor... condensing dimensional tunnel..."), false);
 
         be.setOwnerUUID(playerUUID);
         be.setLinked(true);
@@ -109,7 +113,7 @@ public class WorldSeedItem extends Item {
         }
 
         player.displayClientMessage(Component.literal(
-                "[PocketDimensions] Realm linked to this anchor. Right-click to enter."), false);
+                "...the bridge stabilizes. Right-click the anchor to cross over."), false);
         return InteractionResult.SUCCESS;
     }
 }

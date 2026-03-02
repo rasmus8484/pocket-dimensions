@@ -89,14 +89,14 @@ public class PocketItem extends Item {
         if (!level.isClientSide()) {
             if (!level.getBlockState(placePos).canBeReplaced()) {
                 player.displayClientMessage(
-                        Component.literal("[PocketDimensions] Cannot place anchor here."), false);
+                        Component.literal("The ground here is too solid. The anchor cannot take root."), false);
                 return InteractionResult.FAIL;
             }
 
             UUID pocketId = getPocketId(stack);
             if (pocketId == null) {
                 player.displayClientMessage(
-                        Component.literal("[PocketDimensions] This Pocket Item has no room linked yet."), false);
+                        Component.literal("This token is blank - no pocket has been folded into it yet."), false);
                 return InteractionResult.FAIL;
             }
 
@@ -154,7 +154,7 @@ public class PocketItem extends Item {
         ServerLevel pocketLevel = server.getLevel(PocketDimensionsMod.POCKET_DIM);
         if (pocketLevel == null) {
             player.displayClientMessage(
-                    Component.literal("[PocketDimensions] Pocket dimension unavailable!"), false);
+                    Component.literal("The fold between worlds has collapsed. The pocket cannot be reached."), false);
             return InteractionResult.FAIL;
         }
 

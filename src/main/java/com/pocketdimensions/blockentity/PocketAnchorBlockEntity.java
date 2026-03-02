@@ -57,7 +57,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
      */
     public void enterRoom(Player player, Level level, BlockPos pos) {
         if (pocketId == null) {
-            player.displayClientMessage(Component.literal("[PocketDimensions] This anchor is not linked to any room."), false);
+            player.displayClientMessage(Component.literal("This anchor is hollow - no pocket is folded within."), false);
             return;
         }
         if (level.isClientSide()) return;
@@ -68,7 +68,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
         PocketRoomManager mgr = PocketRoomManager.get(server);
         ServerLevel pocketLevel = server.getLevel(PocketDimensionsMod.POCKET_DIM);
         if (pocketLevel == null) {
-            player.displayClientMessage(Component.literal("[PocketDimensions] Pocket dimension unavailable!"), false);
+            player.displayClientMessage(Component.literal("The fold between worlds has collapsed. The pocket cannot be reached."), false);
             return;
         }
 

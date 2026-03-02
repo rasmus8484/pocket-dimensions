@@ -77,34 +77,26 @@ public class WorldBreacherBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
-    /** Right-click with lapis -> add fuel. Right-click empty hand -> show status. */
+    /** Right-click with lapis -> add fuel. Non-lapis items pass through. */
     @Override
     public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                        Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!stack.is(Items.LAPIS_LAZULI)) return InteractionResult.PASS;
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         WorldBreacherBlockEntity be = (WorldBreacherBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
 
-        if (stack.is(Items.LAPIS_LAZULI)) {
-            int amount = stack.getCount();
-            be.addFuel(amount);
-            if (!player.getAbilities().instabuild) stack.shrink(amount);
-            player.displayClientMessage(Component.literal(
-                    "[World Breacher] Added " + amount + " lapis. Fuel: " + be.getFuel()), false);
-            return InteractionResult.SUCCESS;
-        }
-
-        be.sendStatusTo(player);
+        int amount = stack.getCount();
+        be.addFuel(amount);
+        if (!player.getAbilities().instabuild) stack.shrink(amount);
+        player.displayClientMessage(Component.literal(
+                "The breacher drinks in the lapis. (" + be.getFuel() + " stored)"), false);
         return InteractionResult.SUCCESS;
     }
 
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
-        if (level.isClientSide()) return InteractionResult.SUCCESS;
-        WorldBreacherBlockEntity be = (WorldBreacherBlockEntity) level.getBlockEntity(pos);
-        if (be == null) return InteractionResult.FAIL;
-        be.sendStatusTo(player);
-        return InteractionResult.SUCCESS;
+        return InteractionResult.PASS;
     }
 }

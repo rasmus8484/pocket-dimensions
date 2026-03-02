@@ -35,6 +35,9 @@ public class PocketDimensionsConfig {
     /** Ticks between each attacker lapis consumed. Default 200. */
     public static final ForgeConfigSpec.IntValue CORE_FUEL_BURN_TICKS;
 
+    /** Radius in blocks within which players see siege boss bars. */
+    public static final ForgeConfigSpec.IntValue SIEGE_BOSSBAR_RANGE;
+
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
@@ -75,6 +78,10 @@ public class PocketDimensionsConfig {
         CORE_FUEL_BURN_TICKS = builder
                 .comment("Ticks between each attacker lapis consumed.")
                 .defineInRange("core_fuel_burn_ticks", 200, 1, Integer.MAX_VALUE);
+
+        SIEGE_BOSSBAR_RANGE = builder
+                .comment("Radius in blocks within which players see siege boss bars.")
+                .defineInRange("siege_bossbar_range", 64, 8, 256);
 
         builder.pop();
 

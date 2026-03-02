@@ -52,34 +52,34 @@ public class WorldAnchorBlockEntity extends BlockEntity {
     public void tryEnterRealm(Player player, Level level, BlockPos pos) {
         if (!linked || ownerUUID == null) {
             player.displayClientMessage(Component.literal(
-                    "[PocketDimensions] This anchor is not linked. Use a WorldSeed on it first."), false);
+                    "The anchor sits cold and dormant. It needs a World Seed to awaken."), false);
             return;
         }
 
         // No use inside a pocket room
         if (level.dimension().equals(PocketDimensionsMod.POCKET_DIM)) {
             player.displayClientMessage(Component.literal(
-                    "[PocketDimensions] Cannot enter a realm from inside a pocket room."), false);
+                    "The walls of this pocket press too close. You cannot reach a realm from here."), false);
             return;
         }
 
         // No re-entry from inside the realm
         if (level.dimension().equals(PocketDimensionsMod.REALM_DIM)) {
             player.displayClientMessage(Component.literal(
-                    "[PocketDimensions] You are already in a realm."), false);
+                    "You already stand on foreign ground."), false);
             return;
         }
 
         // Phase 4: owner always; anyone else only if a completed World Breacher with fuel is on top
         if (!canAccess(player, level, worldPosition)) {
-            player.displayClientMessage(Component.literal("[PocketDimensions] Access denied."), false);
+            player.displayClientMessage(Component.literal("The anchor's wards hold firm. You shall not pass."), false);
             return;
         }
 
         MinecraftServer server = level.getServer();
         if (server == null) {
             LOGGER.warn("[WorldAnchor] server is null - level.isClientSide()={}", level.isClientSide());
-            player.displayClientMessage(Component.literal("[PocketDimensions] Error: server unavailable."), false);
+            player.displayClientMessage(Component.literal("The rift flickers and collapses. Something is deeply wrong."), false);
             return;
         }
 
@@ -87,7 +87,7 @@ public class WorldAnchorBlockEntity extends BlockEntity {
         ServerLevel realmLevel = server.getLevel(PocketDimensionsMod.REALM_DIM);
         if (realmLevel == null) {
             player.displayClientMessage(Component.literal(
-                    "[PocketDimensions] Realm dimension unavailable. Check server logs."), false);
+                    "The realm beyond refuses to answer. The void is silent."), false);
             return;
         }
 

@@ -12,15 +12,24 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -41,6 +50,9 @@ public class WorldBreacherBlockEntity extends BlockEntity {
     /** Stack of lapis lazuli fuel. */
     private int fuel = 0;
 
+    /** Transient boss bar — not saved to NBT; recreated lazily after server restart. */
+    private ServerBossEvent bossBar = null;
+
     public WorldBreacherBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntityTypes.WORLD_BREACHER.get(), pos, state);
     }
@@ -52,47 +64,189 @@ public class WorldBreacherBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   WorldBreacherBlockEntity be) {
         if (!(level instanceof ServerLevel serverLevel)) return;
-        if (be.fuel <= 0) return;  // Paused, no decay
 
         // Check that WorldAnchor is directly below
         BlockPos anchorPos = pos.below();
-        if (!(level.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity anchor)) return;
+        boolean hasAnchor = level.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity;
+        WorldAnchorBlockEntity anchor = hasAnchor
+                ? (WorldAnchorBlockEntity) level.getBlockEntity(anchorPos) : null;
 
         // Check defender slowdown from WorldCore inside the realm
-        boolean defenderSlowed = be.isDefenderCoreActive(serverLevel, anchor);
+        boolean defended = hasAnchor && anchor != null && be.isDefenderCoreActive(serverLevel, anchor);
 
-        // Progress: normally +1/tick; with defender core: +1 every CORE_SLOW_FACTOR ticks
-        boolean shouldAdvance = !defenderSlowed
-                || (level.getGameTime() % PocketDimensionsConfig.CORE_SLOW_FACTOR.get() == 0);
-        if (shouldAdvance) {
-            be.progressTicks = Math.min(be.progressTicks + 1,
-                    PocketDimensionsConfig.BREACH_DURATION_TICKS.get());
-            be.setChanged();
+        // Progress + fuel drain (only when fueled and anchor present)
+        if (be.fuel > 0 && hasAnchor && anchor != null) {
+            boolean shouldAdvance = !defended
+                    || (level.getGameTime() % PocketDimensionsConfig.CORE_SLOW_FACTOR.get() == 0);
+            if (shouldAdvance) {
+                boolean wasDone = be.isBreachComplete();
+                be.progressTicks = Math.min(be.progressTicks + 1,
+                        PocketDimensionsConfig.BREACH_DURATION_TICKS.get());
+                be.setChanged();
+                // Sync to client the moment breach completes so the beacon beam appears immediately
+                if (!wasDone && be.isBreachComplete()) {
+                    level.sendBlockUpdated(pos, state, state, 3);
+                }
+            }
+
+            // Every CORE_FUEL_BURN_TICKS: drain 1 attacker lapis; drain 1 defender lapis if active
+            if (level.getGameTime() % PocketDimensionsConfig.CORE_FUEL_BURN_TICKS.get() == 0) {
+                be.fuel = Math.max(0, be.fuel - 1);
+                if (defended) {
+                    be.consumeDefenderFuel(serverLevel, anchor);
+                }
+                be.setChanged();
+            }
         }
 
-        // Every CORE_FUEL_BURN_TICKS: drain 1 attacker lapis; drain 1 defender lapis if active
-        if (level.getGameTime() % PocketDimensionsConfig.CORE_FUEL_BURN_TICKS.get() == 0) {
-            be.fuel = Math.max(0, be.fuel - 1);
-            if (defenderSlowed) {
-                be.consumeDefenderFuel(serverLevel, anchor);
+        // Force-load the WorldCore chunk in realm so it can tick (beacon color, defense fuel)
+        if (level.getGameTime() % 200 == 0 && (be.fuel > 0 || be.progressTicks > 0)
+                && anchor != null && anchor.getOwnerUUID() != null) {
+            BlockPos corePos = RealmManager.get(serverLevel.getServer()).getWorldCorePos(anchor.getOwnerUUID());
+            if (corePos != null) {
+                ServerLevel realmLevel = serverLevel.getServer().getLevel(PocketDimensionsMod.REALM_DIM);
+                if (realmLevel != null) {
+                    ((ServerChunkCache) realmLevel.getChunkSource())
+                            .addTicketWithRadius(TicketType.PORTAL, new ChunkPos(corePos), 2);
+                }
             }
-            be.setChanged();
+        }
+
+        // --- Boss bar management ---
+        // Dismiss boss bar when breach is complete (beacon beam replaces it)
+        if (be.isBreachComplete()) {
+            if (be.bossBar != null) {
+                be.bossBar.removeAllPlayers();
+                be.bossBar = null;
+            }
+        } else if (be.progressTicks > 0 || be.fuel > 0) {
+            // Lazy create
+            if (be.bossBar == null) {
+                be.bossBar = new ServerBossEvent(
+                        buildBarName(be, defended),
+                        pickColor(be, defended),
+                        BossEvent.BossBarOverlay.PROGRESS);
+            }
+
+            // Every tick: update progress float
+            int duration = PocketDimensionsConfig.BREACH_DURATION_TICKS.get();
+            be.bossBar.setProgress(Math.min((float) be.progressTicks / duration, 1.0f));
+
+            // Every 20 ticks: update name, color, player list
+            if (level.getGameTime() % 20 == 0) {
+                be.bossBar.setName(buildBarName(be, defended));
+                be.bossBar.setColor(pickColor(be, defended));
+                updateBossBarPlayers(be.bossBar, serverLevel, pos, anchor);
+            }
+        } else if (be.bossBar != null) {
+            // No progress and no fuel — remove bar
+            be.bossBar.removeAllPlayers();
+            be.bossBar = null;
         }
     }
 
     /** Reset progress when the block is removed from the world. */
     @Override
     public void setRemoved() {
+        if (bossBar != null) {
+            bossBar.removeAllPlayers();
+            bossBar = null;
+        }
         progressTicks = 0;
         super.setRemoved();
     }
 
-    /** Shows siege status message to the interacting player. */
-    public void sendStatusTo(Player player) {
-        int pct = (int) ((progressTicks / (double) PocketDimensionsConfig.BREACH_DURATION_TICKS.get()) * 100);
-        player.displayClientMessage(Component.literal(
-                "[World Breacher] Siege progress: " + pct + "% | Fuel: " + fuel + " lapis"), false);
+    // -------------------------------------------------------------------------
+    // Boss bar helpers
+    // -------------------------------------------------------------------------
+
+    private static Component buildBarName(WorldBreacherBlockEntity be, boolean defended) {
+        int duration = PocketDimensionsConfig.BREACH_DURATION_TICKS.get();
+        int pct = (int) ((be.progressTicks / (double) duration) * 100);
+        boolean complete = be.progressTicks >= duration;
+        boolean paused = be.fuel <= 0;
+
+        StringBuilder sb = new StringBuilder("Breaching the Veil \u2014 ").append(pct).append("%");
+
+        if (complete) {
+            sb.append(" \u2014 The Veil is Torn!");
+        } else if (paused) {
+            sb.append(" \u2014 Dormant (starved of lapis)");
+        } else {
+            int remainingTicks = duration - be.progressTicks;
+            int etaSeconds = defended
+                    ? (remainingTicks * PocketDimensionsConfig.CORE_SLOW_FACTOR.get()) / 20
+                    : remainingTicks / 20;
+            sb.append(" \u2014 ").append(formatTime(etaSeconds));
+        }
+
+        if (defended && !complete && !paused) {
+            sb.append(" \u2014 Warded");
+        }
+
+        return Component.literal(sb.toString());
     }
+
+    private static BossEvent.BossBarColor pickColor(WorldBreacherBlockEntity be, boolean defended) {
+        int duration = PocketDimensionsConfig.BREACH_DURATION_TICKS.get();
+        if (be.progressTicks >= duration) return BossEvent.BossBarColor.GREEN;
+        if (be.fuel <= 0) return BossEvent.BossBarColor.WHITE;
+        if (defended) return BossEvent.BossBarColor.YELLOW;
+        return BossEvent.BossBarColor.BLUE;
+    }
+
+    private static String formatTime(int totalSeconds) {
+        if (totalSeconds <= 0) return "0s";
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        int seconds = totalSeconds % 60;
+        StringBuilder sb = new StringBuilder();
+        if (hours > 0) sb.append(hours).append("h ");
+        if (minutes > 0) sb.append(minutes).append("m ");
+        sb.append(seconds).append("s");
+        return sb.toString();
+    }
+
+    private static void updateBossBarPlayers(ServerBossEvent bar, ServerLevel level, BlockPos pos,
+                                               @Nullable WorldAnchorBlockEntity anchor) {
+        MinecraftServer server = level.getServer();
+        double range = PocketDimensionsConfig.SIEGE_BOSSBAR_RANGE.get();
+
+        // Players near the siege block in the overworld
+        Set<ServerPlayer> eligible = new HashSet<>(
+                server.getPlayerList().getPlayers().stream()
+                        .filter(p -> p.level() == level && p.blockPosition().closerThan(pos, range))
+                        .toList());
+
+        // Players inside the linked realm plot
+        if (anchor != null && anchor.getOwnerUUID() != null) {
+            RealmManager rm = RealmManager.get(server);
+            int[] bounds = rm.getRealmBounds(anchor.getOwnerUUID());
+            ServerLevel realmLevel = server.getLevel(PocketDimensionsMod.REALM_DIM);
+            if (realmLevel != null) {
+                for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                    if (p.level() == realmLevel
+                            && p.getX() >= bounds[0] && p.getX() < bounds[2]
+                            && p.getZ() >= bounds[1] && p.getZ() < bounds[3]) {
+                        eligible.add(p);
+                    }
+                }
+            }
+        }
+
+        // Remove players who left, add players who entered
+        Set<ServerPlayer> current = new HashSet<>(bar.getPlayers());
+        for (ServerPlayer p : current) {
+            if (!eligible.contains(p)) bar.removePlayer(p);
+        }
+        for (ServerPlayer p : eligible) {
+            if (!current.contains(p)) bar.addPlayer(p);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Defender helpers
+    // -------------------------------------------------------------------------
 
     /** Returns true if the realm's WorldCore has defense fuel, without consuming it. */
     private boolean isDefenderCoreActive(ServerLevel level, WorldAnchorBlockEntity anchor) {
@@ -159,4 +313,9 @@ public class WorldBreacherBlockEntity extends BlockEntity {
     public int getProgressTicks() { return progressTicks; }
     public int getFuel() { return fuel; }
     public void addFuel(int amount) { fuel += amount; setChanged(); }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        return INFINITE_EXTENT_AABB;
+    }
 }

@@ -54,7 +54,7 @@ public class PocketEventHandler {
         if (event.getEntityLiving().level().dimension().equals(PocketDimensionsMod.POCKET_DIM)) {
             if (event.getEntityLiving() instanceof net.minecraft.world.entity.player.Player p) {
                 p.displayClientMessage(
-                        Component.literal("[PocketDimensions] Chorus fruit doesn't work in here."), true);
+                        Component.literal("The fruit's pull fizzles against the pocket walls."), true);
             }
             return true; // cancel
         }
@@ -203,7 +203,7 @@ public class PocketEventHandler {
 
             if (!mgr.getOccupants(pocketId).isEmpty()) {
                 player.displayClientMessage(
-                        Component.literal("[PocketDimensions] Warning: players are inside this room!"),
+                        Component.literal("Voices still echo from within - someone is inside!"),
                         true);
             }
 
