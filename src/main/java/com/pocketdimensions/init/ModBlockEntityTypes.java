@@ -1,6 +1,7 @@
 package com.pocketdimensions.init;
 
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.blockentity.AnchorBreakerBlockEntity;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldBreakerBlockEntity;
@@ -36,4 +37,9 @@ public class ModBlockEntityTypes {
             BLOCK_ENTITY_TYPES.register("world_core",
                     () -> new BlockEntityType<>(WorldCoreBlockEntity::new,
                             Set.of(ModBlocks.WORLD_CORE.get())));
+
+    public static final RegistryObject<BlockEntityType<AnchorBreakerBlockEntity>> ANCHOR_BREAKER =
+            BLOCK_ENTITY_TYPES.register("anchor_breaker",
+                    () -> new BlockEntityType<>(AnchorBreakerBlockEntity::new,
+                            Set.of(ModBlocks.ANCHOR_BREAKER.get())));
 }

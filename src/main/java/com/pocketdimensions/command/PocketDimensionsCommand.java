@@ -31,8 +31,8 @@ import java.util.UUID;
  * Registers all "/pd" sub-commands.
  *
  * Syntax:
- *   /pd owner <name>                               — resolve by player name
- *   /pd owner 550e8400-e29b-41d4-a716-446655440000 — resolve by raw UUID
+ *   /pd owner <name>                               - resolve by player name
+ *   /pd owner 550e8400-e29b-41d4-a716-446655440000 - resolve by raw UUID
  *
  * The argument is auto-detected: if it parses as a UUID it is used directly;
  * otherwise it is treated as a player name and resolved via:
@@ -68,7 +68,7 @@ public class PocketDimensionsCommand {
         ServerPlayer executor = src.getPlayerOrException();
         ServerLevel level = src.getLevel();
 
-        // Ray-cast from executor's eyes — find the WorldAnchor they are looking at (up to 5 blocks)
+        // Ray-cast from executor's eyes - find the WorldAnchor they are looking at (up to 5 blocks)
         Vec3 eyePos = executor.getEyePosition();
         Vec3 lookEnd = eyePos.add(executor.getLookAngle().scale(5.0));
         BlockHitResult hit = level.clip(new ClipContext(
@@ -92,7 +92,7 @@ public class PocketDimensionsCommand {
             return 0;
         }
 
-        // ── Resolve new owner UUID from the argument ──────────────────────────
+        // -- Resolve new owner UUID from the argument --------------------------
         String arg = StringArgumentType.getString(ctx, "player");
         UUID newOwner;
         String newOwnerName;
@@ -104,7 +104,7 @@ public class PocketDimensionsCommand {
             ServerPlayer online = server.getPlayerList().getPlayer(newOwner);
             newOwnerName = (online != null) ? online.getName().getString() : arg;
         } else {
-            // Name lookup: online → ops list → whitelist
+            // Name lookup: online -> ops list -> whitelist
             newOwner = resolveByName(server, arg);
             if (newOwner == null) {
                 src.sendFailure(Component.literal(
@@ -122,7 +122,7 @@ public class PocketDimensionsCommand {
             return 0;
         }
 
-        // ── Transfer ownership across all three data holders ──────────────────
+        // -- Transfer ownership across all three data holders ------------------
         RealmManager mgr = RealmManager.get(server);
         mgr.transferOwnership(oldOwner, newOwner);
         anchor.setOwnerUUID(newOwner);
@@ -148,7 +148,7 @@ public class PocketDimensionsCommand {
 
     /**
      * Resolves a player name to a UUID.
-     * Checks: online players → op list → whitelist.
+     * Checks: online players -> op list -> whitelist.
      * Returns null if the name cannot be found in any of those sources.
      */
     private static UUID resolveByName(MinecraftServer server, String name) {

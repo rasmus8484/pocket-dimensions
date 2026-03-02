@@ -6,6 +6,7 @@ import com.pocketdimensions.event.PocketEventHandler;
 import com.pocketdimensions.event.RealmEventHandler;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.init.ModBlocks;
+import com.pocketdimensions.init.ModChunkGenerators;
 import com.pocketdimensions.init.ModCreativeTabs;
 import com.pocketdimensions.init.ModItems;
 import net.minecraft.core.registries.Registries;
@@ -43,6 +44,7 @@ public class PocketDimensionsMod {
         ModItems.ITEMS.register(modBusGroup);
         ModBlockEntityTypes.BLOCK_ENTITY_TYPES.register(modBusGroup);
         ModCreativeTabs.CREATIVE_TABS.register(modBusGroup);
+        ModChunkGenerators.CHUNK_GENERATORS.register(modBusGroup);
 
         new PocketEventHandler();
         new RealmEventHandler();

@@ -23,19 +23,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.Set;
 import java.util.UUID;
 
 /**
- * Pocket Item — the key/token for a pocket room.
+ * Pocket Item - the key/token for a pocket room.
  * <p>
  * Carries {@code pocket_id} (UUID as int array) in item CustomData. The UUID is never used to
  * derive coordinates; only the server-side PocketRoomManager mapping is authoritative.
  * <p>
  * Behaviours:
- * - Crouch + right-click on block face  → pre-place a Pocket Anchor at that face
- * - Right-click on block face (no shift) → enter room (allocate if needed, place anchor at feet)
- * - Right-click in air (use())           → same as right-click block without shift
+ * - Crouch + right-click on block face  -> pre-place a Pocket Anchor at that face
+ * - Right-click on block face (no shift) -> enter room (allocate if needed, place anchor at feet)
+ * - Right-click in air (use())           -> same as right-click block without shift
  */
 public class PocketItem extends Item {
 
@@ -44,7 +43,7 @@ public class PocketItem extends Item {
     }
 
     // -------------------------------------------------------------------------
-    // useOn — right-click on a block face
+    // useOn - right-click on a block face
     // -------------------------------------------------------------------------
 
     @Override
@@ -68,7 +67,7 @@ public class PocketItem extends Item {
     }
 
     // -------------------------------------------------------------------------
-    // use — right-click in air (no block target)
+    // use - right-click in air (no block target)
     // -------------------------------------------------------------------------
 
     @Override
@@ -119,7 +118,7 @@ public class PocketItem extends Item {
      * Allocate a room if needed, place anchor at player's feet, then teleport in.
      */
     private InteractionResult enterOrAllocate(ItemStack stack, Player player, Level level, InteractionHand hand) {
-        // Never enter from inside the pocket dimension — prevents entry location being overwritten
+        // Never enter from inside the pocket dimension - prevents entry location being overwritten
         // with a pocket-dim coordinate, which would make exit loop back into the room.
         if (level.dimension().equals(PocketDimensionsMod.POCKET_DIM)) return InteractionResult.PASS;
 

@@ -1,7 +1,7 @@
 package com.pocketdimensions.blockentity;
 
-import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.PocketDimensionsConfig;
+import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.manager.RealmManager;
 import net.minecraft.core.BlockPos;
@@ -15,6 +15,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -24,33 +25,29 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * World Breacher block entity - tracks siege progress and lapis fuel.
- * <p>
- * Progress rules:
- * - Base duration: config BREACH_DURATION_TICKS (default 24000 = 1 MC day).
- * - Advances only when: breacher exists, WorldAnchor below exists, fuel > 0, chunk loaded.
- * - If fuel runs out: progress PAUSES (no decay).
- * - If breacher is destroyed: progress RESETS to 0.
- * - WorldCore fuel (defender) reduces progress rate to 1/CORE_SLOW_FACTOR.
+ * Anchor Breaker block entity - tracks anchor-destruction progress and lapis fuel.
+ *
+ * Progress rules mirror WorldBreakerBlockEntity, but on completion this block
+ * permanently removes the WorldAnchor beneath it (and drops itself via neighborChanged).
  */
-public class WorldBreakerBlockEntity extends BlockEntity {
+public class AnchorBreakerBlockEntity extends BlockEntity {
 
-    /** Ticks of progress. Full breach = BREACH_DURATION_TICKS. */
+    /** Ticks of progress. Full destruction = BREAKER_DURATION_TICKS. */
     private int progressTicks = 0;
 
     /** Stack of lapis lazuli fuel. */
     private int fuel = 0;
 
-    public WorldBreakerBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntityTypes.WORLD_BREAKER.get(), pos, state);
+    public AnchorBreakerBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntityTypes.ANCHOR_BREAKER.get(), pos, state);
     }
 
     // -------------------------------------------------------------------------
-    // Server tick (called from WorldBreakerBlock.getTicker)
+    // Server tick (called from AnchorBreakerBlock.getTicker)
     // -------------------------------------------------------------------------
 
     public static void serverTick(Level level, BlockPos pos, BlockState state,
-                                  WorldBreakerBlockEntity be) {
+                                  AnchorBreakerBlockEntity be) {
         if (!(level instanceof ServerLevel serverLevel)) return;
         if (be.fuel <= 0) return;  // Paused, no decay
 
@@ -65,8 +62,7 @@ public class WorldBreakerBlockEntity extends BlockEntity {
         boolean shouldAdvance = !defenderSlowed
                 || (level.getGameTime() % PocketDimensionsConfig.CORE_SLOW_FACTOR.get() == 0);
         if (shouldAdvance) {
-            be.progressTicks = Math.min(be.progressTicks + 1,
-                    PocketDimensionsConfig.BREACH_DURATION_TICKS.get());
+            be.progressTicks++;
             be.setChanged();
         }
 
@@ -78,6 +74,17 @@ public class WorldBreakerBlockEntity extends BlockEntity {
             }
             be.setChanged();
         }
+
+        // On completion: clear anchor from RealmManager, then destroy the anchor block
+        if (be.progressTicks >= PocketDimensionsConfig.BREAKER_DURATION_TICKS.get()) {
+            UUID ownerUUID = anchor.getOwnerUUID();
+            if (ownerUUID != null) {
+                RealmManager.get(serverLevel.getServer()).clearAnchorLocation(ownerUUID);
+            }
+            // Destroying the anchor triggers neighborChanged on this block -> drops this block
+            level.setBlock(anchorPos, Blocks.AIR.defaultBlockState(), 3);
+            return;  // do not touch `be` after block removal
+        }
     }
 
     /** Reset progress when the block is removed from the world. */
@@ -87,11 +94,11 @@ public class WorldBreakerBlockEntity extends BlockEntity {
         super.setRemoved();
     }
 
-    /** Shows siege status message to the interacting player. */
+    /** Shows destruction status message to the interacting player. */
     public void sendStatusTo(Player player) {
-        int pct = (int) ((progressTicks / (double) PocketDimensionsConfig.BREACH_DURATION_TICKS.get()) * 100);
+        int pct = (int) ((progressTicks / (double) PocketDimensionsConfig.BREAKER_DURATION_TICKS.get()) * 100);
         player.displayClientMessage(Component.literal(
-                "[World Breacher] Siege progress: " + pct + "% | Fuel: " + fuel + " lapis"), false);
+                "[Anchor Breaker] Anchor destruction: " + pct + "% | Fuel: " + fuel + " lapis"), false);
     }
 
     /** Returns true if the realm's WorldCore has defense fuel, without consuming it. */
@@ -153,9 +160,6 @@ public class WorldBreakerBlockEntity extends BlockEntity {
     // Getters / setters
     // -------------------------------------------------------------------------
 
-    public boolean isBreachComplete() {
-        return progressTicks >= PocketDimensionsConfig.BREACH_DURATION_TICKS.get();
-    }
     public int getProgressTicks() { return progressTicks; }
     public int getFuel() { return fuel; }
     public void addFuel(int amount) { fuel += amount; setChanged(); }

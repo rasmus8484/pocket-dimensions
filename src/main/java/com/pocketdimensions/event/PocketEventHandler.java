@@ -25,7 +25,6 @@ import net.minecraftforge.fml.LogicalSide;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,11 +35,11 @@ import java.util.UUID;
  *   2. Right-click a BoundaryBlock (handled in BoundaryBlock.useWithoutItem)
  *
  * Safety net: players in the pocket dimension with no occupant record are ejected
- * after 5 seconds — catches anyone who got stuck via bugs or commands.
+ * after 5 seconds - catches anyone who got stuck via bugs or commands.
  */
 public class PocketEventHandler {
 
-    /** Exit cooldown — prevents double-trigger on the same jump. */
+    /** Exit cooldown - prevents double-trigger on the same jump. */
     private static final Map<UUID, Integer> exitCooldownExpiry = new HashMap<>();
 
     public PocketEventHandler() {
@@ -73,7 +72,7 @@ public class PocketEventHandler {
 
         UUID uuid = serverPlayer.getUUID();
 
-        // ── Only act for players inside the pocket dimension ──
+        // -- Only act for players inside the pocket dimension --
         if (!serverPlayer.level().dimension().equals(PocketDimensionsMod.POCKET_DIM)) {
             return;
         }
@@ -85,9 +84,15 @@ public class PocketEventHandler {
         UUID pocketId = mgr.findRoomForOccupant(uuid);
         int now = serverPlayer.tickCount;
 
-        if (pocketId == null) return; // not tracked as an occupant — do nothing
+        if (pocketId == null) {
+            // Safety net: player is in the pocket dimension with no occupant record.
+            // This happens if they respawned here (e.g. /spawnpoint set inside a room
+            // that was later destroyed). Eject immediately to prevent a void death loop.
+            mgr.teleportToEntryOrSpawn(serverPlayer, server);
+            return;
+        }
 
-        // ── Crouch + jump exit trigger ──
+        // -- Crouch + jump exit trigger --
         Integer expiry = exitCooldownExpiry.get(uuid);
         if (expiry != null && now < expiry) return; // cooldown active
 
@@ -98,7 +103,7 @@ public class PocketEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // Exit logic — called from tick event AND BoundaryBlock right-click
+    // Exit logic - called from tick event AND BoundaryBlock right-click
     // -------------------------------------------------------------------------
 
     public static void performExit(ServerPlayer player, UUID pocketId,
@@ -119,7 +124,7 @@ public class PocketEventHandler {
                     return;
                 }
 
-                // Anchor was stolen — find who holds the pocket item and teleport near them
+                // Anchor was stolen - find who holds the pocket item and teleport near them
                 for (ServerPlayer online : server.getPlayerList().getPlayers()) {
                     if (online == player) continue;
                     if (!holdsPocketItem(online, pocketId)) continue;
@@ -137,7 +142,7 @@ public class PocketEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // PlayerLoggedOutEvent — anchor auto-placement
+    // PlayerLoggedOutEvent - anchor auto-placement
     // -------------------------------------------------------------------------
 
     private void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
@@ -180,7 +185,7 @@ public class PocketEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // BlockEvent.BreakEvent — anchor break warning
+    // BlockEvent.BreakEvent - anchor break warning
     // -------------------------------------------------------------------------
 
     private void onBlockBreak(BlockEvent.BreakEvent event) {

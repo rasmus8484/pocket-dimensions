@@ -73,7 +73,7 @@ public class PocketRoomManager extends SavedData {
     }
 
     // -------------------------------------------------------------------------
-    // Codec helpers — intermediate records for serialization
+    // Codec helpers - intermediate records for serialization
     // -------------------------------------------------------------------------
 
     private record RoomEntry(UUID pocketId, int plotIndex, UUID ownerUUID,
@@ -261,7 +261,7 @@ public class PocketRoomManager extends SavedData {
         var air      = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
         var mutable  = new BlockPos.MutableBlockPos();
 
-        // Fill outer 20×20×20 with BoundaryBlock
+        // Fill outer 20x20x20 with BoundaryBlock
         for (int x = 0; x < SHELL_SIZE; x++) {
             for (int y = 0; y < SHELL_SIZE; y++) {
                 for (int z = 0; z < SHELL_SIZE; z++) {
@@ -270,7 +270,7 @@ public class PocketRoomManager extends SavedData {
             }
         }
 
-        // Carve 16×16×16 air interior (2 blocks in from each face)
+        // Carve 16x16x16 air interior (2 blocks in from each face)
         for (int x = 0; x < AIR_SIZE; x++) {
             for (int y = 0; y < AIR_SIZE; y++) {
                 for (int z = 0; z < AIR_SIZE; z++) {

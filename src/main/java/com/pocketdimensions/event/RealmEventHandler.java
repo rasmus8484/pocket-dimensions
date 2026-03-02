@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.monster.Monster;
@@ -21,6 +22,7 @@ import net.minecraftforge.event.entity.EntityTravelToDimensionEvent;
 import net.minecraftforge.event.entity.living.MobSpawnEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.SleepFinishedTimeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -60,7 +62,7 @@ public class RealmEventHandler {
 
     /**
      * Per-player transient runtime state for chunk-change / timer-based boundary checks.
-     * Not persisted — rebuilt from PlayerRealmInfo on login or entry.
+     * Not persisted - rebuilt from PlayerRealmInfo on login or entry.
      */
     private static final Map<UUID, RuntimeRealmState> runtimeStates = new ConcurrentHashMap<>();
 
@@ -82,6 +84,7 @@ public class RealmEventHandler {
         MobSpawnEvent.FinalizeSpawn.BUS.addListener(this::onFinalizeSpawn);
         PlayerInteractEvent.RightClickBlock.BUS.addListener(this::onRightClickWorldAnchor);
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onPlayerLoggedIn);
+        SleepFinishedTimeEvent.BUS.addListener(this::onRealmSleepFinished);
     }
 
     /**
@@ -89,7 +92,6 @@ public class RealmEventHandler {
      * The teleport itself fires from the next PlayerTickEvent to avoid mid-interaction packet issues.
      */
     public static void queueRealmEntry(UUID playerUUID, UUID ownerUUID) {
-        LOGGER.info("[WorldAnchor] Queuing realm entry for player={} owner={}", playerUUID, ownerUUID);
         pendingRealmEntries.put(playerUUID, ownerUUID);
     }
 
@@ -99,12 +101,11 @@ public class RealmEventHandler {
      * While pending, onEntityTravelToDimension will allow this player's travel.
      */
     public static void queueRealmExit(UUID playerUUID) {
-        LOGGER.info("[WorldCore] Queuing realm exit for player={}", playerUUID);
         pendingRealmExits.add(playerUUID);
     }
 
     // -------------------------------------------------------------------------
-    // PlayerLoggedInEvent — restore runtime state or eject on login
+    // PlayerLoggedInEvent - restore runtime state or eject on login
     // -------------------------------------------------------------------------
 
     private void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
@@ -119,7 +120,6 @@ public class RealmEventHandler {
         RealmManager.PlayerRealmInfo info = mgr.getPlayerRealmInfo(uuid);
 
         if (info == null) {
-            LOGGER.info("[RealmLogin] No PlayerRealmInfo for {} in realm — ejecting", serverPlayer.getName().getString());
             mgr.teleportToEntryOrSpawn(serverPlayer, server);
             return;
         }
@@ -127,11 +127,10 @@ public class RealmEventHandler {
         int cx = ((int) Math.floor(serverPlayer.getX())) >> 4;
         int cz = ((int) Math.floor(serverPlayer.getZ())) >> 4;
         runtimeStates.put(uuid, new RuntimeRealmState(cx, cz, serverPlayer.level().getGameTime()));
-        LOGGER.info("[RealmLogin] Restored runtime state for {} in realm", serverPlayer.getName().getString());
     }
 
     // -------------------------------------------------------------------------
-    // PlayerTickEvent — realm entry + border enforcement
+    // PlayerTickEvent - realm entry + border enforcement
     // -------------------------------------------------------------------------
 
     private void onPlayerTick(TickEvent.PlayerTickEvent.Post event) {
@@ -141,7 +140,7 @@ public class RealmEventHandler {
 
         UUID playerUUID = serverPlayer.getUUID();
 
-        // ── Process any pending realm entry (queued from block interaction) ──
+        // -- Process any pending realm entry (queued from block interaction) --
         UUID pendingOwner = pendingRealmEntries.remove(playerUUID);
         if (pendingOwner != null) {
             MinecraftServer server = ((ServerLevel) serverPlayer.level()).getServer();
@@ -150,7 +149,6 @@ public class RealmEventHandler {
                 if (realmLevel != null) {
                     BlockPos spawnPos = RealmManager.get(server).getSpawnPos(pendingOwner);
                     Vec3 dest = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-                    LOGGER.info("[WorldAnchor] Executing queued realm entry for {} → {}", serverPlayer.getName().getString(), spawnPos);
                     serverPlayer.teleport(new TeleportTransition(realmLevel, dest, Vec3.ZERO, 0f, 0f, TeleportTransition.DO_NOTHING));
                     // Init runtime state for the spawn position
                     int cx = spawnPos.getX() >> 4;
@@ -163,13 +161,12 @@ public class RealmEventHandler {
             return;
         }
 
-        // ── Process any pending realm exit (queued from WorldCore interaction) ──
-        // Use contains(), NOT remove() here — the entry is consumed by onEntityTravelToDimension
+        // -- Process any pending realm exit (queued from WorldCore interaction) --
+        // Use contains(), NOT remove() here - the entry is consumed by onEntityTravelToDimension
         // when the teleport fires synchronously inside teleportToEntryOrSpawn().
         if (pendingRealmExits.contains(playerUUID)) {
             MinecraftServer server = ((ServerLevel) serverPlayer.level()).getServer();
             if (server != null) {
-                LOGGER.info("[WorldCore] Executing queued realm exit for {}", serverPlayer.getName().getString());
                 RealmManager mgr = RealmManager.get(server);
                 mgr.teleportToEntryOrSpawn(serverPlayer, server);
                 runtimeStates.remove(playerUUID);
@@ -190,7 +187,7 @@ public class RealmEventHandler {
 
         RealmManager mgr = RealmManager.get(server);
 
-        // Persistent bounds check — eject if no info (e.g. never recorded, data corrupted)
+        // Persistent bounds check - eject if no info (e.g. never recorded, data corrupted)
         RealmManager.PlayerRealmInfo info = mgr.getPlayerRealmInfo(playerUUID);
         if (info == null) {
             mgr.teleportToEntryOrSpawn(serverPlayer, server);
@@ -221,11 +218,9 @@ public class RealmEventHandler {
                 double M = 2.5;
                 double clampedX = Math.max(info.minX + M, Math.min(info.maxX - M, x));
                 double clampedZ = Math.max(info.minZ + M, Math.min(info.maxZ - M, z));
-                LOGGER.info("[RealmBorder] Clamping {} from ({},{}) to ({},{})",
-                        serverPlayer.getName().getString(), x, z, clampedX, clampedZ);
                 serverPlayer.displayClientMessage(Component.literal(
-                        "[Realm] Outside boundary — pushed back!"), true);
-                // Use connection.teleport() directly — serverPlayer.teleport(TeleportTransition) fires
+                        "[Realm] Outside boundary - pushed back!"), true);
+                // Use connection.teleport() directly - serverPlayer.teleport(TeleportTransition) fires
                 // EntityTravelToDimensionEvent even for same-dimension moves, and our handler cancels
                 // it (player is in REALM_DIM with no pending exit queued).
                 serverPlayer.connection.teleport(clampedX, y, clampedZ, yaw, pitch);
@@ -234,23 +229,23 @@ public class RealmEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // EntityTravelToDimensionEvent — block portals from inside the realm
+    // EntityTravelToDimensionEvent - block portals from inside the realm
     // Returning true from a Predicate listener cancels the event.
     // -------------------------------------------------------------------------
 
     private boolean onEntityTravelToDimension(EntityTravelToDimensionEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return false; // allow — non-players
+        if (!(event.getEntity() instanceof Player player)) return false; // allow - non-players
         if (event.getEntity().level().dimension().equals(PocketDimensionsMod.REALM_DIM)) {
-            // Allow queued exits (WorldCore shift+right-click) — pendingRealmExits entry
+            // Allow queued exits (WorldCore shift+right-click) - pendingRealmExits entry
             // is consumed here so the event fires only once per queued exit.
             if (pendingRealmExits.remove(player.getUUID())) return false; // allow queued exit
-            return true; // cancel — block portals out of the realm
+            return true; // cancel - block portals out of the realm
         }
         return false; // allow all other dimension travel
     }
 
     // -------------------------------------------------------------------------
-    // PlayerInteractEvent.RightClickBlock — WorldAnchor entry works with any item held
+    // PlayerInteractEvent.RightClickBlock - WorldAnchor entry works with any item held
     // -------------------------------------------------------------------------
 
     private void onRightClickWorldAnchor(PlayerInteractEvent.RightClickBlock event) {
@@ -260,7 +255,7 @@ public class RealmEventHandler {
         if (stack.isEmpty()) return;                         // empty hand already reaches useWithoutItem
         if (stack.is(ModItems.WORLD_SEED.get())) return;    // WorldSeed handles itself via useOn
 
-        // Sneaking: let the item act normally so block items (e.g. WorldBreaker) can be placed.
+        // Sneaking: let the item act normally so block items (e.g. World Breacher) can be placed.
         if (event.getEntity().isShiftKeyDown()) return;
 
         // Not sneaking: suppress the item so useWithoutItem fires and the player enters the realm.
@@ -268,7 +263,7 @@ public class RealmEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // MobSpawnEvent.FinalizeSpawn — no natural Monster spawns in realm
+    // MobSpawnEvent.FinalizeSpawn - no natural Monster spawns in realm
     // -------------------------------------------------------------------------
 
     private void onFinalizeSpawn(MobSpawnEvent.FinalizeSpawn event) {
@@ -277,5 +272,19 @@ public class RealmEventHandler {
         if (event.getSpawnReason() != EntitySpawnReason.NATURAL) return;
         if (!(event.getEntity() instanceof Monster)) return;
         event.setSpawnCancelled(true);
+    }
+
+    // -------------------------------------------------------------------------
+    // SleepFinishedTimeEvent - advance time to dawn when sleeping in realm
+    // -------------------------------------------------------------------------
+
+    private void onRealmSleepFinished(SleepFinishedTimeEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) return;
+        if (!serverLevel.dimension().equals(PocketDimensionsMod.REALM_DIM)) return;
+        // Non-overworld dimensions use DerivedLevelData whose setDayTime() is a no-op.
+        // The realm shares the overworld's day time, so we must advance it on the overworld directly.
+        ServerLevel overworld = serverLevel.getServer().getLevel(Level.OVERWORLD);
+        if (overworld == null) return;
+        overworld.setDayTime(event.getNewTime());
     }
 }

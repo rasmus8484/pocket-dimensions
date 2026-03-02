@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * World Anchor block entity — stores realm binding info.
+ * World Anchor block entity - stores realm binding info.
  * <p>
  * Access check at interaction time only (never ticked):
  * - Phase 3: owner only.
@@ -50,9 +50,6 @@ public class WorldAnchorBlockEntity extends BlockEntity {
     // -------------------------------------------------------------------------
 
     public void tryEnterRealm(Player player, Level level, BlockPos pos) {
-        LOGGER.info("[WorldAnchor] tryEnterRealm called — linked={} ownerUUID={} clientSide={}",
-                linked, ownerUUID, level.isClientSide());
-
         if (!linked || ownerUUID == null) {
             player.displayClientMessage(Component.literal(
                     "[PocketDimensions] This anchor is not linked. Use a WorldSeed on it first."), false);
@@ -73,7 +70,7 @@ public class WorldAnchorBlockEntity extends BlockEntity {
             return;
         }
 
-        // Phase 4: owner always; anyone else only if a completed WorldBreaker with fuel is on top
+        // Phase 4: owner always; anyone else only if a completed World Breacher with fuel is on top
         if (!canAccess(player, level, worldPosition)) {
             player.displayClientMessage(Component.literal("[PocketDimensions] Access denied."), false);
             return;
@@ -81,14 +78,13 @@ public class WorldAnchorBlockEntity extends BlockEntity {
 
         MinecraftServer server = level.getServer();
         if (server == null) {
-            LOGGER.warn("[WorldAnchor] server is null — level.isClientSide()={}", level.isClientSide());
+            LOGGER.warn("[WorldAnchor] server is null - level.isClientSide()={}", level.isClientSide());
             player.displayClientMessage(Component.literal("[PocketDimensions] Error: server unavailable."), false);
             return;
         }
 
         RealmManager mgr = RealmManager.get(server);
         ServerLevel realmLevel = server.getLevel(PocketDimensionsMod.REALM_DIM);
-        LOGGER.info("[WorldAnchor] realmLevel={}", realmLevel);
         if (realmLevel == null) {
             player.displayClientMessage(Component.literal(
                     "[PocketDimensions] Realm dimension unavailable. Check server logs."), false);
@@ -107,7 +103,6 @@ public class WorldAnchorBlockEntity extends BlockEntity {
         mgr.setPlayerRealmInfo(player.getUUID(), ownerUUID,
                 bounds[0], bounds[2], bounds[1], bounds[3], spawn);
 
-        LOGGER.info("[WorldAnchor] Queuing realm entry for {}", player.getName().getString());
         RealmEventHandler.queueRealmEntry(player.getUUID(), ownerUUID);
     }
 
@@ -124,7 +119,7 @@ public class WorldAnchorBlockEntity extends BlockEntity {
      * Returns true if the player is allowed to enter the realm via this anchor.
      * Access is only checked here, at interaction time.
      * <p>
-     * Phase 4 will relax this via WorldBreacher breach state.
+     * Phase 4 will relax this via World Breacher breach state.
      */
     private boolean canAccess(Player player, Level level, BlockPos anchorPos) {
         if (player.getUUID().equals(ownerUUID)) return true;

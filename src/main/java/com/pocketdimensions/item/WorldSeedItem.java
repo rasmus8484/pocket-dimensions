@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * World Seed — creates or rekeys a realm binding when used on a WorldAnchor.
+ * World Seed - creates or rekeys a realm binding when used on a WorldAnchor.
  * <p>
  * Rules:
  * - Cannot be used on an anchor that is already linked to any realm.
@@ -81,7 +81,7 @@ public class WorldSeedItem extends Item {
                     return InteractionResult.FAIL;
                 }
             }
-            // Old anchor was destroyed — clear its location and relink below
+            // Old anchor was destroyed - clear its location and relink below
             mgr.clearAnchorLocation(playerUUID);
         } else {
             // First-time use: allocate a new realm for this player

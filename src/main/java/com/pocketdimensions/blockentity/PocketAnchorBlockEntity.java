@@ -27,14 +27,13 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
 import java.util.UUID;
 
 /**
  * Stores the pocket_id (UUID) and owner UUID for a placed Pocket Anchor.
  * The server resolves room coordinates from pocket_id via PocketRoomManager.
  * <p>
- * The item NBT is never trusted for coordinates — only the server-side map is.
+ * The item NBT is never trusted for coordinates - only the server-side map is.
  */
 public class PocketAnchorBlockEntity extends BlockEntity {
 
@@ -54,7 +53,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
 
     /**
      * Right-click: teleport the player into the linked pocket room.
-     * Anyone can enter — no ownership restriction.
+     * Anyone can enter - no ownership restriction.
      */
     public void enterRoom(Player player, Level level, BlockPos pos) {
         if (pocketId == null) {
@@ -73,7 +72,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
             return;
         }
 
-        // Block re-entry from inside the pocket dimension — prevents clobbering the return address.
+        // Block re-entry from inside the pocket dimension - prevents clobbering the return address.
         if (level.dimension().equals(PocketDimensionsMod.POCKET_DIM)) return;
 
         mgr.ensureGenerated(pocketId, pocketLevel);
@@ -90,7 +89,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
 
     /**
      * Crouch + right-click: convert the anchor back into a PocketItem in the thief's inventory.
-     * No warning is sent to players inside — intentional stealth mechanic.
+     * No warning is sent to players inside - intentional stealth mechanic.
      */
     public void stealAnchor(Player thief, Level level, BlockPos pos, BlockState state) {
         if (pocketId == null) return;
@@ -114,7 +113,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
         if (!level.isClientSide() && level.getServer() != null) {
             PocketRoomManager.get(level.getServer()).clearAnchorLocation(pocketId);
         }
-        // No sound, no particle — intentionally silent
+        // No sound, no particle - intentionally silent
     }
 
     // -------------------------------------------------------------------------

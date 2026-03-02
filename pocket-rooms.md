@@ -19,7 +19,7 @@ No room is its own dimension.
 ## 2. Room structure
 
 ### Interior (free space)
-- **16 × 16 × 16** air volume
+- **16 x 16 x 16** air volume
 
 ### Boundary shell
 Boundary is a **custom mod block** with:
@@ -38,18 +38,18 @@ Shell thickness:
 - Ceiling: **2 blocks** thick
 
 Total outer size:
-- **20 × 20 × 20**
+- **20 x 20 x 20**
 
 No door, hatch, portal, or deliberate gap exists.
 **The only entry/exit is teleportation.**
 
 ---
 
-## 3. Allocation model (3×3 chunk plot)
+## 3. Allocation model (3x3 chunk plot)
 
-Each pocket room is assigned a **3×3 chunk region** (48×48 blocks).
+Each pocket room is assigned a **3x3 chunk region** (48x48 blocks).
 
-- The **center chunk** contains the sealed 20×20×20 room.
+- The **center chunk** contains the sealed 20x20x20 room.
 - The surrounding 8 chunks are a buffer to prevent overlap / interaction.
 
 This is required because the room is larger than a single chunk footprint.
@@ -64,7 +64,7 @@ Each Pocket Item carries an identifier:
 
 The server stores authoritative mapping:
 
-- `pocket_id → RoomData (plot coords, owner, etc.)`
+- `pocket_id -> RoomData (plot coords, owner, etc.)`
 
 The item is never trusted to provide coordinates.
 The server resolves coordinates from `pocket_id`.
@@ -104,7 +104,7 @@ Right-clicking the Pocket Anchor teleports the player into the room.
 ### B) Crouch + right-click (silent theft)
 Crouch-right-clicking the Pocket Anchor:
 
-- Instantly converts the anchor into a Pocket Item in the thief’s inventory
+- Instantly converts the anchor into a Pocket Item in the thief's inventory
 - Removes the anchor block
 - Sends **no warning** to players inside
 
@@ -174,7 +174,7 @@ and a player exits the pocket room:
 - Server must search for valid clearance to avoid suffocation
 - If no adjacent safe space exists, expand outward until found
 
-This enables ambush scenarios and prevents “safe escape” if your anchor was stolen.
+This enables ambush scenarios and prevents "safe escape" if your anchor was stolen.
 
 ---
 
@@ -184,13 +184,13 @@ If the anchor location cannot be used as a safe exit for any reason:
 
 - Player exits to the **location they entered from** (dimension + pos + rotation)
 
-The server must store each player’s pocket entry location for this failsafe.
+The server must store each player's pocket entry location for this failsafe.
 
 ---
 
 # Disconnect / logoff handling
 
-“Disconnect” includes manual logout, network disconnect, or crash.
+"Disconnect" includes manual logout, network disconnect, or crash.
 
 ---
 
@@ -204,7 +204,7 @@ The server must store each player’s pocket entry location for this failsafe.
 If a player has stolen the Pocket Item into inventory, and players remain inside,
 then on logout/disconnect:
 
-- A Pocket Anchor is automatically placed at the disconnecting player’s feet
+- A Pocket Anchor is automatically placed at the disconnecting player's feet
 - The Pocket Item is removed from their inventory
 - Players inside remain linked to the anchor
 

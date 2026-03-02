@@ -32,6 +32,10 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.WORLD_BREAKER.get(),
                     new Item.Properties().setId(ITEMS.key("world_breaker"))));
 
+    public static final RegistryObject<Item> ANCHOR_BREAKER_ITEM = ITEMS.register("anchor_breaker",
+            () -> new BlockItem(ModBlocks.ANCHOR_BREAKER.get(),
+                    new Item.Properties().setId(ITEMS.key("anchor_breaker"))));
+
     public static final RegistryObject<Item> WORLD_CORE_ITEM = ITEMS.register("world_core",
             () -> new BlockItem(ModBlocks.WORLD_CORE.get(),
                     new Item.Properties().setId(ITEMS.key("world_core"))));

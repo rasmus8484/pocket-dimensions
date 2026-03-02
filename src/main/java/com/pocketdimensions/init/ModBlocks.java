@@ -32,7 +32,7 @@ public class ModBlocks {
     public static final RegistryObject<Block> WORLD_ANCHOR = BLOCKS.register("world_anchor",
             () -> new WorldAnchorBlock(BlockBehaviour.Properties.of()
                     .setId(BLOCKS.key("world_anchor"))
-                    .strength(50.0f, 1200.0f)
+                    .strength(-1.0f, 3600000.0f)
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops()
                     .noOcclusion()));
@@ -40,6 +40,14 @@ public class ModBlocks {
     public static final RegistryObject<Block> WORLD_BREAKER = BLOCKS.register("world_breaker",
             () -> new WorldBreakerBlock(BlockBehaviour.Properties.of()
                     .setId(BLOCKS.key("world_breaker"))
+                    .strength(50.0f, 1200.0f)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops()
+                    .noOcclusion()));
+
+    public static final RegistryObject<Block> ANCHOR_BREAKER = BLOCKS.register("anchor_breaker",
+            () -> new AnchorBreakerBlock(BlockBehaviour.Properties.of()
+                    .setId(BLOCKS.key("anchor_breaker"))
                     .strength(50.0f, 1200.0f)
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops()

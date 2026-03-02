@@ -3,8 +3,6 @@ package com.pocketdimensions.block;
 import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import net.minecraft.core.BlockPos;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -19,8 +17,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public class WorldAnchorBlock extends BaseEntityBlock {
-
-    private static final Logger LOGGER = LogManager.getLogger();
 
     public static final MapCodec<WorldAnchorBlock> CODEC = simpleCodec(WorldAnchorBlock::new);
 
@@ -58,11 +54,9 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
-        LOGGER.info("[WorldAnchor] useWithoutItem clientSide={}", level.isClientSide());
         if (level.isClientSide()) return InteractionResult.SUCCESS;
 
         WorldAnchorBlockEntity be = (WorldAnchorBlockEntity) level.getBlockEntity(pos);
-        LOGGER.info("[WorldAnchor] be={}", be);
         if (be == null) return InteractionResult.FAIL;
 
         be.tryEnterRealm(player, level, pos);

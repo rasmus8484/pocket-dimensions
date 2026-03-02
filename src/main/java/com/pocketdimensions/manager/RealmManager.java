@@ -32,10 +32,10 @@ import java.util.stream.Collectors;
  * Stored in overworld data storage under "realm_manager".
  *
  * Plot geometry (chunk-aligned):
- *   radiusChunks()  r   — config, default 2
- *   sideChunks()    2r-1 — chunks per plot side (default 3 → 48 blocks)
- *   paddingChunks() p   — gap chunks between plots (default 1)
- *   cellChunks()    sideChunks+paddingChunks — stride between plot origins in chunks
+ *   radiusChunks()  r   - config, default 2
+ *   sideChunks()    2r-1 - chunks per plot side (default 3 -> 48 blocks)
+ *   paddingChunks() p   - gap chunks between plots (default 1)
+ *   cellChunks()    sideChunks+paddingChunks - stride between plot origins in chunks
  *   Plot origin (chunks): ((plotIndex % PLOTS_PER_ROW) * cellChunks(), (plotIndex / PLOTS_PER_ROW) * cellChunks())
  *   Realm area (blocks):  originChunk*16 to (originChunk+sideChunks)*16
  *   WorldCore:   closest dry-land surface within searchRadius chunks of plot center
@@ -52,7 +52,7 @@ public class RealmManager extends SavedData {
     private static final int PLOTS_PER_ROW = 10000;
     private static final int REALM_BASE_Y  = 64;
 
-    // Read from config — not cached, so hot-reloads work (though changing mid-game is discouraged)
+    // Read from config - not cached, so hot-reloads work (though changing mid-game is discouraged)
     private static int radiusChunks()    { return PocketDimensionsConfig.REALM_RADIUS_CHUNKS.get(); }
     private static int paddingChunks()   { return PocketDimensionsConfig.REALM_PADDING_CHUNKS.get(); }
     private static int sideChunks()      { return 2 * radiusChunks() - 1; }
@@ -351,7 +351,7 @@ public class RealmManager extends SavedData {
                 return;
             }
 
-            // No dry land found — mark this plot invalid and try the next one
+            // No dry land found - mark this plot invalid and try the next one
             invalidPlots.add(data.plotIndex);
             int nextIndex = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
             data = new RealmData(nextIndex, ownerUUID);
@@ -385,7 +385,7 @@ public class RealmManager extends SavedData {
     }
 
     /**
-     * Scans chunks within searchRadius of center, sampling 4×4 points per chunk.
+     * Scans chunks within searchRadius of center, sampling 4x4 points per chunk.
      * Returns the closest BlockPos where the surface block is solid and fluid-free,
      * or null if no such position exists in the search area.
      * The returned Y is the surface height (first air above solid), suitable for WorldCore placement.

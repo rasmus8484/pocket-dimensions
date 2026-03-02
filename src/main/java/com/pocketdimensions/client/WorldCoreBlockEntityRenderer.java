@@ -14,13 +14,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Renders a gold-coloured beacon beam rising from the WorldCore block.
+ * Renders a beacon beam rising from the WorldCore block.
+ * Beam colour reflects siege state: blue = normal, pink = breaching, red = breaking.
  * The beam stops at the first non-air block above.
  */
 public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCoreBlockEntity, WorldCoreRenderState> {
-
-    /** Gold-amber ARGB colour for the beam. */
-    private static final int BEAM_COLOR = 0xFFFFCC00;
 
     public WorldCoreBlockEntityRenderer(BlockEntityRendererProvider.Context ctx) {}
 
@@ -47,6 +45,7 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
         }
         state.beamHeight = h;
         state.animationTime = level.getGameTime() + partialTick;
+        state.beamColor = be.getBeamColor();
     }
 
     @Override
@@ -60,7 +59,7 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
                 state.animationTime,           // animationTime (drives rotation)
                 0,                             // yOffset
                 state.beamHeight + 1,          // height
-                BEAM_COLOR,                    // color (RGB)
+                state.beamColor,               // color (ARGB)
                 BeaconRenderer.SOLID_BEAM_RADIUS,
                 BeaconRenderer.BEAM_GLOW_RADIUS);
     }

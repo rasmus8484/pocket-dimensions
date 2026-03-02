@@ -1,12 +1,11 @@
 {
     "type": "pocketdimensions:realm_type",
     "generator": {
-        "type": "minecraft:noise",
+        "type": "pocketdimensions:seeded_noise_no_structures",
         "biome_source": {
             "type": "minecraft:multi_noise",
             "preset": "minecraft:overworld"
         },
-        "settings": "minecraft:overworld",
-        "structure_overrides": []
+        "settings": "pocketdimensions:realm"
     }
 }
