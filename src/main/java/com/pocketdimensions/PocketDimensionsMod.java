@@ -9,6 +9,7 @@ import com.pocketdimensions.init.ModBlocks;
 import com.pocketdimensions.init.ModChunkGenerators;
 import com.pocketdimensions.init.ModCreativeTabs;
 import com.pocketdimensions.init.ModItems;
+import com.pocketdimensions.init.ModMenuTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
@@ -45,6 +46,7 @@ public class PocketDimensionsMod {
         ModBlockEntityTypes.BLOCK_ENTITY_TYPES.register(modBusGroup);
         ModCreativeTabs.CREATIVE_TABS.register(modBusGroup);
         ModChunkGenerators.CHUNK_GENERATORS.register(modBusGroup);
+        ModMenuTypes.MENU_TYPES.register(modBusGroup);
 
         new PocketEventHandler();
         new RealmEventHandler();
@@ -52,7 +54,7 @@ public class PocketDimensionsMod {
                 PocketDimensionsCommand.register(event.getDispatcher()));
 
         if (FMLEnvironment.dist.isClient()) {
-            new ClientSetup();
+            new ClientSetup(modBusGroup);
         }
     }
 }

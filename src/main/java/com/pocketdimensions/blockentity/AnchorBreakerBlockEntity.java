@@ -4,6 +4,7 @@ import com.pocketdimensions.PocketDimensionsConfig;
 import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.manager.RealmManager;
+import com.pocketdimensions.menu.SiegeBlockMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -18,6 +19,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -28,7 +37,6 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -38,19 +46,62 @@ import java.util.UUID;
  * Progress rules mirror WorldBreacherBlockEntity, but on completion this block
  * permanently removes the WorldAnchor beneath it (and drops itself via neighborChanged).
  */
-public class AnchorBreakerBlockEntity extends BlockEntity {
+public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvider {
 
     /** Ticks of progress. Full destruction = BREAKER_DURATION_TICKS. */
     private int progressTicks = 0;
 
-    /** Stack of lapis lazuli fuel. */
+    /** Legacy lapis fuel counter (from direct right-click fueling on older worlds). Drained before slot. */
     private int fuel = 0;
+
+    /** Persistent 1-slot inventory for lapis fuel (visible in the GUI). */
+    private final SimpleContainer inventory = new SimpleContainer(1) {
+        @Override
+        public boolean canPlaceItem(int slot, ItemStack stack) {
+            return stack.is(Items.LAPIS_LAZULI);
+        }
+    };
 
     /** Transient boss bar — not saved to NBT; recreated lazily after server restart. */
     private ServerBossEvent bossBar = null;
 
     public AnchorBreakerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntityTypes.ANCHOR_BREAKER.get(), pos, state);
+        inventory.addListener(c -> setChanged());
+    }
+
+    // -------------------------------------------------------------------------
+    // Fuel helpers
+    // -------------------------------------------------------------------------
+
+    /** Returns true if any fuel is available (counter or slot). */
+    public boolean hasFuel() {
+        return fuel > 0 || !inventory.getItem(0).isEmpty();
+    }
+
+    /** Consume one unit of fuel: drain legacy counter first, then slot. */
+    private void consumeOneFuel() {
+        if (fuel > 0) {
+            fuel--;
+        } else {
+            ItemStack slot = inventory.getItem(0);
+            if (!slot.isEmpty()) slot.shrink(1);
+        }
+        setChanged();
+    }
+
+    /** Insert lapis into the inventory slot. Returns the amount actually inserted. */
+    public int insertLapis(int amount) {
+        ItemStack slot = inventory.getItem(0);
+        int space = 64 - (slot.isEmpty() ? 0 : slot.getCount());
+        int toAdd = Math.min(amount, space);
+        if (toAdd <= 0) return 0;
+        if (slot.isEmpty()) {
+            inventory.setItem(0, new ItemStack(Items.LAPIS_LAZULI, toAdd));
+        } else {
+            slot.grow(toAdd);
+        }
+        return toAdd;
     }
 
     // -------------------------------------------------------------------------
@@ -71,7 +122,7 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
         boolean defended = hasAnchor && anchor != null && be.isDefenderCoreActive(serverLevel, anchor);
 
         // Progress + fuel drain (only when fueled and anchor present)
-        if (be.fuel > 0 && hasAnchor && anchor != null) {
+        if (be.hasFuel() && hasAnchor && anchor != null) {
             boolean shouldAdvance = !defended
                     || (level.getGameTime() % PocketDimensionsConfig.CORE_SLOW_FACTOR.get() == 0);
             if (shouldAdvance) {
@@ -81,11 +132,10 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
 
             // Every CORE_FUEL_BURN_TICKS: drain 1 attacker lapis; drain 1 defender lapis if active
             if (level.getGameTime() % PocketDimensionsConfig.CORE_FUEL_BURN_TICKS.get() == 0) {
-                be.fuel = Math.max(0, be.fuel - 1);
+                be.consumeOneFuel();
                 if (defended) {
                     be.consumeDefenderFuel(serverLevel, anchor);
                 }
-                be.setChanged();
             }
 
             // On completion: clear anchor from RealmManager, then destroy the anchor block
@@ -102,7 +152,7 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
         }
 
         // Force-load the WorldCore chunk in realm so it can tick (beacon color, defense fuel)
-        if (level.getGameTime() % 200 == 0 && (be.fuel > 0 || be.progressTicks > 0)
+        if (level.getGameTime() % 200 == 0 && (be.hasFuel() || be.progressTicks > 0)
                 && anchor != null && anchor.getOwnerUUID() != null) {
             BlockPos corePos = RealmManager.get(serverLevel.getServer()).getWorldCorePos(anchor.getOwnerUUID());
             if (corePos != null) {
@@ -115,7 +165,7 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
         }
 
         // --- Boss bar management ---
-        if (be.progressTicks > 0 || be.fuel > 0) {
+        if (be.progressTicks > 0 || be.hasFuel()) {
             // Lazy create
             if (be.bossBar == null) {
                 be.bossBar = new ServerBossEvent(
@@ -160,7 +210,7 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
         int duration = PocketDimensionsConfig.BREAKER_DURATION_TICKS.get();
         int pct = (int) ((be.progressTicks / (double) duration) * 100);
         boolean complete = be.progressTicks >= duration;
-        boolean paused = be.fuel <= 0;
+        boolean paused = !be.hasFuel();
 
         StringBuilder sb = new StringBuilder("Shattering the Anchor \u2014 ").append(pct).append("%");
 
@@ -186,7 +236,7 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
     private static BossEvent.BossBarColor pickColor(AnchorBreakerBlockEntity be, boolean defended) {
         int duration = PocketDimensionsConfig.BREAKER_DURATION_TICKS.get();
         if (be.progressTicks >= duration) return BossEvent.BossBarColor.GREEN;
-        if (be.fuel <= 0) return BossEvent.BossBarColor.WHITE;
+        if (!be.hasFuel()) return BossEvent.BossBarColor.WHITE;
         if (defended) return BossEvent.BossBarColor.YELLOW;
         return BossEvent.BossBarColor.RED;
     }
@@ -208,13 +258,11 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
         MinecraftServer server = level.getServer();
         double range = PocketDimensionsConfig.SIEGE_BOSSBAR_RANGE.get();
 
-        // Players near the siege block in the overworld
         Set<ServerPlayer> eligible = new HashSet<>(
                 server.getPlayerList().getPlayers().stream()
                         .filter(p -> p.level() == level && p.blockPosition().closerThan(pos, range))
                         .toList());
 
-        // Players inside the linked realm plot
         if (anchor != null && anchor.getOwnerUUID() != null) {
             RealmManager rm = RealmManager.get(server);
             int[] bounds = rm.getRealmBounds(anchor.getOwnerUUID());
@@ -230,7 +278,6 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
             }
         }
 
-        // Remove players who left, add players who entered
         Set<ServerPlayer> current = new HashSet<>(bar.getPlayers());
         for (ServerPlayer p : current) {
             if (!eligible.contains(p)) bar.removePlayer(p);
@@ -244,19 +291,16 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
     // Defender helpers
     // -------------------------------------------------------------------------
 
-    /** Returns true if the realm's WorldCore has defense fuel, without consuming it. */
     private boolean isDefenderCoreActive(ServerLevel level, WorldAnchorBlockEntity anchor) {
         WorldCoreBlockEntity wc = findWorldCore(level, anchor);
         return wc != null && wc.hasDefenseFuel();
     }
 
-    /** Consumes one unit of defense fuel from the realm's WorldCore. */
     private void consumeDefenderFuel(ServerLevel level, WorldAnchorBlockEntity anchor) {
         WorldCoreBlockEntity wc = findWorldCore(level, anchor);
         if (wc != null) wc.consumeDefenseFuel();
     }
 
-    /** Looks up the WorldCoreBlockEntity for the realm owned by this anchor's owner. */
     @Nullable
     private WorldCoreBlockEntity findWorldCore(ServerLevel level, WorldAnchorBlockEntity anchor) {
         UUID ownerUUID = anchor.getOwnerUUID();
@@ -279,6 +323,8 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
         super.saveAdditional(output);
         output.putInt("progress_ticks", progressTicks);
         output.putInt("fuel", fuel);
+        ItemStack slot = inventory.getItem(0);
+        output.putInt("slot_lapis_count", slot.isEmpty() ? 0 : slot.getCount());
     }
 
     @Override
@@ -286,6 +332,12 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
         super.loadAdditional(input);
         progressTicks = input.getIntOr("progress_ticks", 0);
         fuel = input.getIntOr("fuel", 0);
+        int slotCount = input.getIntOr("slot_lapis_count", 0);
+        if (slotCount > 0) {
+            inventory.setItem(0, new ItemStack(Items.LAPIS_LAZULI, slotCount));
+        } else {
+            inventory.setItem(0, ItemStack.EMPTY);
+        }
     }
 
     @Override
@@ -305,5 +357,46 @@ public class AnchorBreakerBlockEntity extends BlockEntity {
 
     public int getProgressTicks() { return progressTicks; }
     public int getFuel() { return fuel; }
-    public void addFuel(int amount) { fuel += amount; setChanged(); }
+    public SimpleContainer getInventory() { return inventory; }
+
+    // -------------------------------------------------------------------------
+    // MenuProvider
+    // -------------------------------------------------------------------------
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.pocketdimensions.anchor_breaker");
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player player) {
+        return new SiegeBlockMenu(containerId, playerInv, this);
+    }
+
+    public ContainerData createContainerData() {
+        return new ContainerData() {
+            @Override
+            public int get(int index) {
+                return switch (index) {
+                    case 0 -> progressTicks;
+                    case 1 -> PocketDimensionsConfig.BREAKER_DURATION_TICKS.get();
+                    case 2 -> {
+                        if (!(level instanceof ServerLevel sl)) yield 0;
+                        BlockPos anchorPos = worldPosition.below();
+                        if (!(sl.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity anchor)) yield 0;
+                        WorldCoreBlockEntity wc = findWorldCore(sl, anchor);
+                        yield (wc != null && wc.hasDefenseFuel()) ? 1 : 0;
+                    }
+                    default -> 0;
+                };
+            }
+
+            @Override
+            public void set(int index, int value) {}
+
+            @Override
+            public int getCount() { return 3; }
+        };
+    }
 }

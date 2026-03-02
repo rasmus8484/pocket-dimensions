@@ -86,6 +86,7 @@ public class WorldSeedItem extends Item {
         } else {
             // First-time use: allocate a new realm for this player
             mgr.allocateRealm(playerUUID);
+            mgr.setCreatedGameTime(playerUUID, level.getServer().overworld().getGameTime());
         }
 
         // Link the new anchor

@@ -4,6 +4,8 @@ import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -53,13 +55,23 @@ public class WorldCoreBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
-    /** Right-click with any item: shift+lapis inserts defense fuel (owner only); everything else exits the realm. */
+    /**
+     * Right-click with item:
+     * - Crouch: open GUI (owner only)
+     * - Lapis (not crouching): direct fuel insert (owner only)
+     * - Anything else: exit realm
+     */
     @Override
     public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                        Player player, InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         WorldCoreBlockEntity be = (WorldCoreBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
+
+        if (player.isShiftKeyDown()) {
+            return openGui(player, be);
+        }
+
         if (stack.is(Items.LAPIS_LAZULI)) {
             be.tryInsertFuel(player, stack, level);
         } else {
@@ -68,14 +80,35 @@ public class WorldCoreBlock extends BaseEntityBlock {
         return InteractionResult.SUCCESS;
     }
 
-    /** Empty-hand right-click always exits the realm. */
+    /**
+     * Empty-hand right-click:
+     * - Crouch: open GUI (owner only)
+     * - Normal: exit realm
+     */
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         WorldCoreBlockEntity be = (WorldCoreBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
+
+        if (player.isShiftKeyDown()) {
+            return openGui(player, be);
+        }
+
         be.exitRealm(player, level);
+        return InteractionResult.SUCCESS;
+    }
+
+    private InteractionResult openGui(Player player, WorldCoreBlockEntity be) {
+        if (be.getOwnerUUID() == null || !be.getOwnerUUID().equals(player.getUUID())) {
+            player.displayClientMessage(Component.literal(
+                    "The core's inner workings remain sealed to all but its master."), false);
+            return InteractionResult.SUCCESS;
+        }
+        if (player instanceof ServerPlayer sp) {
+            sp.openMenu(be, be.getBlockPos());
+        }
         return InteractionResult.SUCCESS;
     }
 }

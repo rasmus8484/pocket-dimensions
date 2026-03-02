@@ -3,6 +3,7 @@ package com.pocketdimensions.blockentity;
 import com.pocketdimensions.event.RealmEventHandler;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.manager.RealmManager;
+import com.pocketdimensions.menu.WorldCoreMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -15,8 +16,14 @@ import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -39,7 +46,7 @@ import java.util.UUID;
  * - Emits a beacon beam whose color reflects current siege state:
  *   blue = normal, pink = World Breacher active, red = Anchor Breaker active or anchor destroyed.
  */
-public class WorldCoreBlockEntity extends BlockEntity {
+public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
 
     // Siege state constants
     public static final int STATE_NORMAL      = 0;
@@ -53,14 +60,23 @@ public class WorldCoreBlockEntity extends BlockEntity {
 
     private UUID ownerUUID = null;
 
-    /** Lapis fuel stored for defensive breach slowdown. */
+    /** Legacy lapis fuel counter (from direct right-click fueling on older worlds). Drained before slot. */
     private int defenseFuel = 0;
 
     /** Current siege state - synced to client for beam colour. */
     private int siegeState = STATE_NORMAL;
 
+    /** Persistent 1-slot inventory for lapis fuel (visible in the GUI). */
+    private final SimpleContainer inventory = new SimpleContainer(1) {
+        @Override
+        public boolean canPlaceItem(int slot, ItemStack stack) {
+            return stack.is(Items.LAPIS_LAZULI);
+        }
+    };
+
     public WorldCoreBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntityTypes.WORLD_CORE.get(), pos, state);
+        inventory.addListener(c -> setChanged());
     }
 
     // -------------------------------------------------------------------------
@@ -105,7 +121,7 @@ public class WorldCoreBlockEntity extends BlockEntity {
         if (anchorLevel == null) return STATE_NORMAL;
         BlockPos siegePos = anchorEntry.getValue().above();
         BlockEntity siegeBe = anchorLevel.getBlockEntity(siegePos);
-        if (siegeBe instanceof AnchorBreakerBlockEntity ab && ab.getFuel() > 0) return STATE_BREAKING;
+        if (siegeBe instanceof AnchorBreakerBlockEntity ab && ab.hasFuel()) return STATE_BREAKING;
         if (siegeBe instanceof WorldBreacherBlockEntity) return STATE_BREACHING;
         return STATE_NORMAL;
     }
@@ -124,31 +140,54 @@ public class WorldCoreBlockEntity extends BlockEntity {
     }
 
     /**
-     * Shift+right-click with lapis: insert defense fuel (owner only).
+     * Right-click with lapis: insert into inventory slot (owner only).
      */
     public void tryInsertFuel(Player player, ItemStack stack, Level level) {
         if (ownerUUID == null || !player.getUUID().equals(ownerUUID)) {
             player.displayClientMessage(Component.literal(
-                    "The core pulses faintly (" + defenseFuel + " lapis within) but refuses your hand. Only the realm's master may feed it."), false);
+                    "The core pulses faintly but refuses your hand. Only the realm's master may feed it."), false);
             return;
         }
-        int toAdd = stack.getCount();
-        defenseFuel += toAdd;
-        stack.shrink(toAdd);
-        setChanged();
-        player.displayClientMessage(Component.literal(
-                "The core swallows the lapis whole - its light steadies. (" + defenseFuel + " stored)"), false);
+        int inserted = insertLapis(stack.getCount());
+        if (inserted > 0) {
+            stack.shrink(inserted);
+            setChanged();
+            player.displayClientMessage(Component.literal(
+                    "The core accepts your offering."), false);
+        } else {
+            player.displayClientMessage(Component.literal(
+                    "The core's reserves are full."), false);
+        }
+    }
+
+    /** Insert lapis into the inventory slot. Returns the amount actually inserted. */
+    public int insertLapis(int amount) {
+        ItemStack slot = inventory.getItem(0);
+        int space = 64 - (slot.isEmpty() ? 0 : slot.getCount());
+        int toAdd = Math.min(amount, space);
+        if (toAdd <= 0) return 0;
+        if (slot.isEmpty()) {
+            inventory.setItem(0, new ItemStack(Items.LAPIS_LAZULI, toAdd));
+        } else {
+            slot.grow(toAdd);
+        }
+        return toAdd;
     }
 
     /** Called by siege block entities to check if the defender slowdown is active. */
-    public boolean hasDefenseFuel() { return defenseFuel > 0; }
+    public boolean hasDefenseFuel() {
+        return defenseFuel > 0 || !inventory.getItem(0).isEmpty();
+    }
 
     /** Consume 1 lapis per breach tick-batch (called from siege block entities). */
     public void consumeDefenseFuel() {
         if (defenseFuel > 0) {
             defenseFuel--;
-            setChanged();
+        } else {
+            ItemStack slot = inventory.getItem(0);
+            if (!slot.isEmpty()) slot.shrink(1);
         }
+        setChanged();
     }
 
     /** Returns the ARGB beam colour for the current siege state. */
@@ -174,6 +213,8 @@ public class WorldCoreBlockEntity extends BlockEntity {
         }
         output.putInt("defense_fuel", defenseFuel);
         output.putInt("siege_state", siegeState);
+        ItemStack slot = inventory.getItem(0);
+        output.putInt("slot_lapis_count", slot.isEmpty() ? 0 : slot.getCount());
     }
 
     @Override
@@ -184,6 +225,12 @@ public class WorldCoreBlockEntity extends BlockEntity {
         ownerUUID = (msb != 0 || lsb != 0) ? new UUID(msb, lsb) : null;
         defenseFuel = input.getIntOr("defense_fuel", 0);
         siegeState = input.getIntOr("siege_state", STATE_NORMAL);
+        int slotCount = input.getIntOr("slot_lapis_count", 0);
+        if (slotCount > 0) {
+            inventory.setItem(0, new ItemStack(Items.LAPIS_LAZULI, slotCount));
+        } else {
+            inventory.setItem(0, ItemStack.EMPTY);
+        }
     }
 
     @Override
@@ -203,6 +250,64 @@ public class WorldCoreBlockEntity extends BlockEntity {
 
     public UUID getOwnerUUID() { return ownerUUID; }
     public void setOwnerUUID(UUID uuid) { this.ownerUUID = uuid; setChanged(); }
+    public int getSiegeState() { return siegeState; }
+    public SimpleContainer getInventory() { return inventory; }
+
+    // -------------------------------------------------------------------------
+    // MenuProvider
+    // -------------------------------------------------------------------------
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("block.pocketdimensions.world_core");
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInv, Player player) {
+        return new WorldCoreMenu(containerId, playerInv, this);
+    }
+
+    /** Creates a ContainerData that syncs siege state and realm creation time to the client. */
+    public ContainerData createContainerData() {
+        return new ContainerData() {
+            @Override
+            public int get(int index) {
+                return switch (index) {
+                    case 0 -> siegeState;
+                    case 1 -> {
+                        if (level instanceof ServerLevel sl) {
+                            long created = RealmManager.get(sl.getServer()).getCreatedGameTime(ownerUUID);
+                            yield (int) (created & 0xFFFFFFFFL);
+                        }
+                        yield 0;
+                    }
+                    case 2 -> {
+                        if (level instanceof ServerLevel sl) {
+                            long created = RealmManager.get(sl.getServer()).getCreatedGameTime(ownerUUID);
+                            yield (int) (created >>> 32);
+                        }
+                        yield 0;
+                    }
+                    case 3 -> {
+                        if (level != null) yield (int) (level.getGameTime() & 0xFFFFFFFFL);
+                        yield 0;
+                    }
+                    case 4 -> {
+                        if (level != null) yield (int) (level.getGameTime() >>> 32);
+                        yield 0;
+                    }
+                    default -> 0;
+                };
+            }
+
+            @Override
+            public void set(int index, int value) {}
+
+            @Override
+            public int getCount() { return 5; }
+        };
+    }
 
     @Override
     public AABB getRenderBoundingBox() {

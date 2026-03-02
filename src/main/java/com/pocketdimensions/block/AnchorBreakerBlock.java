@@ -6,6 +6,7 @@ import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -77,26 +78,43 @@ public class AnchorBreakerBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
-    /** Right-click with lapis -> add fuel. Non-lapis items pass through. */
+    /** Right-click with lapis -> add fuel. Crouch+right-click -> open GUI. Non-lapis items pass through. */
     @Override
     public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                        Player player, InteractionHand hand, BlockHitResult hit) {
+        if (player.isShiftKeyDown()) {
+            if (level.isClientSide()) return InteractionResult.SUCCESS;
+            return openGui(player, level, pos);
+        }
         if (!stack.is(Items.LAPIS_LAZULI)) return InteractionResult.PASS;
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         AnchorBreakerBlockEntity be = (AnchorBreakerBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
 
-        int amount = stack.getCount();
-        be.addFuel(amount);
-        if (!player.getAbilities().instabuild) stack.shrink(amount);
-        player.displayClientMessage(Component.literal(
-                "The breaker absorbs the lapis hungrily. (" + be.getFuel() + " stored)"), false);
+        int inserted = be.insertLapis(stack.getCount());
+        if (inserted > 0) {
+            if (!player.getAbilities().instabuild) stack.shrink(inserted);
+            player.displayClientMessage(Component.literal(
+                    "The breaker absorbs the lapis hungrily."), false);
+        }
         return InteractionResult.SUCCESS;
     }
 
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
+        if (player.isShiftKeyDown()) {
+            if (level.isClientSide()) return InteractionResult.SUCCESS;
+            return openGui(player, level, pos);
+        }
         return InteractionResult.PASS;
+    }
+
+    private InteractionResult openGui(Player player, Level level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof AnchorBreakerBlockEntity be)) return InteractionResult.FAIL;
+        if (player instanceof ServerPlayer sp) {
+            sp.openMenu(be, pos);
+        }
+        return InteractionResult.SUCCESS;
     }
 }

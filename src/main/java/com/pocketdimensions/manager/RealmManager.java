@@ -70,6 +70,7 @@ public class RealmManager extends SavedData {
         public @Nullable String   anchorDimKey  = null;
         public @Nullable BlockPos anchorPos     = null;
         public @Nullable BlockPos worldCorePos  = null;
+        public long createdGameTime = 0;
 
         public RealmData(int plotIndex, UUID ownerUUID) {
             this.plotIndex = plotIndex;
@@ -115,7 +116,8 @@ public class RealmManager extends SavedData {
     private record RealmEntry(UUID ownerUUID, int plotIndex, boolean generated,
                               Optional<String> anchorDimKey,
                               Optional<Long> anchorPosLong,
-                              Optional<Long> worldCorePosLong) {
+                              Optional<Long> worldCorePosLong,
+                              long createdGameTime) {
 
         static final Codec<RealmEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 UUIDUtil.CODEC.fieldOf("ownerUUID").forGetter(RealmEntry::ownerUUID),
@@ -123,7 +125,8 @@ public class RealmManager extends SavedData {
                 Codec.BOOL.optionalFieldOf("generated", false).forGetter(RealmEntry::generated),
                 Codec.STRING.optionalFieldOf("anchorDimKey").forGetter(RealmEntry::anchorDimKey),
                 Codec.LONG.optionalFieldOf("anchorPosLong").forGetter(RealmEntry::anchorPosLong),
-                Codec.LONG.optionalFieldOf("worldCorePosLong").forGetter(RealmEntry::worldCorePosLong)
+                Codec.LONG.optionalFieldOf("worldCorePosLong").forGetter(RealmEntry::worldCorePosLong),
+                Codec.LONG.optionalFieldOf("createdGameTime", 0L).forGetter(RealmEntry::createdGameTime)
         ).apply(instance, RealmEntry::new));
 
         static RealmEntry from(UUID ownerUUID, RealmData data) {
@@ -131,15 +134,17 @@ public class RealmManager extends SavedData {
                     ownerUUID, data.plotIndex, data.generated,
                     Optional.ofNullable(data.anchorDimKey),
                     Optional.ofNullable(data.anchorPos).map(BlockPos::asLong),
-                    Optional.ofNullable(data.worldCorePos).map(BlockPos::asLong));
+                    Optional.ofNullable(data.worldCorePos).map(BlockPos::asLong),
+                    data.createdGameTime);
         }
 
         RealmData toData() {
             RealmData d = new RealmData(plotIndex, ownerUUID);
-            d.generated    = generated;
-            d.anchorDimKey = anchorDimKey.orElse(null);
-            d.anchorPos    = anchorPosLong.map(BlockPos::of).orElse(null);
-            d.worldCorePos = worldCorePosLong.map(BlockPos::of).orElse(null);
+            d.generated       = generated;
+            d.anchorDimKey    = anchorDimKey.orElse(null);
+            d.anchorPos       = anchorPosLong.map(BlockPos::of).orElse(null);
+            d.worldCorePos    = worldCorePosLong.map(BlockPos::of).orElse(null);
+            d.createdGameTime = createdGameTime;
             return d;
         }
     }
@@ -265,8 +270,23 @@ public class RealmManager extends SavedData {
 
     public void allocateRealm(UUID ownerUUID) {
         int plotIndex = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
-        realms.put(ownerUUID, new RealmData(plotIndex, ownerUUID));
+        RealmData data = new RealmData(plotIndex, ownerUUID);
+        realms.put(ownerUUID, data);
         setDirty();
+    }
+
+    /** Set the created timestamp on a realm (call after allocation, when server is available). */
+    public void setCreatedGameTime(UUID ownerUUID, long gameTime) {
+        RealmData data = realms.get(ownerUUID);
+        if (data != null) {
+            data.createdGameTime = gameTime;
+            setDirty();
+        }
+    }
+
+    public long getCreatedGameTime(UUID ownerUUID) {
+        RealmData data = realms.get(ownerUUID);
+        return data != null ? data.createdGameTime : 0;
     }
 
     // -------------------------------------------------------------------------
@@ -539,10 +559,11 @@ public class RealmManager extends SavedData {
         RealmData old = realms.remove(oldOwner);
         if (old == null) return;
         RealmData fresh = new RealmData(old.plotIndex, newOwner);
-        fresh.generated    = old.generated;
-        fresh.anchorDimKey = old.anchorDimKey;
-        fresh.anchorPos    = old.anchorPos;
-        fresh.worldCorePos = old.worldCorePos;
+        fresh.generated       = old.generated;
+        fresh.anchorDimKey    = old.anchorDimKey;
+        fresh.anchorPos       = old.anchorPos;
+        fresh.worldCorePos    = old.worldCorePos;
+        fresh.createdGameTime = old.createdGameTime;
         realms.put(newOwner, fresh);
         setDirty();
     }
