@@ -41,7 +41,7 @@ Each player can own one realm — a region of overworld-like terrain (no structu
 2. Use a **World Seed** on the anchor — the seed crumbles into the anchor and condenses a dimensional tunnel to your realm
 3. **Right-click** the linked anchor to enter your realm (owner always has access)
 4. **Right-click** the **World Core** (indestructible block at your realm's center) to exit back to where you entered
-5. As the owner, **crouch + right-click** the World Core with lapis lazuli to add defensive fuel
+5. As the owner, **crouch + right-click** the World Core to open its GUI — shows realm info (owner, age, siege status), a lapis fuel slot for defense, and an Exit Realm button
 
 The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core's beacon turns red and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
@@ -54,14 +54,16 @@ The World Anchor is indestructible by normal mining — it can only be removed t
 Two siege blocks can be placed on top of a World Anchor, both fueled by lapis lazuli:
 
 **World Breacher** (`world_breacher`, netherite block texture)
-- Right-click with lapis to fuel it
+- Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
+- GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks (1 Minecraft day) while fueled
 - When complete, any player can use the anchor to enter the realm (as long as the breacher remains fueled)
 - If fuel runs out after breach, access reverts to owner-only
 - Destroying the breacher resets all progress
 
 **Anchor Breaker** (`anchor_breaker`, redstone block texture)
-- Right-click with lapis to fuel it
+- Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
+- GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks while fueled
 - When complete, permanently destroys the World Anchor
 - The Anchor Breaker drops itself when the anchor disappears
