@@ -27,7 +27,7 @@ import java.util.UUID;
 /**
  * Anchor Breaker block entity - tracks anchor-destruction progress and lapis fuel.
  *
- * Progress rules mirror WorldBreakerBlockEntity, but on completion this block
+ * Progress rules mirror WorldBreacherBlockEntity, but on completion this block
  * permanently removes the WorldAnchor beneath it (and drops itself via neighborChanged).
  */
 public class AnchorBreakerBlockEntity extends BlockEntity {

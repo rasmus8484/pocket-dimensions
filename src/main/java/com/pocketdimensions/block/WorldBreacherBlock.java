@@ -1,7 +1,7 @@
 package com.pocketdimensions.block;
 
 import com.mojang.serialization.MapCodec;
-import com.pocketdimensions.blockentity.WorldBreakerBlockEntity;
+import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -27,13 +27,13 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * World Breacher - siege add-on placed on top of a WorldAnchor.
- * Cleanup (progress reset) is handled in WorldBreakerBlockEntity.setRemoved().
+ * Cleanup (progress reset) is handled in WorldBreacherBlockEntity.setRemoved().
  */
-public class WorldBreakerBlock extends BaseEntityBlock {
+public class WorldBreacherBlock extends BaseEntityBlock {
 
-    public static final MapCodec<WorldBreakerBlock> CODEC = simpleCodec(WorldBreakerBlock::new);
+    public static final MapCodec<WorldBreacherBlock> CODEC = simpleCodec(WorldBreacherBlock::new);
 
-    public WorldBreakerBlock(BlockBehaviour.Properties properties) {
+    public WorldBreacherBlock(BlockBehaviour.Properties properties) {
         super(properties);
     }
 
@@ -45,7 +45,7 @@ public class WorldBreakerBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new WorldBreakerBlockEntity(pos, state);
+        return new WorldBreacherBlockEntity(pos, state);
     }
 
     @Nullable
@@ -53,8 +53,8 @@ public class WorldBreakerBlock extends BaseEntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                   BlockEntityType<T> type) {
         if (level.isClientSide()) return null;
-        return createTickerHelper(type, ModBlockEntityTypes.WORLD_BREAKER.get(),
-                WorldBreakerBlockEntity::serverTick);
+        return createTickerHelper(type, ModBlockEntityTypes.WORLD_BREACHER.get(),
+                WorldBreacherBlockEntity::serverTick);
     }
 
     /** Only survives when placed directly on a WorldAnchor. */
@@ -82,7 +82,7 @@ public class WorldBreakerBlock extends BaseEntityBlock {
     public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                        Player player, InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide()) return InteractionResult.SUCCESS;
-        WorldBreakerBlockEntity be = (WorldBreakerBlockEntity) level.getBlockEntity(pos);
+        WorldBreacherBlockEntity be = (WorldBreacherBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
 
         if (stack.is(Items.LAPIS_LAZULI)) {
@@ -102,7 +102,7 @@ public class WorldBreakerBlock extends BaseEntityBlock {
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                             Player player, BlockHitResult hit) {
         if (level.isClientSide()) return InteractionResult.SUCCESS;
-        WorldBreakerBlockEntity be = (WorldBreakerBlockEntity) level.getBlockEntity(pos);
+        WorldBreacherBlockEntity be = (WorldBreacherBlockEntity) level.getBlockEntity(pos);
         if (be == null) return InteractionResult.FAIL;
         be.sendStatusTo(player);
         return InteractionResult.SUCCESS;

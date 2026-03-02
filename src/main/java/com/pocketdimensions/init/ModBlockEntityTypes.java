@@ -4,7 +4,7 @@ import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.blockentity.AnchorBreakerBlockEntity;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
-import com.pocketdimensions.blockentity.WorldBreakerBlockEntity;
+import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -28,10 +28,10 @@ public class ModBlockEntityTypes {
                     () -> new BlockEntityType<>(WorldAnchorBlockEntity::new,
                             Set.of(ModBlocks.WORLD_ANCHOR.get())));
 
-    public static final RegistryObject<BlockEntityType<WorldBreakerBlockEntity>> WORLD_BREAKER =
-            BLOCK_ENTITY_TYPES.register("world_breaker",
-                    () -> new BlockEntityType<>(WorldBreakerBlockEntity::new,
-                            Set.of(ModBlocks.WORLD_BREAKER.get())));
+    public static final RegistryObject<BlockEntityType<WorldBreacherBlockEntity>> WORLD_BREACHER =
+            BLOCK_ENTITY_TYPES.register("world_breacher",
+                    () -> new BlockEntityType<>(WorldBreacherBlockEntity::new,
+                            Set.of(ModBlocks.WORLD_BREACHER.get())));
 
     public static final RegistryObject<BlockEntityType<WorldCoreBlockEntity>> WORLD_CORE =
             BLOCK_ENTITY_TYPES.register("world_core",

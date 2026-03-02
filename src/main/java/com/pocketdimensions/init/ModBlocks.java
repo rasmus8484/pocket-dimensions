@@ -37,9 +37,9 @@ public class ModBlocks {
                     .requiresCorrectToolForDrops()
                     .noOcclusion()));
 
-    public static final RegistryObject<Block> WORLD_BREAKER = BLOCKS.register("world_breaker",
-            () -> new WorldBreakerBlock(BlockBehaviour.Properties.of()
-                    .setId(BLOCKS.key("world_breaker"))
+    public static final RegistryObject<Block> WORLD_BREACHER = BLOCKS.register("world_breacher",
+            () -> new WorldBreacherBlock(BlockBehaviour.Properties.of()
+                    .setId(BLOCKS.key("world_breacher"))
                     .strength(50.0f, 1200.0f)
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops()

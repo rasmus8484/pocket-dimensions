@@ -23,7 +23,7 @@ public class ModCreativeTabs {
                                 output.accept(ModItems.WORLD_SEED.get());
                                 output.accept(ModItems.POCKET_ANCHOR_ITEM.get());
                                 output.accept(ModItems.WORLD_ANCHOR_ITEM.get());
-                                output.accept(ModItems.WORLD_BREAKER_ITEM.get());
+                                output.accept(ModItems.WORLD_BREACHER_ITEM.get());
                                 output.accept(ModItems.ANCHOR_BREAKER_ITEM.get());
                                 output.accept(ModItems.WORLD_CORE_ITEM.get());
                                 output.accept(ModItems.BOUNDARY_BLOCK_ITEM.get());

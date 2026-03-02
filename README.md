@@ -53,7 +53,7 @@ The World Anchor is indestructible by normal mining — it can only be removed t
 
 Two siege blocks can be placed on top of a World Anchor, both fueled by lapis lazuli:
 
-**World Breacher** (`world_breaker`, netherite block texture)
+**World Breacher** (`world_breacher`, netherite block texture)
 - Right-click with lapis to fuel it
 - Progresses over 24,000 ticks (1 Minecraft day) while fueled
 - When complete, any player can use the anchor to enter the realm (as long as the breacher remains fueled)

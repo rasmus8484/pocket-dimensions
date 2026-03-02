@@ -87,7 +87,7 @@ public class WorldCoreBlockEntity extends BlockEntity {
         BlockPos siegePos = anchorEntry.getValue().above();
         BlockEntity siegeBe = anchorLevel.getBlockEntity(siegePos);
         if (siegeBe instanceof AnchorBreakerBlockEntity ab && ab.getFuel() > 0) return STATE_BREAKING;
-        if (siegeBe instanceof WorldBreakerBlockEntity) return STATE_BREACHING;
+        if (siegeBe instanceof WorldBreacherBlockEntity) return STATE_BREACHING;
         return STATE_NORMAL;
     }
 

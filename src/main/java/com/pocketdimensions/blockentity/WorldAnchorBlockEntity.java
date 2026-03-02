@@ -125,8 +125,8 @@ public class WorldAnchorBlockEntity extends BlockEntity {
         if (player.getUUID().equals(ownerUUID)) return true;
 
         BlockPos breakerPos = anchorPos.above();
-        if (level.getBlockEntity(breakerPos) instanceof WorldBreakerBlockEntity breaker) {
-            return breaker.isBreachComplete() && breaker.getFuel() > 0;
+        if (level.getBlockEntity(breakerPos) instanceof WorldBreacherBlockEntity breacher) {
+            return breacher.isBreachComplete() && breacher.getFuel() > 0;
         }
 
         return false;

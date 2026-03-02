@@ -33,7 +33,7 @@ import java.util.UUID;
  * - If breacher is destroyed: progress RESETS to 0.
  * - WorldCore fuel (defender) reduces progress rate to 1/CORE_SLOW_FACTOR.
  */
-public class WorldBreakerBlockEntity extends BlockEntity {
+public class WorldBreacherBlockEntity extends BlockEntity {
 
     /** Ticks of progress. Full breach = BREACH_DURATION_TICKS. */
     private int progressTicks = 0;
@@ -41,16 +41,16 @@ public class WorldBreakerBlockEntity extends BlockEntity {
     /** Stack of lapis lazuli fuel. */
     private int fuel = 0;
 
-    public WorldBreakerBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntityTypes.WORLD_BREAKER.get(), pos, state);
+    public WorldBreacherBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntityTypes.WORLD_BREACHER.get(), pos, state);
     }
 
     // -------------------------------------------------------------------------
-    // Server tick (called from WorldBreakerBlock.getTicker)
+    // Server tick (called from WorldBreacherBlock.getTicker)
     // -------------------------------------------------------------------------
 
     public static void serverTick(Level level, BlockPos pos, BlockState state,
-                                  WorldBreakerBlockEntity be) {
+                                  WorldBreacherBlockEntity be) {
         if (!(level instanceof ServerLevel serverLevel)) return;
         if (be.fuel <= 0) return;  // Paused, no decay
 

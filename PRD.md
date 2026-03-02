@@ -49,7 +49,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
-| SG-001 | DONE | World Breacher | `world_breaker` block; after breach_duration_ticks, opens realm access to anyone while fueled |
+| SG-001 | DONE | World Breacher | `world_breacher` block; after breach_duration_ticks, opens realm access to anyone while fueled |
 | SG-002 | DONE | Anchor Breaker | `anchor_breaker` block; after breaker_duration_ticks, permanently destroys WorldAnchor |
 | SG-003 | DONE | Lapis fuel system | Both siege blocks consume lapis; progress pauses when fuel exhausted |
 | SG-004 | DONE | Config-driven durations | breach/breaker duration, core_slow_factor, core_fuel_burn_ticks in config |
