@@ -3,6 +3,8 @@ package com.pocketdimensions.block;
 import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.init.ModItems;
+import com.pocketdimensions.init.ModParticles;
+import net.minecraft.util.RandomSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -55,6 +57,26 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
         return state.getValue(HALF) == DoubleBlockHalf.LOWER ? LOWER_SHAPE : UPPER_SHAPE;
+    }
+
+    /**
+     * Client-only, called at random for blocks near the player (about 0.4 calls/s per block);
+     * spawning two runes per call gives roughly one rune per second per linked anchor.
+     */
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        if (state.getValue(HALF) != DoubleBlockHalf.LOWER || !state.getValue(LINKED)) return;
+        for (int n = 0; n < 2; n++) {
+            int face = random.nextInt(4);
+            double nx = face == 2 ? -1 : face == 3 ? 1 : 0, nz = face == 0 ? -1 : face == 1 ? 1 : 0;
+            double along = (random.nextDouble() - 0.5) * 9 / 16.0;
+            double y = random.nextBoolean() ? (18 + random.nextDouble() * 5) / 16.0 : (5 + random.nextDouble() * 5) / 16.0;
+            double x = pos.getX() + 0.5 + nx * 6.8 / 16.0 + (nz != 0 ? along : 0);
+            double z = pos.getZ() + 0.5 + nz * 6.8 / 16.0 + (nx != 0 ? along : 0);
+            double out = (0.5 + random.nextDouble() * 0.5) / 16.0 / 20.0;       // 0.5–1 px per second
+            double up = (1.2 + random.nextDouble() * 0.8) / 16.0 / 20.0;        // 1.2–2 px per second
+            level.addParticle(ModParticles.RUNE.get(), x, pos.getY() + y, z, nx * out, up, nz * out);
+        }
     }
 
     /** Sets LINKED on both halves of the anchor whose lower half is at lowerPos. */

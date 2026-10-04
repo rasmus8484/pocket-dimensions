@@ -1,5 +1,8 @@
 package com.pocketdimensions.client;
 
+import com.pocketdimensions.client.particle.RuneParticle;
+import com.pocketdimensions.init.ModParticles;
+import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
@@ -21,6 +24,8 @@ public class ClientSetup {
     public ClientSetup(BusGroup modBusGroup) {
         EntityRenderersEvent.RegisterRenderers.BUS.addListener(this::onRegisterRenderers);
         FMLClientSetupEvent.getBus(modBusGroup).addListener(this::onClientSetup);
+        RegisterParticleProvidersEvent.BUS.addListener(e ->
+                e.registerSpriteSet(ModParticles.RUNE.get(), RuneParticle.Provider::new));
     }
 
     private void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
