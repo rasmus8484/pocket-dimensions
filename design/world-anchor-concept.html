@@ -1,0 +1,2712 @@
+<meta charset="utf-8">
+<title>World Anchor Concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed 3D stage; title card top-left, design ledger right (sheet on phones), design + view controls bottom. Single dark look by choice: glowing runes need a night stage. */
+:root {
+  --night: #0b0d17;
+  --panel: rgba(17, 19, 33, 0.84);
+  --line: rgba(196, 170, 112, 0.28);
+  --parch: #e9e1cf;
+  --muted: #a49d8c;
+  --gold: #d6a23c;
+  --rune: #7ff0ff;
+  --font-display: "Alegreya SC", "Palatino Linotype", Georgia, serif;
+  --font-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--night); color: var(--parch); font-family: var(--font-body); font-size: 15px; overflow: hidden; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+.card {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 16px); left: 16px;
+  max-width: min(330px, calc(100% - 32px));
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 14px 16px; backdrop-filter: blur(6px);
+}
+.card .eyebrow { font: 500 0.7rem var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.card h1 { margin: 2px 0 0; font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; letter-spacing: 0.02em; color: var(--gold); text-wrap: balance; }
+.card p { margin: 6px 0 0; color: var(--parch); line-height: 1.4; font-style: italic; }
+.card .scale { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-top: 8px; letter-spacing: 0.04em; }
+
+.controls {
+  position: fixed; left: 16px; right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.group { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px; pointer-events: auto; backdrop-filter: blur(6px); }
+.group button {
+  font: 500 0.85rem var(--font-body); color: var(--muted); background: transparent;
+  border: 0; border-radius: 4px; padding: 7px 11px; cursor: pointer;
+}
+.group.designs button { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.03em; font-size: 0.9rem; }
+.group button:hover { color: var(--parch); }
+.group button[aria-pressed="true"] { background: rgba(214, 162, 60, 0.18); color: var(--gold); }
+.group button:focus-visible, .group select:focus-visible { outline: 2px solid var(--rune); outline-offset: 1px; }
+.group select {
+  font: 500 0.85rem var(--font-body); color: var(--muted); background: transparent;
+  border: 0; border-left: 1px solid var(--line); padding: 7px 8px; cursor: pointer;
+}
+.group select.active { color: var(--gold); }
+.group select option { background: #151726; color: var(--parch); }
+
+.notes {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 16px); right: 16px;
+  width: 310px; max-height: calc(100% - 150px); overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 14px 16px; backdrop-filter: blur(6px);
+}
+.notes h2 { margin: 0 0 8px; font: 700 1.05rem var(--font-display); color: var(--gold); letter-spacing: 0.03em; }
+.notes dl { margin: 0; display: grid; gap: 10px; }
+.notes dt { font: 500 0.7rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.notes dd { margin: 2px 0 0; line-height: 1.45; }
+.notes ul { margin: 2px 0 0; padding-left: 18px; line-height: 1.45; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--parch); }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 6px; margin-top: 4px; }
+.sw { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+.sw i { width: 14px; height: 14px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.15); flex: none; }
+#notesToggle { display: none; }
+
+.label {
+  position: fixed; transform: translate(-50%, -100%); pointer-events: none;
+  font: 700 0.95rem var(--font-display); letter-spacing: 0.06em; color: var(--parch);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9); white-space: nowrap; text-align: center;
+}
+.label small { display: block; font: 400 0.72rem var(--font-body); letter-spacing: 0; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .notes { display: none; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); left: 16px; right: 16px; width: auto; max-height: 45%; }
+  .notes.open { display: block; }
+  #notesToggle { display: inline-block; }
+  .card .scale { display: none; }
+}
+</style>
+
+<div id="stage"></div>
+
+<header class="card">
+  <div class="eyebrow">World Anchor · <span id="cIndex"></span></div>
+  <h1 id="cName">Runebound Monolith</h1>
+  <p id="cLine"></p>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom</div>
+</header>
+
+<aside class="notes" id="notes">
+  <h2>Design notes</h2>
+  <dl>
+    <div><dt>Inert</dt><dd id="nStory"></dd></div>
+    <div><dt>When the seed is set</dt><dd id="nChange"></dd></div>
+    <div id="rowInteract"><dt>Where you click</dt><dd id="nInteract"></dd></div>
+    <div><dt>Moving parts and effects</dt><dd><ul id="nCode"></ul></dd></div>
+    <div><dt>Static model boxes (estimate)</dt><dd id="nBoxes"></dd></div>
+    <div><dt>Palette</dt><dd><div class="swatches" id="nSwatches"></div></dd></div>
+  </dl>
+</aside>
+
+<div class="controls">
+  <div class="row">
+    <div class="group designs" role="group" aria-label="Design">
+      <span id="designButtons" style="display:contents"></span>
+      <select id="earlier" aria-label="Earlier concepts"></select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="group" role="group" aria-label="View">
+      <button id="vBoth" aria-pressed="true">Both</button>
+      <button id="vInert" aria-pressed="false">Inert</button>
+      <button id="vLinked" aria-pressed="false">Linked</button>
+    </div>
+    <div class="group" role="group" aria-label="Options">
+      <button id="tPlayer" aria-pressed="true">Player</button>
+      <button id="tGrid" aria-pressed="false">Pixel grid</button>
+      <button id="tMotion" aria-pressed="true">Motion</button>
+      <button id="tSpin" aria-pressed="true">Spin</button>
+      <button id="tNight" aria-pressed="false">Night</button>
+      <button id="notesToggle" aria-pressed="false">Notes</button>
+    </div>
+  </div>
+</div>
+
+<div class="label" id="lblInert">Inert<small>no seed yet</small></div>
+<div class="label" id="lblLinked">Linked<small>seed set, rift open</small></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const PX = 1 / 16;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DEFAULT_BOUNDS = { x0: -8, x1: 24, y0: 0, y1: 40 };
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function hash3(x, y, z) {
+  let n = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(z | 0, 1274126177);
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+}
+const shade = (c, k) => c.map(v => Math.max(0, Math.min(255, v * k)));
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const tone = (c, x, y, z, amt = 0.12, salt = 0) => shade(c, 1 - amt / 2 + hash3(x + salt, y, z) * amt);
+const C = (x, z) => ({ cx: x + 0.5 - 8, cz: z + 0.5 - 8 });
+const inBlock = (x, z) => x >= 0 && x <= 15 && z >= 0 && z <= 15;
+function oct(cx, cz, h, cut) { const ax = Math.abs(cx), az = Math.abs(cz); return ax < h && az < h && ax + az < 2 * h - cut; }
+const anySide = e => e.nx || e.px || e.nz || e.pz;
+function sideFace(e, x, z) {
+  if (e.nz) return { f: 0, u: x };
+  if (e.pz) return { f: 1, u: 15 - x };
+  if (e.nx) return { f: 2, u: 15 - z };
+  if (e.px) return { f: 3, u: z };
+  return null;
+}
+function segInfo(p, a, b) {
+  const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const L2 = ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2;
+  const t = ((p[0] - a[0]) * ab[0] + (p[1] - a[1]) * ab[1] + (p[2] - a[2]) * ab[2]) / L2;
+  const tc = Math.max(0, Math.min(1, t));
+  return { t, d: Math.hypot(a[0] + ab[0] * tc - p[0], a[1] + ab[1] * tc - p[1], a[2] + ab[2] * tc - p[2]) };
+}
+function polyDist(p, pts) {
+  let best = { d: 1e9, seg: 0, t: 0 };
+  for (let i = 0; i < pts.length - 1; i++) {
+    const s = segInfo(p, pts[i], pts[i + 1]);
+    if (s.d < best.d) best = { d: s.d, seg: i, t: s.t };
+  }
+  return best;
+}
+const angDiff = (a, b) => Math.abs(((a - b) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI);
+
+const GOLD = [214, 162, 60];
+const goldTone = (x, y, z) => { const n = hash3(x + 11, y, z + 5); return n > 0.93 ? [250, 226, 150] : tone(GOLD, x, y, z, 0.14); };
+
+// ---------------------------------------------------------------------------
+// Voxelizer
+// ---------------------------------------------------------------------------
+function voxelizeRaw(B, shape, paint, transKeys = []) {
+  const NXs = B.x1 - B.x0, NYs = B.y1 - B.y0;
+  const I = (x, y, z) => ((y - B.y0) * NXs + (z - B.x0)) * NXs + (x - B.x0);
+  const inB = (x, y, z) => x >= B.x0 && x < B.x1 && z >= B.x0 && z < B.x1 && y >= B.y0 && y < B.y1;
+  const occ = new Array(NXs * NYs * NXs).fill(null);
+  for (let y = B.y0; y < B.y1; y++) for (let z = B.x0; z < B.x1; z++) for (let x = B.x0; x < B.x1; x++)
+    occ[I(x, y, z)] = shape(x, y, z);
+  const trans = new Set(transKeys);
+  const filled = (x, y, z) => inB(x, y, z) && occ[I(x, y, z)] !== null;
+  const opaque = (x, y, z) => filled(x, y, z) && !trans.has(occ[I(x, y, z)]);
+  const solid = [], glow = [], tr = [], flow = [];
+  for (let y = B.y0; y < B.y1; y++) for (let z = B.x0; z < B.x1; z++) for (let x = B.x0; x < B.x1; x++) {
+    const k = occ[I(x, y, z)];
+    if (k === null) continue;
+    const e = { px: !opaque(x + 1, y, z), nx: !opaque(x - 1, y, z), py: !opaque(x, y + 1, z), ny: !opaque(x, y - 1, z), pz: !opaque(x, y, z + 1), nz: !opaque(x, y, z - 1) };
+    const isT = trans.has(k);
+    if (isT ? [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].every(([a, b, c]) => filled(x + a, y + b, z + c))
+            : !(e.px || e.nx || e.py || e.ny || e.pz || e.nz)) continue;
+    const r = paint(k, x, y, z, e);
+    (r.fl ? flow : r.g ? glow : r.t ? tr : solid).push({ x, y, z, c: r.c });
+  }
+  const countBoxes = (y0, y1) => {
+    const used = new Uint8Array(occ.length);
+    const ok = (x, y, z) => inB(x, y, z) && y >= y0 && y < y1 && occ[I(x, y, z)] !== null && !used[I(x, y, z)];
+    let n = 0;
+    for (let y = Math.max(y0, B.y0); y < Math.min(y1, B.y1); y++) for (let z = B.x0; z < B.x1; z++) for (let x = B.x0; x < B.x1; x++) {
+      if (!ok(x, y, z)) continue;
+      let x2 = x; while (ok(x2 + 1, y, z)) x2++;
+      let z2 = z; rowZ: while (true) { for (let i = x; i <= x2; i++) if (!ok(i, y, z2 + 1)) break rowZ; z2++; }
+      let y2 = y; slabY: while (true) { for (let i = x; i <= x2; i++) for (let j = z; j <= z2; j++) if (!ok(i, y2 + 1, j)) break slabY; y2++; }
+      for (let a = y; a <= y2; a++) for (let b = z; b <= z2; b++) for (let c = x; c <= x2; c++) used[I(c, a, b)] = 1;
+      n++;
+    }
+    return n;
+  };
+  return { solid, glow, trans: tr, flow, countBoxes };
+}
+
+// A separately drawn, movable voxel part (block entity renderer in game)
+function voxPart({ bounds, shape, paint, trans = [], opacity = 0.5, pivot }) {
+  const v = voxelizeRaw(bounds, shape, paint, trans);
+  const outer = new THREE.Group(), inner = new THREE.Group();
+  inner.position.set(-pivot[0] * PX, -pivot[1] * PX, -pivot[2] * PX);
+  if (v.solid.length) inner.add(instanced(v.solid, solidMat));
+  if (v.glow.length) inner.add(instanced(v.glow, glowMat));
+  if (v.trans.length) inner.add(instanced(v.trans, new THREE.MeshStandardMaterial({ transparent: true, opacity, depthWrite: false, roughness: 0.15 })));
+  outer.add(inner);
+  outer.position.set(pivot[0] * PX, pivot[1] * PX, pivot[2] * PX);
+  return outer;
+}
+
+// ---------------------------------------------------------------------------
+// Seeds
+// ---------------------------------------------------------------------------
+function seedVoxels(type) {
+  const v = [];
+  if (type === 'teardrop') {
+    const layers = [{ y: -3, s: 2 }, { y: -2, s: 4 }, { y: -1, s: 4, band: true }, { y: 0, s: 4 }, { y: 1, s: 2 }, { y: 2, s: 2 }];
+    for (const L of layers) {
+      const a = -L.s / 2;
+      for (let x = a; x < a + L.s; x++) for (let z = a; z < a + L.s; z++) {
+        const corner = (x === a || x === a + L.s - 1) && (z === a || z === a + L.s - 1);
+        const k = (L.y + 3) / 5;
+        v.push({ x, y: L.y, z, c: L.band && corner ? [245, 205, 95] : [40 + k * 150, 200 + k * 55, 140 + k * 85] });
+      }
+    }
+  } else if (type === 'planet') {
+    for (let i = -3; i < 3; i++) for (let j = -3; j < 3; j++) for (let k = -3; k < 3; k++) {
+      const p = [i + 0.5, j + 0.5, k + 0.5];
+      if (Math.hypot(...p) < 2.75) {
+        const n = hash3(i + 40, j + 40, k + 40);
+        v.push({ x: i, y: j, z: k, c: Math.abs(p[1]) > 2.0 ? [235, 245, 255] : n > 0.5 ? [96, 206, 118] : [64, 146, 255] });
+      }
+    }
+  } else if (type === 'gem' || type === 'gemSmall') {
+    const R = type === 'gem' ? 2.7 : 1.8;
+    for (let i = -3; i < 3; i++) for (let j = -4; j < 4; j++) for (let k = -3; k < 3; k++) {
+      const px = i + 0.5, py = j + 0.5, pz = k + 0.5;
+      if (Math.abs(px) + Math.abs(py) * 0.75 + Math.abs(pz) < R)
+        v.push({ x: i, y: j, z: k, c: hash3(i + 9, j, k) > 0.8 ? [230, 255, 245] : mix([40, 200, 140], [160, 255, 215], (py + 3) / 6) });
+    }
+  } else if (type === 'acorn') {
+    for (let i = -2; i < 2; i++) for (let j = -3; j < 3; j++) for (let k = -2; k < 2; k++) {
+      const px = i + 0.5, py = j + 0.5, pz = k + 0.5;
+      if ((px / 1.9) ** 2 + (py / 2.6) ** 2 + (pz / 1.9) ** 2 < 1) v.push({ x: i, y: j, z: k, c: py > 0.9 ? [190, 132, 58] : [206, 255, 150] });
+    }
+    v.push({ x: 0, y: 3, z: 0, c: [150, 104, 46] }, { x: -1, y: 3, z: -1, c: [150, 104, 46] });
+  }
+  return v;
+}
+
+// ---------------------------------------------------------------------------
+// ROUND 2 · I  Crystal Bloom
+// ---------------------------------------------------------------------------
+const BLOOM_SHARDS = [
+  { a: [8, 2, 8], b: [8, 36, 8], r: 4.2, main: true },
+  { a: [10, 3, 9], b: [16.5, 20, 11], r: 2.3 },
+  { a: [6, 3, 6.5], b: [0, 24, 3], r: 2.5 },
+  { a: [9, 3, 6], b: [11, 17, -1.5], r: 1.9 },
+  { a: [6.5, 3, 10], b: [4, 15, 17], r: 1.9 },
+  { a: [9.5, 3, 10], b: [14, 28, 15], r: 2.1 },
+  { a: [6, 3, 9], b: [-0.5, 13, 12], r: 1.6 },
+];
+const CORNERS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+const CLAW_SHUT = CORNERS.map(([sx, sz]) => [[8 + sx * 5.5, 2.5, 8 + sz * 5.5], [8 + sx * 4.6, 8, 8 + sz * 4.6], [8 + sx * 2.6, 11.5, 8 + sz * 2.6], [8 + sx * 1.3, 11, 8 + sz * 1.3]]);
+const CLAW_OPEN = CORNERS.map(([sx, sz]) => [[8 + sx * 5.5, 2.5, 8 + sz * 5.5], [8 + sx * 7, 8, 8 + sz * 7], [8 + sx * 8, 11, 8 + sz * 8], [8 + sx * 8.6, 10, 8 + sz * 8.6]]);
+
+// ---------------------------------------------------------------------------
+// ROUND 2 · II  Unfurled Seed
+// ---------------------------------------------------------------------------
+function podShell(x, y, z, q) {
+  if (y < 4) return null;
+  const p = [x + 0.5 - 8, y + 0.5 - 16, z + 0.5 - 8];
+  if ((p[0] / 6.5) ** 2 + (p[1] / 12) ** 2 + (p[2] / 6.5) ** 2 >= 1) return null;
+  const Ei = (p[0] / 5) ** 2 + (p[1] / 10.5) ** 2 + (p[2] / 5) ** 2;
+  if (Ei < 1) return null;
+  if ((p[0] > 0 ? 1 : -1) !== q[0] || (p[2] > 0 ? 1 : -1) !== q[1]) return null;
+  if (Math.min(Math.abs(p[0]), Math.abs(p[2])) < 1) return 'rim';
+  return Ei < 1.3 ? 'inner' : 'shell';
+}
+
+// ---------------------------------------------------------------------------
+// ROUND 2 · III  The Gyre
+// ---------------------------------------------------------------------------
+const FRAGS = [[4, 5, 4], [3, 4, 3], [4, 3, 4], [5, 4, 3], [3, 3, 4], [4, 4, 4], [3, 5, 3], [4, 3, 3], [3, 4, 4]].map((d, k) => {
+  const a = k * 0.698 + 0.2, r = 2.6 + (k % 3) * 1.1;
+  const lie = [...d].sort((p, q) => q - p);
+  const dims = [lie[0], lie[2], lie[1]];
+  const rest = [Math.round(8 + Math.cos(a) * r - dims[0] / 2), 3 + (k % 4 === 3 ? 1 : 0), Math.round(8 + Math.sin(a) * r - dims[2] / 2)];
+  return { d, dims, rest, orbit: { R: 7.5 + (k % 3) * 1.8, h: 9 + (k * 2.4) % 20, sp: 0.18 + (k % 4) * 0.07, a0: k * 1.9, tilt: (k % 2 ? 0.35 : -0.3) } };
+});
+const BASALT = [78, 76, 92];
+const fragPaint = (L) => (k, x, y, z, e) => {
+  if (e.py && (x + z) % 2 === 0 && hash3(x, y, z + 3) > 0.35) return L ? { c: [180, 240, 255], g: true } : { c: [32, 30, 40] };
+  if (anySide(e) && y === 1 && hash3(x + 5, y, z) > 0.6) return { c: goldTone(x, y, z) };
+  return { c: tone(BASALT, x, y, z, 0.25) };
+};
+
+// ---------------------------------------------------------------------------
+// ROUND 2 · IV  Halo Gate
+// ---------------------------------------------------------------------------
+const GATE_CY = 18;
+
+// ---------------------------------------------------------------------------
+// ROUND 2 · V  Maker's Hand
+// ---------------------------------------------------------------------------
+const FINGER_X = [4.6, 7.0, 9.4, 11.8];
+const HAND_OPEN = [
+  ...FINGER_X.map(xb => { const s = xb - 8.2; return [[xb, 13.5, 12.5], [xb + s * 0.25, 18, 14.6], [xb + s * 0.45, 23, 15.2], [xb + s * 0.6, 27 - Math.abs(s) * 0.6, 14.2]]; }),
+  [[3.2, 12.5, 7], [0.6, 15.5, 8.5], [0.2, 20, 10.5], [1.0, 23.5, 11.5]],
+];
+const HAND_SHUT = [
+  ...FINGER_X.map(xb => [[xb, 13.5, 12.5], [xb, 17.5, 13.2], [xb, 19, 10], [xb, 17, 7.2]]),
+  [[3.2, 12.5, 7], [3.8, 16, 7.5], [6, 17.5, 8.2]],
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 1 (kept for comparison)
+// ---------------------------------------------------------------------------
+const GLYPHS = [
+  ['XXXX', 'X...', 'XXX.', '...X', 'XXXX'], ['.XX.', 'X..X', '.XX.', '..X.', 'XXX.'], ['X.X.', 'XXXX', 'X.X.', '..X.', '..XX'],
+  ['XXX.', '..X.', 'XXXX', '.X..', 'XX..'], ['X..X', 'X.X.', 'XX..', 'X.X.', 'X..X'], ['.X..', 'XXX.', '.X.X', '...X', '..XX'],
+];
+const A_PARTS = [
+  { f: [0, 0, 0], t: [16, 3, 16], m: 'stone' }, { f: [1, 3, 1], t: [15, 4, 15], m: 'gold' },
+  { f: [2, 4, 2], t: [14, 10, 14], m: 'stone', runes: 'shaft', glyphSet: 0 }, { f: [1, 10, 1], t: [15, 11, 15], m: 'stone' },
+  { f: [1, 11, 1], t: [15, 12, 15], m: 'gold' },
+  { f: [1, 12, 1], t: [4, 22, 4], m: 'stone', runes: 'pillar' }, { f: [12, 12, 1], t: [15, 22, 4], m: 'stone', runes: 'pillar' },
+  { f: [1, 12, 12], t: [4, 22, 15], m: 'stone', runes: 'pillar' }, { f: [12, 12, 12], t: [15, 22, 15], m: 'stone', runes: 'pillar' },
+  { f: [5, 12, 5], t: [11, 13, 11], m: 'gold', ring: true }, { f: [5, 21, 5], t: [11, 22, 11], m: 'gold', ring: true },
+  ...[[5, 5], [10, 5], [5, 10], [10, 10]].flatMap(([x, z]) => [{ f: [x, 13, z], t: [x + 1, 14, z + 1], m: 'gold' }, { f: [x, 20, z], t: [x + 1, 21, z + 1], m: 'gold' }]),
+  { f: [1, 22, 1], t: [15, 23, 15], m: 'gold' }, { f: [2, 23, 2], t: [14, 29, 14], m: 'stone', runes: 'shaft', glyphSet: 2 },
+  { f: [1, 29, 1], t: [15, 30, 15], m: 'gold' }, { f: [0, 30, 0], t: [16, 32, 16], m: 'stone', sigil: true },
+];
+const A_AT = new Map();
+for (const p of A_PARTS)
+  for (let x = p.f[0]; x < p.t[0]; x++) for (let y = p.f[1]; y < p.t[1]; y++) for (let z = p.f[2]; z < p.t[2]; z++) {
+    if (p.ring && x > p.f[0] && x < p.t[0] - 1 && z > p.f[2] && z < p.t[2] - 1) continue;
+    A_AT.set(x + ',' + y + ',' + z, p);
+  }
+function aRune(p, x, y, z) {
+  const [fx, fy, fz] = p.f, [tx, ty, tz] = p.t;
+  if (p.runes === 'shaft') {
+    const faces = [];
+    if (z === fz) faces.push({ u: x - fx, i: 0 }); if (x === tx - 1) faces.push({ u: z - fz, i: 1 });
+    if (z === tz - 1) faces.push({ u: tx - 1 - x, i: 2 }); if (x === fx) faces.push({ u: tz - 1 - z, i: 3 });
+    const v = y - fy; if (v < 1 || v > 5) return false;
+    for (const f of faces) {
+      let g, col;
+      if (f.u >= 1 && f.u <= 4) { g = GLYPHS[(p.glyphSet + f.i * 2) % 6]; col = f.u - 1; }
+      else if (f.u >= 7 && f.u <= 10) { g = GLYPHS[(p.glyphSet + f.i * 2 + 1) % 6]; col = f.u - 7; }
+      else continue;
+      if (g[5 - v][col] === 'X') return true;
+    }
+    return false;
+  }
+  if (p.runes === 'pillar') {
+    const outerX = fx < 8 ? x === fx : x === tx - 1, outerZ = fz < 8 ? z === fz : z === tz - 1;
+    const v = y - fy, dotted = v >= 1 && v <= 8 && v % 3 !== 0;
+    return (outerX && z === fz + 1 && dotted) || (outerZ && x === fx + 1 && dotted);
+  }
+  return p.sigil && y === ty - 1 && Math.hypot(x + 0.5 - 8, z + 0.5 - 8) < 1.5;
+}
+function makeCracks(linked) {
+  const s = new Set(); let seed = 7;
+  const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let f = 0; f < 4; f++) for (const dir of [-1, 1]) for (let k = 0; k < 2; k++) {
+    let u = dir < 0 ? (linked ? 6 : 7) : (linked ? 9 : 8), v = 6 + Math.floor(rnd() * 20);
+    const len = 4 + Math.floor(rnd() * 4);
+    for (let i = 0; i < len; i++) { s.add(f + '|' + u + '|' + v); u += dir; const r = rnd(); v += r < 0.33 ? -1 : r > 0.66 ? 1 : 0; if (rnd() < 0.3) s.add(f + '|' + u + '|' + v); }
+  }
+  return s;
+}
+const CRACKS = [makeCracks(false), makeCracks(true)];
+const obsidian = (x, y, z) => hash3(x, y, z) > 0.92 ? [104, 80, 150] : tone([54, 46, 72], x, y, z, 0.18);
+function ringVoxels(R, i, linked) {
+  const seen = new Set(), v = [];
+  for (let s = 0; s < 512; s++) {
+    const a = s / 512 * Math.PI * 2, ix = Math.floor(R * Math.cos(a)), iz = Math.floor(R * Math.sin(a)), k = ix + ',' + iz;
+    if (seen.has(k)) continue; seen.add(k);
+    const base = i === 1 ? [204, 210, 228] : [226, 176, 72], mark = v.length % 5 === 0;
+    v.push({ x: ix, y: -0.5, z: iz, c: mark ? (linked ? [255, 200, 110] : shade(base, 0.7)) : tone(base, ix, i, iz, 0.12), g: mark && linked });
+  }
+  return v;
+}
+
+// ---------------------------------------------------------------------------
+// ROUND 3 helpers: lightning arcs, light shafts, materials
+// ---------------------------------------------------------------------------
+const unitBox = new THREE.BoxGeometry(1, 1, 1);
+const UP = new THREE.Vector3(0, 1, 0);
+const rnd = (i, k, s = 0) => hash3(i * 17 + s, k, s * 13 + 5);
+const inBox = (x, y, z, f, t) => x >= f[0] && x < t[0] && y >= f[1] && y < t[1] && z >= f[2] && z < t[2];
+function orientBox(m, a, b, w) {
+  const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const len = d.length();
+  if (len < 1e-4) return m.makeScale(0, 0, 0);
+  const q = new THREE.Quaternion().setFromUnitVectors(UP, d.normalize());
+  return m.compose(new THREE.Vector3((a[0] + b[0]) / 2 * PX, (a[1] + b[1]) / 2 * PX, (a[2] + b[2]) / 2 * PX), q, new THREE.Vector3(w * PX, len * PX, w * PX));
+}
+// Jagged lightning, redrawn `rate` times a second (Minecraft's own bolt is drawn from boxes too)
+function arcs(count, rgb, ends, { segs = 7, amp = 1.3, width = 0.5, rate = 5 } = {}) {
+  const mesh = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: new THREE.Color(...rgb), toneMapped: false }), count * segs);
+  const m = new THREE.Matrix4();
+  let last = null;
+  const update = t => {
+    const k = Math.floor(t * rate);
+    if (k === last) return;
+    last = k;
+    let n = 0;
+    for (let i = 0; i < count; i++) {
+      const e = ends(i, k), pts = [];
+      for (let j = 0; j <= segs; j++) {
+        const f = j / segs, w = (j === 0 || j === segs) ? 0 : amp;
+        pts.push([0, 1, 2].map(c => e.a[c] + (e.b[c] - e.a[c]) * f + (hash3(i * 31 + j, k, c * 7) * 2 - 1) * w));
+      }
+      for (let j = 0; j < segs; j++) mesh.setMatrixAt(n++, e.on === false ? m.makeScale(0, 0, 0) : orientBox(m, pts[j], pts[j + 1], width));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+  update(0);
+  return { obj: mesh, update };
+}
+// Flickering additive light shafts
+function shafts(list, rgb) {
+  const mesh = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), list.length);
+  const m = new THREE.Matrix4(), col = new THREE.Color();
+  list.forEach((s, i) => mesh.setMatrixAt(i, orientBox(m, s.a, s.b, s.w)));
+  const update = t => {
+    const k = Math.floor(t * 4);
+    list.forEach((s, i) => { const f = 0.55 + 0.75 * rnd(i, k, 3); col.setRGB(rgb[0] * f, rgb[1] * f, rgb[2] * f); mesh.setColorAt(i, col); });
+    mesh.instanceColor.needsUpdate = true;
+  };
+  update(0);
+  return { obj: mesh, update };
+}
+const OBSID3 = (x, y, z) => hash3(x, y, z) > 0.94 ? [96, 76, 130] : tone([44, 38, 60], x, y, z, 0.22);
+const IRON3 = (x, y, z) => tone([72, 68, 82], x, y, z, 0.2);
+const R3B = { x0: -2, x1: 18, y0: 0, y1: 32 };   // round 3 stays inside two blocks
+const VANILLA = [[0.30, 1.0, 0.85], [0.62, 0.48, 1.0], [0.012, 0.018, 0.04]];
+
+// Fractured Vessel: plates and their crack pattern
+const VPLATES = [
+  { f: [2, 4, 0], t: [14, 25, 2], n: [0, 0, -1] },
+  { f: [2, 4, 14], t: [14, 25, 16], n: [0, 0, 1] },
+  { f: [0, 4, 2], t: [2, 25, 14], n: [-1, 0, 0] },
+  { f: [14, 4, 2], t: [16, 25, 14], n: [1, 0, 0] },
+];
+const VCRACK = (() => {
+  const s = new Set(); let seed = 11;
+  const r = () => { seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let f = 0; f < 4; f++) for (let c = 0; c < 4; c++) {
+    let u = 3 + Math.floor(r() * 10), v = 6 + Math.floor(r() * 16);
+    for (let i = 0; i < 9; i++) {
+      s.add(f + '|' + u + '|' + v);
+      const q = r();
+      if (q < 0.4) u += r() < 0.5 ? -1 : 1; else v += q < 0.7 ? 1 : -1;
+      if (r() < 0.25) s.add(f + '|' + (u + 1) + '|' + v);
+    }
+  }
+  return s;
+})();
+function vesselPlate(x, y, z, L, e) {
+  const f = e.nz ? 0 : e.pz ? 1 : e.nx ? 2 : e.px ? 3 : -1;
+  if (f >= 0 && VCRACK.has(f + '|' + (f < 2 ? x : z) + '|' + y)) return L ? { c: [255, 236, 190], g: true } : { c: [26, 20, 18] };
+  if (y === 4 || y === 24) return { c: goldTone(x, y, z) };
+  if (f >= 0 && (y === 6 || y === 22) && (f < 2 ? x : z) % 3 === 0) return { c: [230, 190, 110] };
+  return { c: tone([66, 54, 50], x, y, z, 0.22) };
+}
+
+// Rending Altar: two obsidian blades and the tear between them
+function hornRange(y, side, L) {
+  const h = y - 12;
+  const notch = hash3(y, side + 2, 3) > 0.62 ? -0.8 : 0;
+  return { inner: Math.max(0.3, (L ? 3.0 - h * 0.08 : 0.6 - h * 0.02) + notch), outer: 7.6 - h * 0.22, zh: 3.6 - h * 0.12 };
+}
+const ALTAR_RIFTS = [];
+for (let y = 6; y < 30; y += 2) {
+  const w = y < 12 ? 1.5 : Math.max(0.6, 3.0 - (y - 12) * 0.08) - 0.1;
+  const zh = y < 12 ? 3.5 : 3.6 - (y - 12) * 0.12;
+  ALTAR_RIFTS.push({ type: 'box', f: [8 - w, y, 8 - zh], t: [8 + w, y + 2, 8 + zh] });
+}
+
+// Tempest Spire: stacked stone segments that levitate apart
+const SEGS = [{ s: 14, h: 4, yi: 4, yl: 6 }, { s: 12, h: 4, yi: 8, yl: 12 }, { s: 10, h: 4, yi: 12, yl: 18 }, { s: 8, h: 3, yi: 16, yl: 24 }];
+function segPaint(S, x, y, z, L, e) {
+  const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), half = S.s / 2;
+  if (y === S.yi + S.h - 1 && (ax >= half - 1 || az >= half - 1) && e.py) return { c: goldTone(x, y, z) };
+  const sf = sideFace(e, x, z);
+  if (sf && (y - S.yi === 1 || y - S.yi === 2) && sf.u % 3 === 1) return L ? { c: [150, 205, 255], g: true } : { c: [62, 66, 84] };
+  return { c: tone([104, 112, 136], x, y, z, 0.18) };
+}
+
+const R3 = [
+  {
+    round: 3, bounds: R3B, name: 'Shackled Star',
+    line: 'A caged wound in reality, held down by chains it is slowly breaking.',
+    story: 'Four obsidian pylons and an iron crown form a cage around nothing. Heavy chains hang slack from the pylons to the floor and two gold seals lie on the base. It is a prison waiting for its prisoner.',
+    change: 'The seed tears a diamond-shaped wound in the air at the centre of the cage. The chains snap taut and glow hot, the seals rise and whirl around the wound, and lightning lashes out of it into the pylons, which drink it through glowing conduits. The whole thing shudders, barely holding.',
+    code: ['Lightning: arcs from the wound to the pylons, redrawn many times a second', 'Seals: two square frames spinning around the wound', 'Rift: diamond-shaped, vanilla gateway colours, shuddering', 'Sparks: particles'],
+    swatches: [['#2c263c', 'Obsidian'], ['#d6a23c', 'Gold bands'], ['#dca0ff', 'Conduit light'], ['#c8e6ff', 'Lightning'], ['#48444e', 'Iron crown'], ['#6dffb5', 'World Seed']],
+    rift: VANILLA, light: 0xdca0ff, bloom: 0.6, glow: 1.25, flicker: false,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      if (y <= 1) return 'base';
+      if (y === 2) return x >= 1 && x <= 14 && z >= 1 && z <= 14 ? 'basetop' : null;
+      const lx = x <= 2 ? x : x >= 13 ? 15 - x : -1, lz = z <= 2 ? z : z >= 13 ? 15 - z : -1;
+      if (lx >= 0 && lz >= 0) {
+        if (y <= 23) return 'pylon';
+        if (y <= 29) return lx <= 1 && lz <= 1 ? 'pylon' : null;
+        return lx === 0 && lz === 0 ? 'tip' : null;
+      }
+      if ((y === 26 || y === 27) && (((z <= 1 || z >= 14) && x >= 3 && x <= 12) || ((x <= 1 || x >= 14) && z >= 3 && z <= 12))) return 'bar';
+      for (const [sx, sz] of CORNERS) {
+        const pts = L ? [[8 + sx * 5.5, 21, 8 + sz * 5.5], [8 + sx * 3.2, 18, 8 + sz * 3.2]]
+                      : [[8 + sx * 5.5, 21, 8 + sz * 5.5], [8 + sx * 4.6, 12, 8 + sz * 4.6], [8 + sx * 3.4, 4, 8 + sz * 3.4]];
+        if (polyDist(p, pts).d < 0.75) return 'chain';
+      }
+      if (!L && y === 3 && ax < 5 && az < 5 && (ax >= 4 || az >= 4)) return 'seal';
+      if (!L && y === 4 && ax + az < 5.2 && ax + az >= 4.2) return 'seal';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (k === 'base') return { c: tone([40, 36, 52], x, y, z, 0.25) };
+      if (k === 'basetop') {
+        if (e.py && ax + az >= 5 && ax + az < 6) return L ? { c: [220, 160, 255], g: true } : { c: goldTone(x, y, z) };
+        return { c: tone([56, 52, 70], x, y, z, 0.2) };
+      }
+      if (k === 'pylon') {
+        if ((x === 2 || x === 13) && (z === 2 || z === 13) && y >= 4 && y <= 22) return L ? { c: y % 3 ? [220, 160, 255] : [255, 240, 255], g: true } : { c: [30, 26, 40] };
+        if (y === 8 || y === 16 || y === 23) return { c: goldTone(x, y, z) };
+        if (L && anySide(e) && hash3(x, y, z + 4) > 0.93) return { c: [200, 140, 255], g: true };
+        return { c: OBSID3(x, y, z) };
+      }
+      if (k === 'tip') return L ? { c: [255, 240, 255], g: true } : { c: [80, 70, 100] };
+      if (k === 'bar') return { c: (x + z) % 3 === 0 ? goldTone(x, y, z) : IRON3(x, y, z) };
+      if (k === 'chain') return (x + y + z) % 2 ? (L ? { c: [255, 190, 255], g: true } : { c: [96, 92, 106] }) : { c: IRON3(x, y, z) };
+      return { c: goldTone(x, y, z) };
+    },
+    rifts: [{ type: 'octa', c: [8, 16, 8], r: 4.8 }],
+    seed: { type: 'gem', c: [8, 16, 8] },
+    extras(L, group, ctx) {
+      if (!L) return null;
+      const seals = [[4.5, 5.5], [3.5, 4.5]].map(([lo, hi]) => {
+        const part = voxPart({
+          bounds: { x0: 2, x1: 14, y0: 16, y1: 17 },
+          shape: (x, y, z) => { const ax = Math.abs(x + 0.5 - 8), az = Math.abs(z + 0.5 - 8); return ax < hi && az < hi && (ax >= lo || az >= lo) ? 's' : null; },
+          paint: (k, x, y, z) => ((x + z) % 3 === 0 ? { c: [255, 230, 160], g: true } : { c: goldTone(x, y, z) }),
+          pivot: [8, 16.5, 8],
+        });
+        group.add(part);
+        return part;
+      });
+      const V = [[4.8, 0, 0], [-4.8, 0, 0], [0, 4.8, 0], [0, -4.8, 0], [0, 0, 4.8], [0, 0, -4.8]];
+      const PY = [[2.5, 2.5], [13.5, 2.5], [2.5, 13.5], [13.5, 13.5]];
+      const bolts = arcs(6, [2.2, 2.6, 3.0], (i, k) => {
+        const v = V[Math.floor(rnd(i, k) * 6)], py = PY[(i + Math.floor(rnd(i, k, 1) * 4)) % 4];
+        return { a: [8 + v[0], 16 + v[1], 8 + v[2]], b: [py[0], 5 + rnd(i, k, 2) * 17, py[1]], on: rnd(i, k, 3) > 0.3 };
+      });
+      group.add(bolts.obj);
+      const sp = particles(30, 0xe0c0ff, { r0: 1, rs: 7, y0: 6, h: 22, swirl: 1.2 });
+      group.add(sp.obj);
+      return t => {
+        seals[0].rotation.set(0.5, t * 1.1, 0.2);
+        seals[1].rotation.set(-0.4, -t * 0.8, 0.9 + t * 0.3);
+        const k = Math.floor(t * 20);
+        ctx.rifts.forEach(r => r.scale.setScalar(1 + (rnd(1, k) - 0.5) * 0.1));
+        bolts.update(t); sp.update(t);
+      };
+    },
+  },
+  {
+    round: 3, bounds: R3B, name: 'Fractured Vessel',
+    line: 'Something far too large has been poured into something far too small.',
+    story: 'An iron-bound crucible of blackened bronze plates, riveted at every edge, its lid clamped down. Hairline cracks run across the plates. It is heavy, sealed and very still.',
+    change: 'The seed goes in and the vessel cannot hold it. The plates are shoved outward from the iron frame and shudder in place, light blasts out through every seam and crack, the lid rattles on a column of light, and arcs crawl over the bindings. Inside, behind the plates, you glimpse raw rift.',
+    code: ['Plates and lid: moving parts that strain outward and shudder', 'Light shafts: flickering beams escaping through the seams', 'Lightning: arcs from the neck to the iron straps', 'Rift: fills the inside, tinted white-gold (needs our own shader)', 'Embers: rising particles'],
+    swatches: [['#42362f', 'Blackened bronze'], ['#605c6a', 'Iron straps'], ['#d6a23c', 'Gold rivets'], ['#ffecbe', 'Escaping light'], ['#ffd27a', 'Arcs'], ['#140c06', 'Rift (warm)']],
+    rift: [[1.0, 0.85, 0.5], [1.0, 1.0, 0.9], [0.04, 0.02, 0.01]], light: 0xffd89a, bloom: 0.75, glow: 1.5, flicker: false,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      if (y <= 1) return x >= 2 && x <= 13 && z >= 2 && z <= 13 ? 'iron' : null;
+      if (y <= 3) return x >= 1 && x <= 14 && z >= 1 && z <= 14 ? (y === 3 ? 'band' : 'iron') : null;
+      if (y <= 24) {
+        if ((x <= 1 || x >= 14) && (z <= 1 || z >= 14)) return 'strap';
+        if (!L) for (const P of VPLATES) if (inBox(x, y, z, P.f, P.t)) return 'plate';
+        return null;
+      }
+      if (L && y <= 28 && x >= 6 && x <= 9 && z >= 6 && z <= 9) return null;
+      if (y <= 26) return x >= 1 && x <= 14 && z >= 1 && z <= 14 ? (y === 26 ? 'band' : 'iron') : null;
+      if (y <= 28) return x >= 4 && x <= 11 && z >= 4 && z <= 11 ? 'neck' : null;
+      if (!L) { if (y <= 30) return x >= 3 && x <= 12 && z >= 3 && z <= 12 ? 'lid' : null; return x >= 7 && x <= 8 && z >= 5 && z <= 10 ? 'lid' : null; }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'plate') return vesselPlate(x, y, z, L, e);
+      if (k === 'band') return { c: goldTone(x, y, z) };
+      if (k === 'strap') return { c: y % 4 === 0 ? goldTone(x, y, z) : tone([96, 92, 106], x, y, z, 0.15) };
+      if (k === 'neck') return { c: y === 28 && e.py ? goldTone(x, y, z) : tone([84, 70, 52], x, y, z, 0.2) };
+      if (k === 'lid') return { c: y === 29 ? IRON3(x, y, z) : goldTone(x, y, z) };
+      return { c: IRON3(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [2, 4, 2], t: [14, 25, 14] }, { type: 'box', f: [6, 25, 6], t: [10, 29, 10] }],
+    seed: { type: 'gem', c: [8, 15, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const plates = VPLATES.map(P => {
+        const part = voxPart({
+          bounds: { x0: -1, x1: 17, y0: 4, y1: 25 },
+          shape: (x, y, z) => (inBox(x, y, z, P.f, P.t) ? 'plate' : null),
+          paint: (k, x, y, z, e) => vesselPlate(x, y, z, true, e),
+          pivot: [(P.f[0] + P.t[0]) / 2, (P.f[1] + P.t[1]) / 2, (P.f[2] + P.t[2]) / 2],
+        });
+        group.add(part);
+        return { part, P, base: part.position.clone() };
+      });
+      const lid = voxPart({
+        bounds: { x0: 2, x1: 14, y0: 29, y1: 32 },
+        shape: (x, y, z) => (y <= 30 ? (x >= 3 && x <= 12 && z >= 3 && z <= 12 ? 'lid' : null) : (x >= 7 && x <= 8 && z >= 5 && z <= 10 ? 'lid' : null)),
+        paint: (k, x, y, z) => ({ c: y === 29 ? IRON3(x, y, z) : goldTone(x, y, z) }),
+        pivot: [8, 30, 8],
+      });
+      group.add(lid);
+      const list = [];
+      for (const [sx, sz] of CORNERS) for (const [hy, along] of [[9, 'x'], [17, 'z'], [13, 'z'], [20, 'x']]) {
+        const a = [8 + sx * 6, hy, 8 + sz * 6];
+        const dir = along === 'x' ? [sx * 0.5, 0.15, sz * 1] : [sx * 1, 0.15, sz * 0.5];
+        const len = 6 + ((hy * 7) % 5);
+        list.push({ a, b: [a[0] + dir[0] * len, a[1] + dir[1] * len, a[2] + dir[2] * len], w: 1.4 });
+      }
+      for (const [dx, dz] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) list.push({ a: [8 + dx, 28, 8 + dz], b: [8 + dx * 2, 36, 8 + dz * 2], w: 1.6 });
+      const sh = shafts(list, [1.4, 1.1, 0.6]);
+      group.add(sh.obj);
+      const bolts = arcs(3, [2.6, 2.2, 1.4], (i, k) => {
+        const [sx, sz] = CORNERS[Math.floor(rnd(i, k) * 4)];
+        return { a: [8, 28, 8], b: [8 + sx * 7, 6 + rnd(i, k, 1) * 18, 8 + sz * 7], on: rnd(i, k, 2) > 0.35 };
+      });
+      group.add(bolts.obj);
+      const em = particles(36, 0xffc070, { r0: 0, rs: 3, y0: 26, h: 12, swirl: 0.6 });
+      group.add(em.obj);
+      return t => {
+        const k = Math.floor(t * 24);
+        plates.forEach(({ part, P, base }, i) => {
+          const push = 1.3 + 0.35 * Math.sin(t * 3 + i) + (rnd(i, k) - 0.5) * 0.35;
+          part.position.set(base.x + P.n[0] * push * PX, base.y + (rnd(i, k, 1) - 0.5) * 0.3 * PX, base.z + P.n[2] * push * PX);
+          part.rotation.set(P.n[2] * 0.04 * Math.sin(t * 2.3 + i), 0, -P.n[0] * 0.04 * Math.sin(t * 2.3 + i));
+        });
+        lid.position.y = (30 + 0.8 + 0.4 * Math.abs(Math.sin(t * 6))) * PX;
+        lid.rotation.set((rnd(5, k) - 0.5) * 0.08, 0, (rnd(6, k) - 0.5) * 0.08);
+        sh.update(t); bolts.update(t); em.update(t);
+      };
+    },
+  },
+  {
+    round: 3, bounds: R3B, name: 'Prism Engine',
+    line: 'An arcane dynamo that forces a world into being by sheer power.',
+    story: 'An iron engine block with a dark core shaft, three square rotors standing still around it, and four grey crystals on posts at the corners. It looks like a machine switched off.',
+    change: 'The crystals ignite violet and fire beams into the core, which tears open into a column of deep space with the seed at its heart. The rotors spin up in opposite directions, lightning jumps from the crystal tips to the crown, and an inverted crystal pyramid rises and turns in the crown.',
+    code: ['Rotors: three square frames spinning in opposite directions', 'Beams: four pulsing beams from the crystals into the core', 'Lightning: crystal tips to crown spikes', 'Crown crystal: floats and turns', 'Rift: core column, vanilla gateway colours'],
+    swatches: [['#48444e', 'Engine iron'], ['#d6a23c', 'Rotor gold'], ['#c86eff', 'Charged crystal'], ['#ffd2ff', 'Beam light'], ['#6c6280', 'Spent crystal'], ['#0a1020', 'Rift']],
+    rift: VANILLA, light: 0xd28cff, bloom: 0.7, glow: 1.4, flicker: false,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 1) return 'iron';
+      if (y <= 3) return ax < 7 && az < 7 ? (y === 3 && (ax >= 6 || az >= 6) ? 'gold' : 'iron') : null;
+      for (const [sx, sz] of CORNERS) {
+        const dx = cx - sx * 5.5, dz = cz - sz * 5.5;
+        if (y <= 8 && Math.abs(dx) < 1 && Math.abs(dz) < 1) return 'post';
+        if (y >= 9 && Math.abs(dx) + Math.abs(dz) + Math.abs(y + 0.5 - 15) * 0.42 < 2.7) return 'crys';
+      }
+      if (y >= 28 && y <= 29) return ax < 7 && az < 7 && (ax >= 4 || az >= 4) ? 'crown' : null;
+      if (y >= 30) return ax >= 5 && ax < 7 && az >= 5 && az < 7 ? 'spike' : null;
+      if (!L && y >= 4 && y <= 27 && ax < 2 && az < 2) return 'core';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'post') return { c: y === 8 ? goldTone(x, y, z) : IRON3(x, y, z) };
+      if (k === 'crys') {
+        if (!L) return { c: tone([108, 98, 128], x, y, z, 0.15) };
+        return { c: hash3(x, y, z) > 0.85 ? [255, 235, 255] : mix([190, 100, 255], [255, 210, 255], Math.min(1, (y - 9) / 12)), g: true };
+      }
+      if (k === 'crown') return { c: ax >= 6 || az >= 6 ? goldTone(x, y, z) : IRON3(x, y, z) };
+      if (k === 'spike') return y === 31 && L ? { c: [255, 220, 255], g: true } : { c: goldTone(x, y, z) };
+      if (k === 'core') return { c: y % 4 === 0 ? [30, 28, 36] : IRON3(x, y, z) };
+      return { c: IRON3(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [6, 4, 6], t: [10, 28, 10] }],
+    seed: { type: 'gem', c: [8, 16, 8] },
+    extras(L, group) {
+      const frames = [[5, 7], [4, 16], [5, 25]].map(([h, Y]) => {
+        const part = voxPart({
+          bounds: { x0: 2, x1: 14, y0: Y, y1: Y + 1 },
+          shape: (x, y, z) => { const ax = Math.abs(x + 0.5 - 8), az = Math.abs(z + 0.5 - 8); return ax < h && az < h && (ax >= h - 1 || az >= h - 1) ? 'f' : null; },
+          paint: (k, x, y, z) => ((x + z) % 3 === 0 ? (L ? { c: [140, 240, 255], g: true } : { c: [120, 90, 40] }) : { c: goldTone(x, y, z) }),
+          pivot: [8, Y + 0.5, 8],
+        });
+        group.add(part);
+        return part;
+      });
+      if (!L) return null;
+      const top = voxPart({
+        bounds: { x0: 4, x1: 12, y0: 26, y1: 32 },
+        shape: (x, y, z) => { const hs = (y - 25) * 0.62; return Math.abs(x + 0.5 - 8) < hs && Math.abs(z + 0.5 - 8) < hs ? 'p' : null; },
+        paint: (k, x, y, z) => ({ c: hash3(x, y, z) > 0.8 ? [255, 240, 255] : [230, 140, 255], g: true }),
+        pivot: [8, 28.5, 8],
+      });
+      group.add(top);
+      const beams = shafts(CORNERS.map(([sx, sz]) => ({ a: [8 + sx * 5.5, 15, 8 + sz * 5.5], b: [8 + sx * 2, 15, 8 + sz * 2], w: 1.4 })), [1.8, 0.9, 2.0]);
+      group.add(beams.obj);
+      const bolts = arcs(4, [2.4, 1.6, 2.8], (i, k) => {
+        const [sx, sz] = CORNERS[i];
+        return { a: [8 + sx * 5.5, 21, 8 + sz * 5.5], b: [8 + sx * 6, 30, 8 + sz * 6], on: rnd(i, k) > 0.4 };
+      }, { amp: 1.0 });
+      group.add(bolts.obj);
+      const sp = particles(30, 0xf0b0ff, { r0: 2, rs: 5, y0: 4, h: 26, swirl: 2.0 });
+      group.add(sp.obj);
+      return t => {
+        frames[0].rotation.y = t * 1.6; frames[1].rotation.y = -t * 2.2; frames[2].rotation.y = t * 1.2;
+        top.rotation.y = t * 0.8; top.position.y = (28.5 + 0.4 * Math.sin(t * 1.7)) * PX;
+        beams.update(t); bolts.update(t); sp.update(t);
+      };
+    },
+  },
+  {
+    round: 3, bounds: R3B, name: 'Rending Altar',
+    line: 'A wound in the world, stapled shut, and the staples are losing.',
+    story: 'A squat altar of dark stone with two obsidian blades rising from it and pressed together like closed jaws. Cold gold staples bind the blades shut along the seam.',
+    change: 'The blades are forced apart by a crimson tear that rips up through the altar and between them. The staples glow white-hot as they strain to hold it, and the top one has already snapped and hangs in the air. Lightning crackles across the gap and embers pour upward.',
+    code: ['Two models: the blades closed when inert, forced apart when linked', 'Broken staple: two pieces floating and shaking', 'Lightning: arcs across the tear', 'Rift: a jagged tear, tinted crimson (needs our own shader)', 'Embers: rising particles'],
+    swatches: [['#3a2c30', 'Altar stone'], ['#34283a', 'Obsidian blades'], ['#d6a23c', 'Gold staples'], ['#fff0c8', 'White-hot metal'], ['#ff8c5a', 'Crimson veins'], ['#1a0004', 'Rift (crimson)']],
+    rift: [[1.0, 0.35, 0.3], [1.0, 0.75, 0.4], [0.05, 0.0, 0.01]], light: 0xff7a5a, bloom: 0.75, glow: 1.5, flicker: false,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 1) return 'base';
+      if (y <= 11) {
+        if (ax >= 7 || az >= 7) return null;
+        if (L && y >= 6 && ax < 1.6 && az < 3.5) return null;
+        return y === 11 && (ax >= 6 || az >= 6) ? 'gold' : 'altar';
+      }
+      const r = hornRange(y, Math.sign(cx), L);
+      if (ax >= r.inner && ax < r.outer && az < r.zh) return 'horn';
+      for (const sy of [15, 20, 25]) { if (L && sy === 25) continue; if (y === sy && az < 1 && ax < 4.5) return 'staple'; }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx } = C(x, z), ax = Math.abs(cx);
+      if (k === 'base') return { c: tone([48, 40, 44], x, y, z, 0.25) };
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'altar') {
+        if ((e.nz || e.pz) && y >= 4 && y <= 9 && x % 3 === 1 && y % 2 === 0) return L ? { c: [255, 110, 80], g: true } : { c: [34, 24, 28] };
+        return { c: tone([82, 64, 68], x, y, z, 0.2) };
+      }
+      if (k === 'horn') {
+        const r = hornRange(y, Math.sign(cx), L);
+        if (L && anySide(e) && ax < r.inner + 1.2 && hash3(x, y, z) > 0.35) return { c: [255, 140, 90], g: true };
+        if (hash3(x, y, z + 2) > 0.94) return { c: [90, 60, 80] };
+        return { c: tone([76, 60, 82], x, y, z, 0.2) };
+      }
+      if (k === 'staple') return L ? { c: ax < 2.5 ? [255, 240, 210] : [255, 170, 90], g: true } : { c: goldTone(x, y, z) };
+      return { c: IRON3(x, y, z) };
+    },
+    rifts: ALTAR_RIFTS,
+    seed: { type: 'gem', c: [8, 18, 8] },
+    extras(L, group, ctx) {
+      if (!L) return null;
+      const pieces = [-1, 1].map(side => {
+        const part = voxPart({
+          bounds: { x0: 4, x1: 12, y0: 25, y1: 26 },
+          shape: (x, y, z) => { const cx = x + 0.5 - 8; return Math.sign(cx) === side && Math.abs(cx) < 3.5 && (z === 7 || z === 8) ? 's' : null; },
+          paint: (k, x, y, z) => ({ c: [255, 200, 130], g: true }),
+          pivot: [8 + side * 2, 25.5, 8],
+        });
+        group.add(part);
+        return { part, side };
+      });
+      const bolts = arcs(5, [3.0, 1.4, 1.0], (i, k) => {
+        const y = 13 + rnd(i, k) * 16, r = hornRange(Math.floor(y), 1, true);
+        return { a: [8 - r.inner, y, 8 + (rnd(i, k, 1) - 0.5) * 6], b: [8 + r.inner, y + (rnd(i, k, 2) - 0.5) * 4, 8 + (rnd(i, k, 3) - 0.5) * 6], on: rnd(i, k, 4) > 0.3 };
+      }, { segs: 5, amp: 0.9 });
+      group.add(bolts.obj);
+      const em = particles(40, 0xff7050, { r0: 0, rs: 1.5, y0: 8, h: 26, swirl: 0.3 });
+      group.add(em.obj);
+      return t => {
+        const k = Math.floor(t * 22);
+        pieces.forEach(({ part, side }, i) => {
+          part.position.set((8 + side * 3.2 + (rnd(i, k) - 0.5) * 0.4) * PX, (26.5 + Math.sin(t * 1.3 + i)) * PX, 8 * PX);
+          part.rotation.set(0, 0, side * (0.5 + 0.08 * Math.sin(t * 2 + i)));
+        });
+        ctx.rifts.forEach((r, i) => r.scale.x = 1 + (rnd(i, k) - 0.5) * 0.25);
+        bolts.update(t); em.update(t);
+      };
+    },
+  },
+  {
+    round: 3, bounds: R3B, name: 'Tempest Spire',
+    line: 'A stepped obelisk torn apart and held aloft by its own storm.',
+    story: 'A stepped obelisk of storm-grey stone, four tiers stacked tight on a heavy base, gold-edged and carved with runes. A small gold socket waits at the top.',
+    change: 'The tiers tear free of each other and hang in the air, slowly twisting, with lightning bridging every gap. Through their hollow centres runs a column of deep space, and at the crown a diamond-shaped wound holds the seed. The runes burn storm blue.',
+    code: ['Tiers: four floating parts that twist and bob', 'Lightning: arcs between the tiers and from the crown', 'Rift: column through the tiers plus a diamond at the crown, vanilla gateway colours', 'Wind: particles spiralling upward'],
+    swatches: [['#68708a', 'Storm stone'], ['#d6a23c', 'Gold edges'], ['#96cdff', 'Storm runes'], ['#d2e8ff', 'Lightning'], ['#3e4254', 'Carved rune'], ['#0a1020', 'Rift']],
+    rift: VANILLA, light: 0x96cdff, bloom: 0.7, glow: 1.4, flicker: false,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 3) return y === 3 && (ax >= 7 || az >= 7) ? 'gold' : 'stone';
+      if (!L) {
+        for (const S of SEGS) if (y >= S.yi && y < S.yi + S.h && ax < S.s / 2 && az < S.s / 2 && !(ax < 2 && az < 2)) return 'seg';
+        if (y >= 19 && y <= 20 && ax < 3 && az < 3 && !(ax < 2 && az < 2)) return 'gold';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'seg') return segPaint(SEGS.find(S => y >= S.yi && y < S.yi + S.h), x, y, z, false, e);
+      return { c: tone([84, 90, 110], x, y, z, 0.2) };
+    },
+    rifts: [{ type: 'box', f: [6, 4, 6], t: [10, 27, 10] }, { type: 'octa', c: [8, 29.5, 8], r: 2.5 }],
+    seed: { type: 'gemSmall', c: [8, 29.5, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const tiers = SEGS.map(S => {
+        const part = voxPart({
+          bounds: { x0: 0, x1: 16, y0: S.yi, y1: S.yi + S.h },
+          shape: (x, y, z) => { const ax = Math.abs(x + 0.5 - 8), az = Math.abs(z + 0.5 - 8); return ax < S.s / 2 && az < S.s / 2 && !(ax < 2 && az < 2) ? 'seg' : null; },
+          paint: (k, x, y, z, e) => segPaint(S, x, y, z, true, e),
+          pivot: [8, S.yi + S.h / 2, 8],
+        });
+        group.add(part);
+        return { part, S };
+      });
+      const gaps = [{ y0: 4, h0: 8, y1: 6, h1: 7 }, ...SEGS.slice(0, 3).map((S, i) => ({ y0: S.yl + S.h, h0: S.s / 2, y1: SEGS[i + 1].yl, h1: SEGS[i + 1].s / 2 })), { y0: 27, h0: 4, y1: 28, h1: 1 }];
+      const bolts = arcs(12, [2.2, 2.8, 3.6], (i, k) => {
+        const g = gaps[i % gaps.length], [sx, sz] = CORNERS[Math.floor(rnd(i, k) * 4)];
+        return { a: [8 + sx * (g.h0 - 0.5), g.y0, 8 + sz * (g.h0 - 0.5)], b: [8 + sx * (g.h1 - 0.5), g.y1, 8 + sz * (g.h1 - 0.5)], on: rnd(i, k, 2) > 0.2 };
+      }, { segs: 4, amp: 0.9, width: 0.7, rate: 5 });
+      group.add(bolts.obj);
+      const wind = particles(36, 0xc0dcff, { r0: 6, rs: 4, y0: 2, h: 30, swirl: 1.4 });
+      group.add(wind.obj);
+      return t => {
+        tiers.forEach(({ part, S }, i) => {
+          part.position.y = (S.yl + S.h / 2 + 0.4 * Math.sin(t * 1.3 + i * 1.7)) * PX;
+          part.rotation.y = 0.18 * Math.sin(t * 0.6 + i) + (i % 2 ? -1 : 1) * 0.12;
+        });
+        bolts.update(t); wind.update(t);
+      };
+    },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 4 helpers: flowing energy channels, containment fields
+// ---------------------------------------------------------------------------
+const flowTime = { value: 0 };
+// Glow whose light travels smoothly toward the core (an animated texture in game)
+function flowMaterial(core) {
+  const m = new THREE.MeshBasicMaterial({ toneMapped: false });
+  m.color.setScalar(1.5);
+  m.customProgramCacheKey = () => 'flow';
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uTime = flowTime;
+    sh.uniforms.uCore = { value: new THREE.Vector3(core[0] * PX, core[1] * PX, core[2] * PX) };
+    sh.vertexShader = 'varying vec3 vLocal;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vLocal = (instanceMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = 'uniform float uTime; uniform vec3 uCore; varying vec3 vLocal;\n' + sh.fragmentShader.replace('#include <color_fragment>',
+      '#include <color_fragment>\n  float dd = length(vLocal - uCore);\n  diffuseColor.rgb *= 0.3 + 0.7 * pow(0.5 + 0.5 * sin(dd * 26.0 + uTime * 2.0), 2.0);');
+  };
+  return m;
+}
+// Translucent rune fields stretched across openings, slowly scrolling
+const fieldCanvas = document.createElement('canvas');
+fieldCanvas.width = fieldCanvas.height = 16;
+{
+  const g = fieldCanvas.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(0, 0, 16, 16);
+  g.fillStyle = 'rgba(255,255,255,0.55)';
+  [[GLYPHS[1], 2, 2], [GLYPHS[4], 10, 9]].forEach(([gl, ox, oy]) => gl.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') g.fillRect(ox + c, oy + r, 1, 1); })));
+  g.fillStyle = 'rgba(255,255,255,0.3)';
+  for (let i = 0; i < 16; i += 4) { g.fillRect(i, 0, 1, 1); g.fillRect(0, i, 1, 1); }
+}
+function fields(list, rgb) {
+  const group = new THREE.Group(), texes = [];
+  for (const f of list) {
+    const tex = new THREE.CanvasTexture(fieldCanvas);
+    tex.magFilter = tex.minFilter = THREE.NearestFilter;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(f.w / 8, f.h / 8);
+    texes.push(tex);
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(f.w * PX, f.h * PX), new THREE.MeshBasicMaterial({
+      map: tex, color: new THREE.Color(...rgb), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    }));
+    mesh.position.set(f.c[0] * PX, f.c[1] * PX, f.c[2] * PX);
+    mesh.rotation.y = f.rotY || 0;
+    group.add(mesh);
+  }
+  return { obj: group, update: t => texes.forEach(tx => { tx.offset.y = t * 0.035; }) };
+}
+const GRANITE = (x, y, z) => { let c = tone([104, 106, 122], x, y, z, 0.16); if (y % 4 === 0) c = shade(c, 0.86); return c; };
+const STEEL = (x, y, z) => tone([118, 122, 138], x, y, z, 0.14);
+const LX = x => Math.min(x, 15 - x);
+const R4B = { x0: -1, x1: 17, y0: 0, y1: 32 };
+
+const R4 = [
+  {
+    round: 4, bounds: R4B, name: 'Breach Bastion',
+    line: 'A fortress built around a wound in the world, and built to hold it open.',
+    story: 'Four massive granite buttresses, banded in gold, stand around an empty chamber on a heavy foundation. Gold crossbars lock each side. Their channels are dark and the chamber is just air.',
+    change: 'A tall column of torn reality opens in the chamber, the full height of the anchor. Light flows steadily up the buttresses into it, the inner edges of the stone burn white where they hold the tear, and a field of runes seals each opening between the crossbars.',
+    code: ['Rift: a tall column, vanilla gateway colours', 'Rune fields: translucent, slowly scrolling animated texture', 'Energy channels: animated texture flowing toward the core', 'Seed: floats in the centre', 'Motes: drawn slowly into the rift'],
+    swatches: [['#4a4c5c', 'Granite'], ['#d6a23c', 'Gold bands'], ['#d2faff', 'Breach edge'], ['#66e6ff', 'Rune field'], ['#5a6070', 'Steel crown'], ['#0a1020', 'Rift']],
+    rift: VANILLA, light: 0x9ff0ff, bloom: 0.5, glow: 1.2, pulse: 1.0, core: [8, 16, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z);
+      if (y <= 3) return y === 3 && (lx === 0 || lz === 0) ? 'gold' : 'granite';
+      if (y >= 26) {
+        if (y <= 27) return y === 27 && (lx === 0 || lz === 0) ? 'gold' : 'granite';
+        if (y <= 29) return lx >= 1 && lz >= 1 ? 'granite' : null;
+        return lx >= 2 && lz >= 2 ? 'crown' : null;
+      }
+      const w = y < 22 ? 5 : 4;
+      if (lx < w && lz < w) return 'butt';
+      if (y <= 5 && lx >= 5 && lz >= 5) return y === 5 ? 'dais' : 'granite';
+      if ((y === 10 || y === 11 || y === 20 || y === 21) && ((lz <= 1 && lx >= w) || (lx <= 1 && lz >= w))) return 'bar';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'bar') return { c: (x + y + z) % 4 === 0 ? [60, 50, 40] : goldTone(x, y, z) };
+      if (k === 'dais') return (lx === 5 || lz === 5) ? (L ? { c: [200, 250, 255], g: true } : { c: goldTone(x, y, z) }) : { c: goldTone(x, y, z) };
+      if (k === 'crown') {
+        if (y === 31 && e.py && lx >= 5 && lz >= 5) return L ? { c: [200, 250, 255], g: true } : { c: goldTone(x, y, z) };
+        return { c: STEEL(x, y, z) };
+      }
+      if (k === 'butt') {
+        const w = y < 22 ? 5 : 4;
+        if (lx === w - 1 && lz === w - 1 && y >= 6) return L ? { c: [210, 250, 255], g: true } : { c: [44, 46, 58] };
+        if (y === 8 || y === 16 || y === 24) return { c: goldTone(x, y, z) };
+        const sf = sideFace(e, x, z);
+        if (sf && ((lz === 0 && lx === 2) || (lx === 0 && lz === 2)) && y >= 5) return L ? { c: [140, 230, 255], fl: true } : { c: [40, 42, 52] };
+      }
+      return { c: GRANITE(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [5, 6, 5], t: [11, 26, 11] }],
+    seed: { type: 'gem', c: [8, 16, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const fl = fields([
+        { c: [8, 16, 2], w: 6, h: 20 }, { c: [8, 16, 14], w: 6, h: 20 },
+        { c: [2, 16, 8], w: 6, h: 20, rotY: Math.PI / 2 }, { c: [14, 16, 8], w: 6, h: 20, rotY: Math.PI / 2 },
+      ], [0.35, 0.85, 1.0]);
+      group.add(fl.obj);
+      const motes = particles(26, 0xbff4ff, { r0: 4, rs: 6, y0: 6, h: 20, swirl: 0.25, sink: true });
+      group.add(motes.obj);
+      return t => { fl.update(t); motes.update(t); };
+    },
+  },
+  {
+    round: 4, bounds: R4B, name: 'Trilithon Gate',
+    line: 'Three stones older than kingdoms, holding a door to another world.',
+    story: 'Two thick granite pillars and a massive lintel on a deep plinth, like a megalithic doorway. Heavy gold brackets sit in the four corners of the opening. Through it you see only the land behind.',
+    change: 'The doorway fills with a slab of deep space, the brackets bite into its corners and glow, and every edge of stone that touches the tear burns violet-white. Light flows down the pillars from the keystone, and a rune field hangs across each face of the door.',
+    code: ['Rift: a deep slab filling the doorway, vanilla gateway colours', 'Rune fields: front and back, slowly scrolling', 'Energy channels: flowing toward the door', 'Seed: floats in the doorway', 'Needs a facing direction when placed, like a door'],
+    swatches: [['#4a4c5c', 'Granite'], ['#d6a23c', 'Gold brackets'], ['#e6d2ff', 'Door edge'], ['#b48cff', 'Rune field'], ['#5a6070', 'Capstone'], ['#0a1020', 'Rift']],
+    rift: VANILLA, light: 0xc8aaff, bloom: 0.5, glow: 1.2, pulse: 1.0, core: [8, 14.5, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      if (y <= 1) return z >= 1 && z <= 14 ? 'granite' : null;
+      if (y === 2) return z >= 2 && z <= 13 ? (z === 2 || z === 13 ? 'gold' : 'plinth') : null;
+      if (y <= 25) {
+        if ((x <= 3 || x >= 12) && z >= 3 && z <= 12) return 'pillar';
+        const dxc = x < 8 ? x - 4 : 11 - x, dyc = y < 14 ? y - 3 : 25 - y;
+        if (((dxc <= 2 && dyc <= 1) || (dxc <= 1 && dyc <= 2)) && ((z >= 3 && z <= 4) || (z >= 11 && z <= 12))) return 'bracket';
+        return null;
+      }
+      if (y <= 29) return z >= 2 && z <= 13 ? 'lintel' : null;
+      return x >= 1 && x <= 14 && z >= 3 && z <= 12 ? 'cap' : null;
+    },
+    paint(k, x, y, z, L, e) {
+      const face = e.nz || e.pz;
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'bracket') {
+        const dxc = x < 8 ? x - 4 : 11 - x, dyc = y < 14 ? y - 3 : 25 - y;
+        if (L && dxc + dyc === 0) return { c: [235, 215, 255], g: true };
+        return { c: goldTone(x, y, z) };
+      }
+      if (k === 'plinth') return (L && e.py && x >= 4 && x <= 11) ? { c: [230, 210, 255], g: true } : { c: GRANITE(x, y, z) };
+      if (k === 'pillar') {
+        if (L && ((x === 3 && e.px) || (x === 12 && e.nx))) return { c: [230, 210, 255], g: true };
+        if (face && (y === 8 || y === 14 || y === 20)) return { c: goldTone(x, y, z) };
+        if (face && (x === 1 || x === 14) && y >= 3) return L ? { c: [190, 150, 255], fl: true } : { c: [40, 42, 52] };
+      }
+      if (k === 'lintel') {
+        if (L && e.ny && x >= 4 && x <= 11) return { c: [230, 210, 255], g: true };
+        if (face && x >= 6 && x <= 9 && y >= 27 && y <= 28) return L ? { c: [235, 215, 255], g: true } : { c: goldTone(x, y, z) };
+        if (face && y === 26) return { c: goldTone(x, y, z) };
+      }
+      if (k === 'cap') return { c: STEEL(x, y, z) };
+      return { c: GRANITE(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [4, 3, 5], t: [12, 26, 11] }],
+    seed: { type: 'gem', c: [8, 14.5, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const fl = fields([{ c: [8, 14.5, 4.6], w: 8, h: 23 }, { c: [8, 14.5, 11.4], w: 8, h: 23 }], [0.7, 0.5, 1.0]);
+      group.add(fl.obj);
+      const motes = particles(24, 0xdcc8ff, { r0: 2, rs: 3, y0: 4, h: 20, swirl: 0.2, sink: true });
+      group.add(motes.obj);
+      return t => { fl.update(t); motes.update(t); };
+    },
+  },
+  {
+    round: 4, bounds: R4B, name: 'Crucible Heart',
+    line: 'Four armoured pylons with a captured piece of raw creation clamped between them.',
+    story: 'A stepped steel foundation and four thick armoured pylons that lean inward at the top, joined by a heavy open crown. Gold clamps on the inner corners grip empty air.',
+    change: 'A huge diamond of torn reality opens between the pylons, gripped at four points by the clamps, which glow where they bite. Amber light flows up the pylons into it, a halo of light breathes slowly around its edges, and you can look straight down into it through the crown.',
+    code: ['Rift: a large diamond, vanilla gateway colours, turning very slowly', 'Halo: a soft, slowly breathing glow around the rift', 'Energy channels: flowing toward the core', 'Seed: floats at the centre', 'Motes: drawn slowly into the core'],
+    swatches: [['#5c6070', 'Armour steel'], ['#d6a23c', 'Gold plating'], ['#ffc86e', 'Amber flow'], ['#ffe6b4', 'Clamp glow'], ['#3a3c48', 'Foundation'], ['#0a1020', 'Rift']],
+    rift: VANILLA, light: 0xffc86e, bloom: 0.5, glow: 1.2, pulse: 0.9, core: [8, 16, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z);
+      if (y <= 1) return 'found';
+      if (y <= 3) return lx >= 1 && lz >= 1 ? (y === 3 && (lx === 1 || lz === 1) ? 'gold' : 'found') : null;
+      if (y === 4) return lx >= 2 && lz >= 2 ? 'steel' : null;
+      if (y >= 28) {
+        if (y <= 29) return lx <= 3 || lz <= 3 ? 'steel' : null;
+        return lx <= 1 && lz <= 1 ? 'spike' : null;
+      }
+      const sh = y >= 22 ? Math.floor((y - 22) / 3) + 1 : 0;
+      if (lx >= 1 + sh && lx <= 3 + sh && lz >= 1 + sh && lz <= 3 + sh) return 'pylon';
+      if (y >= 14 && y <= 18 && ((lx === 4 && lz === 4) || (lx === 5 && lz === 5))) return 'clamp';
+      if (y >= 15 && y <= 17 && ((lx === 4 && lz === 5) || (lx === 5 && lz === 4))) return 'clamp';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'found') return { c: tone([58, 60, 72], x, y, z, 0.18) };
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'spike') return y === 31 && L ? { c: [255, 220, 150], g: true } : { c: goldTone(x, y, z) };
+      if (k === 'clamp') return L && (lx === 5 || lz === 5) ? { c: [255, 230, 180], g: true } : { c: goldTone(x, y, z) };
+      if (k === 'pylon') {
+        const sh = y >= 22 ? Math.floor((y - 22) / 3) + 1 : 0;
+        if (lx === 3 + sh && lz === 3 + sh) return L ? { c: [255, 214, 140], g: true } : { c: [44, 44, 52] };
+        if (y === 8 || y === 13 || y === 19) return { c: goldTone(x, y, z) };
+        if (anySide(e) && ((lx === 1 + sh && lz === 2 + sh) || (lz === 1 + sh && lx === 2 + sh)) && y >= 5)
+          return L ? { c: [255, 190, 100], fl: true } : { c: [44, 44, 52] };
+        if (hash3(x, y, z) > 0.9) return { c: [70, 72, 84] };
+      }
+      return { c: STEEL(x, y, z) };
+    },
+    rifts: [{ type: 'octa', c: [8, 16, 8], r: 6.0 }],
+    seed: { type: 'gem', c: [8, 16, 8] },
+    extras(L, group, ctx) {
+      if (!L) return null;
+      const halo = new THREE.Mesh(new THREE.OctahedronGeometry(6.7 * PX), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.75, 0.4), transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      halo.position.set(8 * PX, 16 * PX, 8 * PX);
+      group.add(halo);
+      const motes = particles(26, 0xffd89a, { r0: 4, rs: 5, y0: 8, h: 18, swirl: 0.25, sink: true });
+      group.add(motes.obj);
+      return t => {
+        halo.material.opacity = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.9));
+        halo.rotation.y = t * 0.12;
+        ctx.rifts.forEach(r => { r.rotation.y = t * 0.12; });
+        motes.update(t);
+      };
+    },
+  },
+  {
+    round: 4, bounds: R4B, name: 'Vault Monolith',
+    line: 'A vault built to keep reality from tearing. Now it keeps the tear.',
+    story: 'A massive granite block with steel corners and a heavy bronze-framed shutter sealed on each of its four sides. It looks like something that is never meant to be opened.',
+    change: 'The shutters are gone, opening a square tunnel through every face. At the heart where the tunnels cross, a block of deep space hangs in the vault, the bronze frames burn teal at the edges that hold it, rune fields seal each opening, and light flows in through channels carved above and below the windows.',
+    code: ['Two models: shutters closed when inert, open when linked', 'Rift: a block of deep space at the crossing, vanilla gateway colours', 'Rune fields: across all four openings, slowly scrolling', 'Energy channels: flowing toward the core'],
+    swatches: [['#4a4c5c', 'Granite'], ['#b4823c', 'Bronze frames'], ['#646878', 'Steel corners'], ['#b4ffe6', 'Vault edge'], ['#5ae6c8', 'Rune field'], ['#0a1020', 'Rift']],
+    rift: VANILLA, light: 0x8cffe0, bloom: 0.5, glow: 1.2, pulse: 1.0, core: [8, 16, 8],
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z);
+      if (y <= 1) return 'base';
+      if (y >= 30) return lx >= 1 && lz >= 1 ? 'cap' : null;
+      const winY = y >= 9 && y <= 22, inX = x >= 4 && x <= 11, inZ = z >= 4 && z <= 11;
+      if (winY && (inX || inZ)) {
+        if (!L && ((inX && lz <= 1) || (inZ && lx <= 1))) return 'shutter';
+        return null;
+      }
+      if ((lz <= 1 && x >= 2 && x <= 13 && y >= 7 && y <= 24) || (lx <= 1 && z >= 2 && z <= 13 && y >= 7 && y <= 24)) return 'frame';
+      if (lx <= 1 && lz <= 1) return 'corner';
+      return 'granite';
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'base') return { c: tone([50, 52, 62], x, y, z, 0.18) };
+      if (k === 'cap') {
+        if (y === 31 && e.py && lx >= 5 && lz >= 5 && (lx === 5 || lz === 5 || (lx === 7 && lz === 7))) return L ? { c: [190, 255, 235], g: true } : { c: goldTone(x, y, z) };
+        return { c: GRANITE(x, y, z) };
+      }
+      if (k === 'shutter') return { c: (x + y + z) % 5 === 0 ? goldTone(x, y, z) : (y === 15 || y === 16 ? goldTone(x, y, z) : tone([66, 68, 80], x, y, z, 0.15)) };
+      if (k === 'frame') {
+        const edge = (y === 8 || y === 23) ? ((lz <= 1 && x >= 4 && x <= 11) || (lx <= 1 && z >= 4 && z <= 11))
+                   : (y >= 9 && y <= 22 && ((lz <= 1 && (x === 3 || x === 12)) || (lx <= 1 && (z === 3 || z === 12))));
+        if (edge) return L ? { c: [190, 255, 235], g: true } : { c: tone([150, 106, 52], x, y, z, 0.1) };
+        if ((x + y + z) % 3 === 0 && anySide(e)) return { c: [70, 52, 34] };
+        return { c: tone([180, 130, 62], x, y, z, 0.14) };
+      }
+      if (k === 'corner') return { c: y % 5 === 0 ? goldTone(x, y, z) : STEEL(x, y, z) };
+      if (anySide(e) && ((y >= 2 && y <= 6) || (y >= 25 && y <= 29))) {
+        const sf = sideFace(e, x, z);
+        if (sf && (sf.u === 7 || sf.u === 8)) return L ? { c: [120, 255, 215], fl: true } : { c: [40, 42, 52] };
+      }
+      return { c: GRANITE(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [4, 9, 4], t: [12, 23, 12] }],
+    seed: { type: 'gem', c: [8, 16, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const fl = fields([
+        { c: [8, 16, 1.6], w: 8, h: 14 }, { c: [8, 16, 14.4], w: 8, h: 14 },
+        { c: [1.6, 16, 8], w: 8, h: 14, rotY: Math.PI / 2 }, { c: [14.4, 16, 8], w: 8, h: 14, rotY: Math.PI / 2 },
+      ], [0.3, 1.0, 0.8]);
+      group.add(fl.obj);
+      return t => fl.update(t);
+    },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 5: gothic and elven
+// ---------------------------------------------------------------------------
+const FIRE_RIFT = [[1.0, 0.45, 0.1], [1.0, 0.85, 0.3], [0.05, 0.01, 0.0]];
+const STAR_RIFT = [[0.75, 0.85, 1.0], [1.0, 0.95, 0.8], [0.01, 0.015, 0.045]];
+const LIMESTONE = (x, y, z) => { let c = tone([196, 190, 176], x, y, z, 0.12); if (y % 3 === 0) c = shade(c, 0.9); return c; };
+const MARBLE = (x, y, z) => (Math.abs(Math.sin(x * 0.6 + y * 1.1 + z * 0.4 + hash3(x, y, z) * 1.4)) < 0.12 ? tone([196, 198, 210], x, y, z, 0.06) : tone([232, 230, 224], x, y, z, 0.05));
+const MITHRIL = (x, y, z) => tone([206, 216, 232], x, y, z, 0.08);
+const STARLIGHT = [210, 235, 255];
+const PALEGOLD = (x, y, z) => tone([236, 220, 160], x, y, z, 0.1);
+
+// The Watcher: two horns and an eye that follows you
+const HORNS = [-1, 1].map(s => [[8 + s * 3.5, 19, 8], [8 + s * 5.2, 24, 8], [8 + s * 4.6, 28, 8], [8 + s * 2.2, 31.5, 8]]);
+
+// Starlight Sanctum: four leaf blades along the diagonals, a bud when inert
+const BLADE_OPEN = [[3.0, 3], [6.8, 12], [7.4, 20], [5.8, 28], [4.2, 32]];
+const BLADE_SHUT = [[3.2, 3], [5.0, 12], [4.0, 20], [1.6, 27], [0.4, 31]];
+function bladeAt(x, y, z, spine) {
+  const { cx, cz } = C(x, z);
+  for (const [sx, sz] of CORNERS) {
+    const rv = (cx * sx + cz * sz) / Math.SQRT2, tv = (cx * sz - cz * sx) / Math.SQRT2;
+    if (rv < 0) continue;
+    const pd = polyDist([rv, y + 0.5, 0], spine.map(([r, yy]) => [r, yy, 0]));
+    const t = (pd.seg + Math.max(0, Math.min(1, pd.t))) / (spine.length - 1);
+    const w = 0.5 + 1.5 * Math.sin(Math.PI * t);
+    if (pd.d < 0.8 && Math.abs(tv) < w) return { tv: Math.abs(tv), w, t };
+  }
+  return null;
+}
+
+// Arch of the Eldar: a slender pointed arch with an inner vine
+const ARCH = [-1, 1].map(s => [[8 + s * 5, 2.5, 8], [8 + s * 5, 18, 8], [8 + s * 4.2, 23, 8], [8 + s * 2.4, 28, 8], [8, 31.5, 8]]);
+const VINE = [-1, 1].map(s => [[8 + s * 3, 3, 8], [8 + s * 3, 17, 8], [8 + s * 2.4, 21, 8], [8 + s * 1.2, 25, 8], [8, 27.5, 8]]);
+function spineX(pts, y) {
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [a, b] = [pts[i], pts[i + 1]];
+    if (y >= a[1] && y <= b[1]) return a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]);
+  }
+  return 8;
+}
+const ARCH_RIFTS = [];
+for (let y = 3; y < 30; y += 2) {
+  const half = 8 - (spineX(ARCH[0], y + 1) + 1.4) - 0.1;
+  if (half > 0.4) ARCH_RIFTS.push({ type: 'box', f: [8 - half, y, 7.2], t: [8 + half, y + 2, 8.8] });
+}
+
+const R5 = [
+  {
+    round: 5, bounds: R4B, name: 'The Watcher',
+    line: 'A black tower whose eye never closes, and never stops looking for you.',
+    story: 'A tower of black ironstone on a spiked base, braced by jagged fins, rising into two great horns that curve toward each other. Narrow slit windows are dark. Between the horns there is only an empty gap.',
+    change: 'Between the horns a vast eye opens: an iris of living fire around a slit pupil that is a tear into another world. It turns, slowly, to follow whoever is near. Ember light burns in the slit windows and runs up the fins, and sparks rise from the horns.',
+    code: ['Eye: a moving part that turns toward the nearest player', 'Rift: the pupil, tinted fire (needs our own shader)', 'Embers: flowing up the fins toward the eye', 'Sparks: particles rising from the horns'],
+    swatches: [['#2c282e', 'Black ironstone'], ['#3a3238', 'Iron fins'], ['#ffa028', 'Ember glow'], ['#fff0aa', 'Eye fire'], ['#dc3214', 'Iris rim'], ['#140400', 'Rift (fire)']],
+    rift: FIRE_RIFT, light: 0xff8c32, bloom: 0.55, glow: 1.2, pulse: 0.8, core: [8, 25, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      if (y <= 2) return y === 2 && lx === 0 && lz === 0 ? null : 'base';
+      if (y <= 6 && lx <= 1 && lz <= 1 && (y <= 4 || (lx === 0 && lz === 0))) return 'iron';
+      if (y <= 19) {
+        const h = 5.0 - Math.floor((y - 3) / 5) * 0.5;
+        if (ax < h && az < h) return 'tower';
+        if (Math.abs(ax - az) < 0.9 && ax < h + 2.2 - (y - 3) * 0.12) return 'fin';
+      }
+      for (const pts of HORNS) {
+        const pd = polyDist(p, pts), t = (pd.seg + Math.max(0, Math.min(1, pd.t))) / 3;
+        if (pd.d < 2.2 - t * 1.6 && az < 1.5 - t * 0.6) return 'horn';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx } = C(x, z);
+      if (k === 'base') return { c: tone([34, 30, 34], x, y, z, 0.2) };
+      if (k === 'iron') return { c: tone([58, 50, 54], x, y, z, 0.2) };
+      if (k === 'fin') return anySide(e) && hash3(x, y, z) > 0.8 ? (L ? { c: [255, 130, 40], fl: true } : { c: [30, 24, 26] }) : { c: tone([58, 50, 56], x, y, z, 0.18) };
+      if (k === 'horn') {
+        if (L && anySide(e) && Math.abs(cx) < 5 && hash3(x, y, z + 7) > 0.6) return { c: [255, 140, 50], g: true };
+        return { c: tone([56, 48, 56], x, y, z, 0.2) };
+      }
+      const sf = sideFace(e, x, z);
+      if (sf && (sf.u === 7 || sf.u === 8) && ((y >= 7 && y <= 9) || (y >= 13 && y <= 15))) return L ? { c: [255, 120, 40], g: true } : { c: [18, 12, 12] };
+      return { c: y % 5 === 2 ? tone([46, 40, 48], x, y, z, 0.1) : tone([66, 60, 70], x, y, z, 0.16) };
+    },
+    rifts: [],
+    seed: null,
+    extras(L, group) {
+      if (!L) return null;
+      const eye = voxPart({
+        bounds: { x0: 2, x1: 14, y0: 18, y1: 32 },
+        shape: (x, y, z) => {
+          if (z < 7 || z > 8) return null;
+          const dx = Math.abs(x + 0.5 - 8), dy = Math.abs(y + 0.5 - 25), s = dx / 4.2 + Math.pow(dy / 6.2, 1.3);
+          if (s >= 1) return null;
+          if (dx < 1 && dy < 5.2) return null;
+          return dx < 1.6 && dy < 5.6 ? 'pupil' : 'iris';
+        },
+        paint: (k, x, y, z) => {
+          if (k === 'pupil') return { c: [20, 6, 4] };
+          const dx = Math.abs(x + 0.5 - 8), dy = Math.abs(y + 0.5 - 25), s = dx / 4.2 + Math.pow(dy / 6.2, 1.3);
+          const c = s < 0.55 ? mix([255, 250, 210], [255, 200, 90], s / 0.55) : mix([255, 160, 40], [200, 36, 12], (s - 0.55) / 0.45);
+          return { c, g: true };
+        },
+        pivot: [8, 25, 8],
+      });
+      eye.children[0].add(riftMesh({ type: 'box', f: [7, 20, 7.1], t: [9, 30, 8.9] }, this.riftMat));
+      group.add(eye);
+      const sparks = particles(34, 0xff9a40, { r0: 2, rs: 4, y0: 20, h: 14, swirl: 0.3 });
+      group.add(sparks.obj);
+      const wp = new THREE.Vector3();
+      return t => {
+        group.localToWorld(wp.set(8 * PX, 25 * PX, 8 * PX));
+        const want = Math.atan2(camera.position.x - wp.x, camera.position.z - wp.z);
+        let d = want - eye.rotation.y;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        eye.rotation.y += d * 0.04;
+        eye.position.set((8 + Math.sin(eye.rotation.y) * 2.6) * PX, 25 * PX, (8 + Math.cos(eye.rotation.y) * 2.6) * PX);
+        sparks.update(t);
+      };
+    },
+  },
+  {
+    round: 5, bounds: R4B, name: 'Cathedral of the Breach',
+    line: 'A cathedral raised over a hole in heaven.',
+    story: 'A small cathedral of pale limestone: stepped corner buttresses topped with pinnacles, a steep slate spire with gold ridges, and a tall pointed lancet window on every side. The glass is dark and the nave is silent.',
+    change: 'The windows light up as stained glass in crimson, sapphire and gold, and through them you see deep space filling the nave. Light climbs the buttresses toward the spire, the tracery burns white-gold, and the jewel at the top of the spire wakes.',
+    code: ['Stained glass: translucent, glowing model faces', 'Rift: fills the nave, vanilla gateway colours', 'Energy channels: climbing the buttresses', 'Motes: rising slowly from the spire'],
+    swatches: [['#c4beb0', 'Limestone'], ['#3c3e4e', 'Slate spire'], ['#d6a23c', 'Gold tracery'], ['#c82840', 'Crimson glass'], ['#2850c8', 'Sapphire glass'], ['#e6aa32', 'Amber glass']],
+    rift: VANILLA, light: 0xd8b0ff, bloom: 0.5, glow: 1.15, pulse: 0.9, core: [8, 12, 8],
+    trans: ['glass'], transOpacity: [1, 0.62], transBasic: true,
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 1) return 'plinth';
+      if (lx <= 1 && lz <= 1) {
+        if (y <= 14) return 'butt';
+        if (y <= 22) return lx + lz <= 1 ? 'butt' : null;
+        if (y <= 26) return lx === 0 && lz === 0 ? 'pinnacle' : null;
+        return null;
+      }
+      if (y <= 20) {
+        if (lx >= 2 && lz >= 2 && (lx === 2 || lz === 2)) {
+          const faceZ = lz === 2 && lx >= 3, faceX = lx === 2 && lz >= 3;
+          const au = Math.abs(faceZ ? cx : cz);
+          if ((faceZ || faceX) && y >= 5 && y <= 19 && au < 3 - Math.max(0, y - 15) * 0.75) return y === 11 ? 'tracery' : 'glass';
+          return 'wall';
+        }
+        if (y === 2 && lx >= 3 && lz >= 3) return 'floor';
+        return null;
+      }
+      if (y === 21) return lx >= 1 && lz >= 1 ? 'cornice' : null;
+      const hh = 6 - (y - 22) * 0.6;
+      if (ax < hh && az < hh) return y >= 30 ? 'apex' : 'roof';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), lx = LX(x), lz = LX(z);
+      if (k === 'plinth') return { c: tone([120, 116, 108], x, y, z, 0.15) };
+      if (k === 'glass') {
+        const pick = [[200, 40, 64], [40, 80, 200], [230, 170, 50], [140, 60, 200]][Math.floor(hash3(x >> 1, y >> 1, z >> 1) * 4)];
+        return L ? { t: true, c: pick } : { c: shade(pick, 0.22) };
+      }
+      if (k === 'tracery') return L ? { c: [255, 236, 190], g: true } : { c: goldTone(x, y, z) };
+      if (k === 'butt') {
+        if (lx === 0 && lz === 0 && anySide(e) && y >= 3) return L ? { c: [210, 170, 255], fl: true } : { c: tone([150, 144, 132], x, y, z, 0.1) };
+        return { c: LIMESTONE(x, y, z) };
+      }
+      if (k === 'pinnacle') return { c: y === 26 ? goldTone(x, y, z) : LIMESTONE(x, y, z) };
+      if (k === 'cornice') return { c: (lx === 1 || lz === 1) ? goldTone(x, y, z) : LIMESTONE(x, y, z) };
+      if (k === 'roof') {
+        if (Math.abs(ax - az) < 0.6) return { c: goldTone(x, y, z) };
+        return { c: tone((x + y + z) % 3 === 0 ? [48, 50, 64] : [62, 64, 80], x, y, z, 0.12) };
+      }
+      if (k === 'apex') return L ? { c: [235, 210, 255], g: true } : { c: goldTone(x, y, z) };
+      if (k === 'floor') return { c: (x + z) % 2 ? [40, 40, 46] : [200, 196, 186] };
+      return { c: LIMESTONE(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [3, 3, 3], t: [13, 21, 13] }],
+    seed: { type: 'gem', c: [8, 12, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const motes = particles(22, 0xe6d2ff, { r0: 1, rs: 3, y0: 26, h: 10, swirl: 0.2 });
+      group.add(motes.obj);
+      return motes.update;
+    },
+  },
+  {
+    round: 5, bounds: R4B, name: 'Starlight Sanctum',
+    line: 'Four blades of elven silver, opening like a flower around a leaf of starlight.',
+    story: 'Four tall leaf-shaped blades of white mithril rise from a chamfered marble dais and meet at the top, closed like a bud. Their veins are pale and still.',
+    change: 'The blades open outward like a flower in the morning, and between them hangs a tall leaf of starlit sky. Starlight runs up the veins of every blade into it, a soft halo breathes around it, and silver motes drift down like falling leaves.',
+    code: ['Two models: the blades closed into a bud when inert, opened when linked', 'Rift: a tall leaf shape, starlight tint (needs our own shader)', 'Halo: soft, slowly breathing', 'Veins: animated texture flowing toward the core', 'Motes: drifting slowly down'],
+    swatches: [['#e8e6e0', 'White marble'], ['#ced8e8', 'Mithril'], ['#ecdca0', 'Pale gold'], ['#d2ebff', 'Starlight'], ['#aab0be', 'Sleeping vein'], ['#03040b', 'Rift (starlight)']],
+    rift: STAR_RIFT, light: 0xd2ebff, bloom: 0.5, glow: 1.15, pulse: 0.7, core: [8, 17, 8],
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z);
+      if (y <= 1) return lx + lz >= 2 ? 'marble' : null;
+      if (y === 2) return lx >= 1 && lz >= 1 && lx + lz >= 3 ? 'marble2' : null;
+      if (y === 3 && lx >= 4 && lz >= 4) return 'dais';
+      return bladeAt(x, y, z, L ? BLADE_OPEN : BLADE_SHUT) ? 'blade' : null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'marble') return { c: MARBLE(x, y, z) };
+      if (k === 'marble2') return { c: (lx === 1 || lz === 1 || lx + lz === 3) && e.py ? PALEGOLD(x, y, z) : MARBLE(x, y, z) };
+      if (k === 'dais') return { c: (lx === 4 || lz === 4) ? (L ? { c: STARLIGHT, g: true }.c : MITHRIL(x, y, z)) : MITHRIL(x, y, z), g: L && (lx === 4 || lz === 4) };
+      const b = bladeAt(x, y, z, L ? BLADE_OPEN : BLADE_SHUT);
+      if (b.tv < 0.5) return L ? { c: STARLIGHT, fl: true } : { c: [170, 176, 190] };
+      if (b.tv > b.w - 0.5 && hash3(x, y, z) > 0.3) return { c: PALEGOLD(x, y, z) };
+      return { c: MITHRIL(x, y, z) };
+    },
+    rifts: [{ type: 'octa', c: [8, 17, 8], r: 3.2, sy: 2.6 }],
+    seed: { type: 'gemSmall', c: [8, 17, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const halo = new THREE.Mesh(new THREE.OctahedronGeometry(3.8 * PX), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.7, 0.85, 1.0), transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      halo.scale.y = 2.5;
+      halo.position.set(8 * PX, 17 * PX, 8 * PX);
+      group.add(halo);
+      const motes = particles(30, 0xdcebff, { r0: 2, rs: 8, y0: 2, h: 30, swirl: 0.15, sink: true });
+      group.add(motes.obj);
+      return t => { halo.material.opacity = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7)); motes.update(t); };
+    },
+  },
+  {
+    round: 5, bounds: R4B, name: 'Arch of the Eldar',
+    line: 'An elven door of white stone and silver, opening onto the stars.',
+    story: 'A slender pointed arch of white stone on shallow marble steps, with a silver vine growing up inside it to a leaf-shaped jewel at the crown. Elvish script is carved down both columns. Through the arch you see only what lies behind.',
+    change: 'Starlit sky fills the arch from edge to edge. The script flows with silver light from the steps up to the crown, the jewel wakes, and the silver vine stands out against the stars like branches against a night sky.',
+    code: ['Rift: fills the arch, starlight tint (needs our own shader)', 'Script: animated texture flowing upward', 'Motes: drifting slowly down', 'Needs a facing direction when placed, like a door'],
+    swatches: [['#e8e6e0', 'White stone'], ['#ced8e8', 'Silver vine'], ['#ecdca0', 'Pale gold'], ['#d2ebff', 'Script light'], ['#b4c8ff', 'Crown jewel'], ['#03040b', 'Rift (starlight)']],
+    rift: STAR_RIFT, light: 0xd2ebff, bloom: 0.5, glow: 1.15, pulse: 0.7, core: [8, 16, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const { cz } = C(x, z), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      if (y <= 1) return z >= 3 && z <= 12 ? 'step' : null;
+      if (y === 2) return x >= 1 && x <= 14 && z >= 4 && z <= 11 ? 'step2' : null;
+      for (const pts of ARCH) if (polyDist(p, pts).d < 1.4 && az < 2) return 'arch';
+      if (y >= 28 && y <= 31 && Math.abs(x + 0.5 - 8) + Math.abs(y + 0.5 - 29.5) * 0.7 < 1.6 && az < 1) return 'jewel';
+      for (const pts of VINE) if (polyDist(p, pts).d < 0.6 && az < 0.6) return 'vine';
+      for (const pts of VINE) {
+        const pd = polyDist([p[0], p[1], 8], pts);
+        if (az < 0.6 && pd.d < 1.6 && pd.d >= 0.6 && hash3(Math.floor(p[1] / 2), x, 1) > 0.72) return 'leaf';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'step') return { c: MARBLE(x, y, z) };
+      if (k === 'step2') return { c: e.py && (x === 1 || x === 14 || z === 4 || z === 11) ? PALEGOLD(x, y, z) : MARBLE(x, y, z) };
+      if (k === 'jewel') return L ? { c: [190, 210, 255], g: true } : { c: [150, 160, 190] };
+      if (k === 'vine') return L ? { c: [205, 225, 255], g: true } : { c: tone([150, 160, 180], x, y, z, 0.1) };
+      if (k === 'leaf') return { c: hash3(x, y, z) > 0.5 ? PALEGOLD(x, y, z) : MITHRIL(x, y, z) };
+      if ((e.nz || e.pz) && y >= 4 && y <= 26 && (y % 3 !== 0) && hash3(x, y >> 1, 4) > 0.35 && Math.abs(Math.abs(x + 0.5 - 8) - spineXAbs(y)) < 0.8)
+        return L ? { c: STARLIGHT, fl: true } : { c: [176, 178, 190] };
+      return { c: MARBLE(x, y, z) };
+    },
+    rifts: ARCH_RIFTS,
+    seed: { type: 'gemSmall', c: [8, 15, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const motes = particles(24, 0xdcebff, { r0: 0, rs: 4, y0: 3, h: 26, swirl: 0.1, sink: true });
+      group.add(motes.obj);
+      return motes.update;
+    },
+  },
+];
+function spineXAbs(y) { return Math.abs(spineX(ARCH[0], y) - 8); }
+
+// ---------------------------------------------------------------------------
+// ROUND 6: elven, monumental, with a clear interaction point on every side
+// ---------------------------------------------------------------------------
+const BLADE6 = [[5.2, 4], [6.8, 12], [6.9, 20], [5.8, 27], [4.4, 31.5]];
+function bladeThick(x, y, z, spine, thick, w0, w1) {
+  const { cx, cz } = C(x, z);
+  for (const [sx, sz] of CORNERS) {
+    const rv = (cx * sx + cz * sz) / Math.SQRT2, tv = (cx * sz - cz * sx) / Math.SQRT2;
+    if (rv < 0) continue;
+    const pd = polyDist([rv, y + 0.5, 0], spine.map(([r, yy]) => [r, yy, 0]));
+    const t = (pd.seg + Math.max(0, Math.min(1, pd.t))) / (spine.length - 1);
+    const w = w0 + w1 * Math.sin(Math.PI * t);
+    if (pd.d < thick && Math.abs(tv) < w) return { tv: Math.abs(tv), w, t, depth: pd.d };
+  }
+  return null;
+}
+const SOCKET_GLOW = [150, 200, 255];
+
+const R6 = [
+  {
+    round: 6, bounds: R4B, name: 'Sanctum Ascendant',
+    line: 'The starlight sanctum, rebuilt to hold the sky open.',
+    story: 'A stepped marble dais with stairs climbing to it from all four sides. Four massive leaf-shaped blades of white stone and mithril rise from its corners. At the centre a waist-high pedestal holds an empty mithril cradle, which glows faintly as if waiting.',
+    change: 'The seed settles into the cradle and a great leaf of starlit sky opens above it, filling the space between the blades. Starlight runs up the veins of every blade toward it, the halo around it breathes slowly, and the steps are edged in silver light.',
+    interact: 'Stairs lead up on every side, and through every gap between the blades you look straight at the pedestal and the rift above it. Click the cradle to set the seed; once it is set, click the rift to cross.',
+    code: ['Rift: a tall leaf shape, starlight tint (needs our own shader)', 'Halo: soft, slowly breathing', 'Veins: animated texture flowing toward the rift', 'Motes: rising slowly'],
+    swatches: [['#e8e6e0', 'White marble'], ['#ced8e8', 'Mithril'], ['#ecdca0', 'Pale gold'], ['#d2ebff', 'Starlight'], ['#96c8ff', 'Waiting cradle'], ['#03040b', 'Rift (starlight)']],
+    rift: STAR_RIFT, light: 0xd2ebff, bloom: 0.5, glow: 1.15, pulse: 0.7, core: [8, 21, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z);
+      if (y <= 1) return lx + lz >= 2 ? 'marble' : null;
+      if (y === 2) return lx >= 1 && lz >= 1 ? 'step' : null;
+      if (y === 3) return lx >= 2 && lz >= 2 ? 'step' : null;
+      if (y === 4) return lx >= 3 && lz >= 3 ? 'platform' : null;
+      if (y >= 5 && y <= 10 && lx >= 6 && lz >= 6) return y === 5 || y === 10 ? 'mithril' : 'pedestal';
+      if (y >= 11 && y <= 12 && lx === 5 && lz === 5) return 'mithril';
+      return bladeThick(x, y, z, BLADE6, 1.35, 0.9, 1.5) ? 'blade' : null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'marble') return { c: MARBLE(x, y, z) };
+      if (k === 'step') {
+        const edge = e.py && (lx === (y === 2 ? 1 : 2) || lz === (y === 2 ? 1 : 2));
+        return edge ? (L ? { c: STARLIGHT, g: true } : { c: PALEGOLD(x, y, z) }) : { c: MARBLE(x, y, z) };
+      }
+      if (k === 'platform') return { c: e.py && (lx === lz || lx === 3 || lz === 3) ? PALEGOLD(x, y, z) : MARBLE(x, y, z) };
+      if (k === 'pedestal') return { c: (e.nz || e.pz) && (x === 7 || x === 8) || (e.nx || e.px) && (z === 7 || z === 8) ? (L ? STARLIGHT : [190, 196, 210]) : MARBLE(x, y, z), g: L && ((e.nz || e.pz) && (x === 7 || x === 8) || (e.nx || e.px) && (z === 7 || z === 8)) };
+      if (k === 'mithril') {
+        if (y === 10 && e.py && lx >= 7 && lz >= 7) return { c: L ? STARLIGHT : SOCKET_GLOW, g: true };
+        return { c: MITHRIL(x, y, z) };
+      }
+      const b = bladeThick(x, y, z, BLADE6, 1.35, 0.9, 1.5);
+      if (b.tv < 0.6 && anySide(e)) return L ? { c: STARLIGHT, fl: true } : { c: [176, 182, 196] };
+      if (b.tv > b.w - 0.7) return { c: MITHRIL(x, y, z) };
+      if (b.t > 0.93 || b.t < 0.05) return { c: PALEGOLD(x, y, z) };
+      return { c: tone([236, 234, 228], x, y, z, 0.04) };
+    },
+    rifts: [{ type: 'octa', c: [8, 21, 8], r: 3.6, sy: 2.4 }],
+    seed: { type: 'gemSmall', c: [8, 13, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const halo = new THREE.Mesh(new THREE.OctahedronGeometry(4.3 * PX), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.7, 0.85, 1.0), transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      halo.scale.y = 2.3;
+      halo.position.set(8 * PX, 21 * PX, 8 * PX);
+      group.add(halo);
+      const motes = particles(28, 0xdcebff, { r0: 2, rs: 6, y0: 5, h: 26, swirl: 0.15 });
+      group.add(motes.obj);
+      return t => { halo.material.opacity = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7)); motes.update(t); };
+    },
+  },
+  {
+    round: 6, bounds: R4B, name: 'Starwarden Gate',
+    line: 'A four-way elven gate. Whichever way you come, it is facing you.',
+    story: 'Four massive marble piers, fluted with mithril, carry a heavy roof and a stepped crest with a jewel at its peak. On every side a tall pointed arch opens into an empty chamber, with a mithril threshold at its foot and a leaf-carved keystone above.',
+    change: 'Starlit sky fills the chamber and shows through all four arches at once, with the seed hanging at its heart. The thresholds and arch edges glow, the keystones wake, and starlight runs up the inner corners of the piers to the crest jewel.',
+    interact: 'There is an arch on every side, each with a glowing threshold step, so there is no wrong way to approach. The rift fills each arch from the floor to above head height. Click into the arch to cross.',
+    code: ['Rift: a large block filling the chamber, starlight tint (needs our own shader)', 'Thresholds and arch edges: glowing model faces', 'Pier corners: animated texture flowing upward', 'Motes: drifting slowly into the chamber'],
+    swatches: [['#e8e6e0', 'White marble'], ['#ced8e8', 'Mithril flutes'], ['#ecdca0', 'Pale gold'], ['#d2ebff', 'Starlight'], ['#b4c8ff', 'Keystone'], ['#03040b', 'Rift (starlight)']],
+    rift: STAR_RIFT, light: 0xd2ebff, bloom: 0.5, glow: 1.15, pulse: 0.7, core: [8, 12, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 1) return 'marble';
+      if (y === 2) return lx >= 1 && lz >= 1 ? 'floor' : null;
+      if (y <= 22) {
+        if (lx <= 3 && lz <= 3) return 'pier';
+        const faceZ = lz <= 2, faceX = lx <= 2;
+        if (faceZ || faceX) {
+          const u = faceZ ? ax : az;
+          if (y <= 14 || u < 4 - (y - 14) * 0.6) return null;
+          return 'span';
+        }
+        return null;
+      }
+      if (y <= 24) return 'roof';
+      const hh = 7 - (y - 25) * 1.0;
+      if (ax < hh && az < hh) return y >= 30 ? 'jewel' : 'crest';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (k === 'marble') return { c: MARBLE(x, y, z) };
+      if (k === 'floor') {
+        const threshold = e.py && ((lz <= 2 && ax < 4) || (lx <= 2 && az < 4));
+        return threshold ? (L ? { c: STARLIGHT, g: true } : { c: MITHRIL(x, y, z) }) : { c: MARBLE(x, y, z) };
+      }
+      if (k === 'pier') {
+        if (lx === 3 && lz === 3 && y >= 3) return L ? { c: STARLIGHT, fl: true } : { c: [176, 182, 196] };
+        if (y === 8 || y === 16) return { c: PALEGOLD(x, y, z) };
+        if ((lx === 0 || lz === 0) && (x + z) % 2 === 0) return { c: MITHRIL(x, y, z) };
+        return { c: MARBLE(x, y, z) };
+      }
+      if (k === 'span') {
+        const u = lz <= 2 ? ax : az, edge = 4 - (y - 14) * 0.6;
+        if (u < 1 && y >= 19) return L ? { c: [190, 210, 255], g: true } : { c: MITHRIL(x, y, z) };
+        if (u < edge + 1) return L ? { c: STARLIGHT, g: true } : { c: MITHRIL(x, y, z) };
+        return { c: MARBLE(x, y, z) };
+      }
+      if (k === 'roof') return { c: (lx === 0 || lz === 0) && y === 24 ? PALEGOLD(x, y, z) : MARBLE(x, y, z) };
+      if (k === 'jewel') return L ? { c: [190, 210, 255], g: true } : { c: MITHRIL(x, y, z) };
+      if (k === 'crest') return { c: Math.abs(ax - az) < 0.6 ? MITHRIL(x, y, z) : MARBLE(x, y, z) };
+      return { c: MARBLE(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [4, 3, 4], t: [12, 21, 12] }],
+    seed: { type: 'gemSmall', c: [8, 12, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const motes = particles(26, 0xdcebff, { r0: 2, rs: 6, y0: 3, h: 18, swirl: 0.2, sink: true });
+      group.add(motes.obj);
+      return motes.update;
+    },
+  },
+  {
+    round: 6, bounds: R4B, name: 'Heart-Tree Bastion',
+    line: 'A white tree as old as the stars, with a world held in its heart.',
+    story: 'A monumental tree of white stone. Four great root-buttresses brace it to the corners and a broad canopy of silver leaves crowns it. On every face, at chest height, a leaf-shaped opening leads into a dark hollow heart, with a mithril ledge beneath it like an offered hand.',
+    change: 'The heart fills with starlit sky, seen through all four openings. Starlight rises through the roots and trunk into it, the ledges glow, and pale blossoms open across the silver canopy.',
+    interact: 'Every face has the same leaf-shaped opening at chest height with a ledge beneath it, so it reads like a window you can reach into. Click the ledge to offer the seed, then click the opening to cross.',
+    code: ['Rift: the hollow heart, starlight tint (needs our own shader)', 'Roots and trunk: animated texture flowing upward', 'Blossoms: glowing leaves in the canopy', 'Motes: falling slowly from the canopy'],
+    swatches: [['#e2ded4', 'White bark'], ['#ced8e8', 'Mithril ledges'], ['#dce4f0', 'Silver leaves'], ['#ecdca0', 'Gold flecks'], ['#d2ebff', 'Starlight'], ['#03040b', 'Rift (starlight)']],
+    rift: STAR_RIFT, light: 0xd2ebff, bloom: 0.5, glow: 1.15, pulse: 0.7, core: [8, 17, 8],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 1) return lx + lz >= 2 ? 'marble' : null;
+      if (y >= 25) {
+        if (y <= 26) return lx + lz >= 2 ? 'branch' : null;
+        if (y <= 29) return lx + lz >= 1 + (y - 26) && hash3(x, y, z) > 0.08 ? 'leaf' : null;
+        if (y === 30) return lx >= 2 && lz >= 2 && lx + lz >= 6 ? 'leaf' : null;
+        return lx >= 4 && lz >= 4 ? 'leaf' : null;
+      }
+      const trunk = lx >= 3 && lz >= 3 && lx + lz >= 7;
+      if (trunk) {
+        if (y >= 11 && y <= 23 && lx >= 5 && lz >= 5) return null;
+        const faceZ = lz <= 4 && lx >= 5, faceX = lx <= 4 && lz >= 5;
+        if ((faceZ || faceX) && y >= 12 && y <= 22) {
+          const u = faceZ ? ax : az, w = 0.3 + 1.7 * Math.sin(Math.PI * (y - 12) / 10);
+          if (u < w) return null;
+        }
+        return 'trunk';
+      }
+      if (y <= 10 && Math.abs(ax - az) < 1.3 + (10 - y) * 0.2 && Math.max(ax, az) < 5 + (10 - y) * 0.32) return 'root';
+      if (y === 11 && ((lz >= 1 && lz <= 2 && ax < 2) || (lx >= 1 && lx <= 2 && az < 2))) return 'ledge';
+      if (y === 10 && ((lz === 2 && ax < 1) || (lx === 2 && az < 1))) return 'ledge';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (k === 'marble') return { c: MARBLE(x, y, z) };
+      if (k === 'leaf') {
+        const n = hash3(x, y, z);
+        if (L && n > 0.88) return { c: [235, 240, 255], g: true };
+        if (n > 0.8) return { c: PALEGOLD(x, y, z) };
+        return { c: tone([214, 222, 236], x, y, z, 0.18) };
+      }
+      if (k === 'branch') return { c: tone([196, 192, 182], x, y, z, 0.12) };
+      if (k === 'ledge') return e.py && y === 11 ? (L ? { c: STARLIGHT, g: true } : { c: SOCKET_GLOW, g: true }) : { c: MITHRIL(x, y, z) };
+      if (k === 'root') {
+        if (e.py && Math.abs(ax - az) < 0.6) return L ? { c: STARLIGHT, fl: true } : { c: [176, 182, 196] };
+        return { c: tone([206, 202, 192], x, y, z, 0.12) };
+      }
+      if ((lx === 3 && lz === 4 || lx === 4 && lz === 3) && y <= 12) return L ? { c: STARLIGHT, fl: true } : { c: [176, 182, 196] };
+      const grain = (x + z) % 3 === 0 ? 0.92 : 1;
+      return { c: shade(tone([226, 222, 212], x, y, z, 0.08), grain) };
+    },
+    rifts: [{ type: 'box', f: [5, 11, 5], t: [11, 24, 11] }],
+    seed: { type: 'gemSmall', c: [8, 16, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const motes = particles(30, 0xe6eeff, { r0: 3, rs: 6, y0: 4, h: 24, swirl: 0.1, sink: true });
+      group.add(motes.obj);
+      return motes.update;
+    },
+  },
+];
+
+// A player-sized figure for judging scale and reach (about 1.8 blocks tall, like the player)
+function playerFigure() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8a94b0, roughness: 0.9, transparent: true, opacity: 0.85 });
+  const box = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w * PX, h * PX, d * PX), mat); m.position.set(x * PX, y * PX, z * PX); g.add(m); };
+  const s = 0.9;
+  box(4 * s, 12 * s, 4 * s, -2 * s, 6 * s, 0); box(4 * s, 12 * s, 4 * s, 2 * s, 6 * s, 0);
+  box(8 * s, 12 * s, 4 * s, 0, 18 * s, 0);
+  box(4 * s, 12 * s, 4 * s, -6 * s, 18 * s, 0); box(4 * s, 12 * s, 4 * s, 6 * s, 18 * s, 0);
+  box(8 * s, 8 * s, 8 * s, 0, 28 * s, 0);
+  return g;
+}
+
+// ---------------------------------------------------------------------------
+// ROUND 7: the user's own concept, a runic monolith with a spherical cutout
+// ---------------------------------------------------------------------------
+const MONO_SC = 13.5, MONO_CR = 7.4;
+// Rune particle sprites: one 6x7 texture per glyph (a 4x5 glyph with a 1px border), like Minecraft particle sprites
+const RUNE_TEX = GLYPHS.map(gl => {
+  const c = document.createElement('canvas'); c.width = 6; c.height = 7;
+  const g = c.getContext('2d'); g.fillStyle = '#fff';
+  gl.forEach((row, r) => [...row].forEach((ch, k) => { if (ch === 'X') g.fillRect(k + 1, r + 1, 1, 1); }));
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+});
+// Glowing runes that peel off the pillar's rune bands and drift away (client-side particles from animateTick in game)
+function runeParticles(group, rgb, perSecond) {
+  const N = 24, parts = [];
+  const col = new THREE.Color().setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace).multiplyScalar(1.0);
+  for (let i = 0; i < N; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: RUNE_TEX[0], color: col, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    sp.scale.set(6 * 0.6 * PX, 7 * 0.6 * PX, 1);
+    sp.visible = false;
+    group.add(sp);
+    parts.push({ sp, born: -99, life: 1, p: new THREE.Vector3(), v: new THREE.Vector3() });
+  }
+  const NORMALS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  let next = 0, last = null;
+  const spawn = t => {
+    const q = parts.find(p => t - p.born > p.life) || parts[0];
+    const [nx, nz] = NORMALS[Math.floor(Math.random() * 4)];
+    const along = (Math.random() - 0.5) * 9;
+    const y = Math.random() < 0.5 ? 18 + Math.random() * 5 : 5 + Math.random() * 5;
+    q.p.set(8 + nx * 6.8 + (nz !== 0 ? along : 0), y, 8 + nz * 6.8 + (nx !== 0 ? along : 0));
+    q.v.set(nx * (0.5 + Math.random() * 0.5) + (Math.random() - 0.5) * 0.4, 1.2 + Math.random() * 0.8, nz * (0.5 + Math.random() * 0.5) + (Math.random() - 0.5) * 0.4);
+    q.born = t; q.life = 3 + Math.random() * 1.5;
+    q.sp.material.map = RUNE_TEX[Math.floor(Math.random() * RUNE_TEX.length)];
+    q.sp.material.needsUpdate = true;
+    q.sp.visible = true;
+  };
+  return t => {
+    if (last === null || t < last) next = t;
+    last = t;
+    while (next <= t) { spawn(next); next += (0.6 + Math.random() * 0.8) / perSecond; }
+    for (const q of parts) {
+      const a = t - q.born;
+      if (a > q.life || a < 0) { q.sp.visible = false; continue; }
+      q.sp.position.set((q.p.x + q.v.x * a) * PX, (q.p.y + q.v.y * a) * PX, (q.p.z + q.v.z * a) * PX);
+      const f = a / q.life;
+      q.sp.material.opacity = Math.min(1, a * 3) * (1 - f) * 0.8;
+    }
+  };
+}   // sphere cutout centre height and radius (px)
+function monolith(o) {
+  const stone = (x, y, z) => { let c = tone(o.stone, x, y, z, 0.14); if (y % 4 === 0) c = shade(c, 0.88); return c; };
+  const runeAt = (sf, y) => {
+    const u = sf.u;
+    const band = (y0, set) => {
+      const v = y - y0;
+      if (v < 0 || v > 4) return false;
+      let g, col;
+      if (u >= 3 && u <= 6) { g = GLYPHS[(sf.f * 2 + set) % 6]; col = u - 3; }
+      else if (u >= 9 && u <= 12) { g = GLYPHS[(sf.f * 2 + set + 1) % 6]; col = u - 9; }
+      else return false;
+      return g[4 - v][col] === 'X';
+    };
+    if (band(18, 0) || band(5, 3)) return true;
+    return (u === 2 || u === 13) && y >= 11 && y <= 19 && y % 2 === 1;
+  };
+  return {
+    round: 7, bounds: R4B, rift: VANILLA, bloom: 0.38, glow: 1.0, pulse: 1.1, flowGain: 0.85, core: [8, MONO_SC, 8],
+    light: o.lightHex, name: o.name, line: o.line, story: o.story, change: o.change, swatches: o.swatches,
+    interact: 'Both points are visible from every side. The seed sits on top of the monolith, held up in four claws where everyone can see it; while empty, the socket between the claws glows. The starry sphere at chest height, seen through the round window on each face, is the way through.',
+    code: ['Rift: a blocky starry sphere, vanilla gateway colours', 'Accretion disk: a pixel ring spinning around the vertical axis', 'Photon ring: a pixel ring that always faces you, like a name tag; light runs around it pixel by pixel to fake a spin (animated texture)', 'Runes: animated texture, light flowing toward the sphere', 'Beam: light running from the seed down into the sphere', 'Rune particles: glowing glyphs peel off the rune bands and drift away, about one per second (client-side, from animateTick)', 'Seed: large and glowing, floating in the claws on top, visible from every side'],
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z);
+      if (y <= 1) return lx + lz >= 1 ? 'plinth' : null;
+      if (y === 2) return lx >= 1 && lz >= 1 ? 'plinth2' : null;
+      if (y <= 4) return lx >= 1 && lz >= 1 ? 'flare' : null;
+      if (y <= 22) {
+        if (lx < 2 || lz < 2) return null;
+        const post = Math.abs(cx) >= 4.5 && Math.abs(cz) >= 4.5;   // corner posts frame the windows
+        if (!post && Math.hypot(cx, y + 0.5 - MONO_SC, cz) < MONO_CR) return null;
+        if (L && y >= 20 && Math.abs(cx) < 1 && Math.abs(cz) < 1) return null;
+        return 'body';
+      }
+      if (y === 23) return lx >= 1 && lz >= 1 ? 'band' : null;
+      if (y === 24) return lx >= 2 && lz >= 2 ? (lx >= 6 && lz >= 6 ? 'socket' : 'collar') : null;
+      // four claws rising from the corners and curling in around the seed
+      if (y <= 26) return (lx === 2 || lx === 3) && (lz === 2 || lz === 3) ? 'claw' : null;
+      if (y <= 28) return (lx === 3 || lx === 4) && (lz === 3 || lz === 4) ? 'claw' : null;
+      if (y <= 30) return lx === 4 && lz === 4 ? 'claw' : null;
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z);
+      if (k === 'plinth') return { c: tone(o.plinth, x, y, z, 0.16) };
+      if (k === 'plinth2') return { c: tone(o.plinth, x, y, z, 0.16) };
+      if (k === 'flare') return { c: y === 4 && e.py ? goldTone(x, y, z) : stone(x, y, z) };
+      if (k === 'band') return { c: (x + z) % 3 === 0 && (lx === 0 || lz === 0) ? (L ? o.rune : o.carved) : goldTone(x, y, z), g: L && (x + z) % 3 === 0 && (lx === 0 || lz === 0) };
+      if (k === 'collar') return { c: e.py && (lx === 2 || lz === 2) ? goldTone(x, y, z) : stone(x, y, z) };
+      if (k === 'socket') return L ? { c: goldTone(x, y, z) } : { c: o.waiting, g: true };
+      if (k === 'claw') {
+        if (y >= 28) return { c: goldTone(x, y, z) };
+        if (y === 26 && anySide(e)) return L ? { c: o.rune, g: true } : { c: o.carved };
+        return { c: stone(x, y, z) };
+      }
+      // body
+      const d = Math.hypot(cx, y + 0.5 - MONO_SC, cz);
+      const outer = (lz === 2 && (e.nz || e.pz)) || (lx === 2 && (e.nx || e.px));
+      if (outer && d < MONO_CR + 0.45) return L ? { c: shade(o.rune, 0.7), g: true } : { c: o.carved };
+      if (!outer && d < MONO_CR + 0.6) return { c: shade(stone(x, y, z), 0.55) };
+      const sf = sideFace(e, x, z);
+      if (sf && runeAt(sf, y)) return L ? { c: o.rune, fl: true } : { c: o.carved };
+      return { c: stone(x, y, z) };
+    },
+    rifts: [{ type: 'vsphere', c: [8, MONO_SC, 8], r: 3.2 }],
+    seed: { type: 'gem', c: [8, 27.5, 8] },
+    extras(L, group, ctx) {
+      if (!L) return null;
+      const ang = (x, y) => Math.atan2(y, x);
+      const glowC = mix(o.ring, [255, 255, 255], 0.45);
+      // Accretion disk: a flat pixel ring spinning around the vertical axis; banded so the spin reads
+      const disk = voxPart({
+        bounds: { x0: -8, x1: 8, y0: 0, y1: 1 },
+        shape: (x, y, z) => { const r = Math.hypot(x + 0.5, z + 0.5); return r >= 4.2 && r < 6.3 ? 'd' : null; },
+        paint: (k, x, y, z) => {
+          const a = ang(x + 0.5, z + 0.5), r = Math.hypot(x + 0.5, z + 0.5);
+          const f = Math.min(1, Math.max(0, (r - 4.5) / 1.7));
+          return { c: shade(mix(glowC, o.deep, f), 0.92 + 0.16 * hash3(x, 7, z)), g: true };
+        },
+        pivot: [0, 0.5, 0],
+      });
+      disk.position.set(8 * PX, MONO_SC * PX, 8 * PX);
+      group.add(disk);
+      // Photon ring: a pixel ring hugging the sphere's outline, always turned to face the viewer
+      const halo = voxPart({
+        bounds: { x0: -8, x1: 8, y0: -8, y1: 8 },
+        shape: (x, y, z) => {
+          if (z !== 0) return null;
+          const px = x + 0.5, py = y + 0.5;
+          const r = Math.hypot(px, py * 1.12);                 // flattened top and bottom
+          if (r >= 2.8 && r < 4.2) return 'h';
+          if (Math.abs(py) < 1 && Math.abs(px) < 5.0) return Math.abs(px) >= 2.8 ? 'h' : null;   // horizontal flares
+          return null;
+        },
+        paint: (k, x, y) => ({ c: shade(glowC, 0.72 + 0.28 * (0.5 + 0.5 * Math.sin(ang(x + 0.5, y + 0.5) * 3))), g: true }),
+        pivot: [0, 0, 0.5],
+      });
+      halo.position.set(8 * PX, MONO_SC * PX, 8 * PX);
+      group.add(halo);
+      // The rings shine with a steady light (the midpoint of the rune pulse) instead of pulsing
+      const steadyMat = new THREE.MeshBasicMaterial({ toneMapped: false });
+      steadyMat.color.setScalar(GLOW_BASE * 0.85);
+      [disk, halo].forEach(g => g.traverse(m => { if (m.isInstancedMesh) m.material = steadyMat; }));
+      const runeFx = runeParticles(group, o.rune, 1);
+      const camLocal = new THREE.Vector3();
+      const haloMesh = halo.children[0].children[0], haloCol = new THREE.Color();
+      const glowLin = new THREE.Color().setRGB(glowC[0] / 255, glowC[1] / 255, glowC[2] / 255, THREE.SRGBColorSpace).toArray();
+      const haloPix = [], hm = new THREE.Matrix4(), hp = new THREE.Vector3();
+      const angs = [];
+      for (let i = 0; i < haloMesh.count; i++) { haloMesh.getMatrixAt(i, hm); hp.setFromMatrixPosition(hm); angs.push(Math.atan2(hp.y, hp.x)); }
+      const order = angs.map((a, i) => i).sort((p, q) => angs[p] - angs[q]);
+      order.forEach((idx, slot) => { haloPix[idx] = slot; });   // each pixel's position around the ring
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(1.2 * PX, 3 * PX, 1.2 * PX), new THREE.MeshBasicMaterial({ color: new THREE.Color(...o.ring.map(v => v / 255)), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      beam.position.set(8 * PX, 22.2 * PX, 8 * PX);
+      group.add(beam);
+      const motes = particles(26, o.moteHex, { r0: 5, rs: 4, y0: 6, h: 18, swirl: 0.25, sink: true });
+      group.add(motes.obj);
+      return t => {
+        disk.rotation.y = t * 0.6;
+        camera.getWorldPosition(camLocal);
+        group.worldToLocal(camLocal);
+        const dir = camLocal.sub(new THREE.Vector3(8 * PX, MONO_SC * PX, 8 * PX)).normalize();
+        halo.position.set((8 + dir.x * 0.6) * PX, (MONO_SC + dir.y * 0.6) * PX, (8 + dir.z * 0.6) * PX);
+        halo.lookAt(camera.getWorldPosition(new THREE.Vector3()));
+        ctx.rifts.forEach(r => r.quaternion.copy(halo.quaternion));
+        // Fake spin: bright bands travel around the ring, pixel by pixel (an animated texture in game)
+        const step = Math.floor(t * 6);
+        haloPix.forEach((slot, i) => {
+          const b = 0.92 + 0.16 * hash3((slot - step + 1000 * haloPix.length) % haloPix.length, 3, 11);
+          haloCol.setRGB(glowLin[0] * b, glowLin[1] * b, glowLin[2] * b);
+          haloMesh.setColorAt(i, haloCol);
+        });
+        haloMesh.instanceColor.needsUpdate = true;
+        runeFx(t);
+        beam.material.opacity = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.4));
+        motes.update(t);
+      };
+    },
+  };
+}
+
+const R7 = [
+  monolith({
+    name: 'Runebound Monolith',
+    line: 'A monolith carved to hold a piece of the night sky, and the runes to keep it there.',
+    story: 'A massive monolith of blue-grey basalt on a stepped plinth. A sphere has been carved out of its heart, opening a round window on every face. Rune bands circle it above and below. On top, four stone claws curl around an empty socket that glows faintly.',
+    change: 'The seed rises into the claws on top, large and glowing for all to see, and pours light down into the monolith. A blocky sphere of starry black hangs in the carved cavity like a black hole, a blazing disk spinning around it and a ring of light framing it from whatever side you look, the window rims burn cyan, and every rune lights up with power flowing toward the sphere.',
+    stone: [66, 70, 88], plinth: [48, 50, 62], rune: [140, 235, 255], ring: [150, 240, 255], deep: [40, 110, 230], carved: [34, 36, 46], waiting: [120, 190, 230], lightHex: 0x96f0ff, moteHex: 0xbff4ff,
+    swatches: [['#424658', 'Basalt'], ['#d6a23c', 'Gold bands'], ['#8cebff', 'Rune light'], ['#96f0ff', 'Ring'], ['#22242e', 'Carved rune'], ['#0a1020', 'Starry sphere']],
+  }),
+  monolith({
+    name: 'Obsidian Monolith',
+    line: 'Black glass, violet fire, and a sphere of night at its heart.',
+    story: 'The same monolith cut from obsidian with a violet sheen, gold-banded, its rune bands and window rims dark. The socket between the claws on top glows faintly violet.',
+    change: 'The runes and the window rims ignite violet-magenta, a starry sphere fills the cavity like a black hole, circled by a spinning violet disk and a ring of light that always faces you, and the seed held in the claws on top feeds it with a column of light.',
+    stone: [44, 36, 58], plinth: [30, 26, 40], rune: [225, 130, 255], ring: [230, 150, 255], deep: [150, 40, 210], carved: [22, 18, 30], waiting: [170, 120, 230], lightHex: 0xe696ff, moteHex: 0xe6b4ff,
+    swatches: [['#2c2438', 'Obsidian'], ['#d6a23c', 'Gold bands'], ['#e182ff', 'Rune light'], ['#e696ff', 'Ring'], ['#16121e', 'Carved rune'], ['#0a1020', 'Starry sphere']],
+  }),
+  monolith({
+    name: 'Sunforged Monolith',
+    line: 'Pale stone and burning gold, built to hold the dark.',
+    story: 'The same monolith in pale sunstone with gold bands, its runes cut deep and dark. The socket between the claws on top glows a faint warm gold.',
+    change: 'The runes and window rims blaze gold, the starry sphere hangs in the cavity like a black hole, with a spinning white-gold disk and a ring of light that always faces you, and the seed held in the claws on top pours light down into it.',
+    stone: [206, 198, 182], plinth: [150, 142, 128], rune: [255, 196, 80], ring: [255, 225, 150], deep: [230, 110, 30], carved: [90, 74, 52], waiting: [240, 200, 120], lightHex: 0xffd88c, moteHex: 0xffe6b4,
+    swatches: [['#cec6b6', 'Sunstone'], ['#d6a23c', 'Gold bands'], ['#ffc450', 'Rune light'], ['#ffe196', 'Ring'], ['#5a4a34', 'Carved rune'], ['#0a1020', 'Starry sphere']],
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// Designs
+// ---------------------------------------------------------------------------
+const DESIGNS = [
+  ...R7,
+  ...R6,
+  ...R5,
+  ...R4,
+  ...R3,
+  // ===================================================================== R2
+  {
+    round: 2, name: 'Crystal Bloom',
+    line: 'The seed does not sit in the anchor. It becomes the anchor.',
+    story: 'A low ritual dais of dark slate, its rune circle cold. Four gold claws curl inward over an empty socket, like a hand closed around nothing.',
+    change: 'The seed crystallises explosively. A cluster of cyan crystal erupts from the socket, the tallest spire reaching past two blocks, and the claws are bent outward by the growth. Deep inside the main spire, behind the crystal, the rift and the seed hang suspended.',
+    code: ['Crystal: translucent model; tilted shards would use rotated elements, far fewer boxes than this voxel estimate', 'Rift: column inside the main spire, vanilla gateway colours', 'Three tiny shards orbit the crown', 'Sparkles: particles'],
+    swatches: [['#3a3e4a', 'Dark slate'], ['#d6a23c', 'Gold claws'], ['#5ae6dc', 'Seed crystal'], ['#c8fffa', 'Crystal facets'], ['#8cfff0', 'Rune circle'], ['#0a1020', 'Rift']],
+    rift: [[0.30, 1.0, 0.85], [0.62, 0.48, 1.0], [0.012, 0.018, 0.04]],
+    light: 0x7ffff0, trans: ['crys'], transOpacity: [0.5, 0.5],
+    shape(x, y, z, L) {
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      if (y <= 1) return inBlock(x, z) && oct(cx, cz, 8, 3) ? 'slate' : null;
+      if (y === 2) return inBlock(x, z) && oct(cx, cz, 7, 3) ? 'dais' : null;
+      if (L) for (const s of BLOOM_SHARDS) {
+        const { t, d } = segInfo(p, s.a, s.b);
+        if (t < 0 || t > 1) continue;
+        const rad = s.r * (t < 0.7 ? 1 : (1 - t) / 0.3);
+        if (d < rad) return (s.main && t > 0.15 && t < 0.8 && d < rad - 1.5) ? null : 'crys';
+      }
+      for (const pts of (L ? CLAW_OPEN : CLAW_SHUT)) if (polyDist(p, pts).d < 0.95) return 'gold';
+      if (!L && y === 3 && rr < 2.6) return rr < 1.5 ? 'socket' : 'gold';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz);
+      if (k === 'slate') return { c: tone([58, 62, 74], x, y, z, 0.2) };
+      if (k === 'dais') {
+        if (e.py && rr >= 4.6 && rr < 5.6) return L ? { c: [140, 255, 240], g: true } : { c: goldTone(x, y, z) };
+        return { c: tone([72, 76, 90], x, y, z, 0.15) };
+      }
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'socket') return { c: [20, 22, 30] };
+      if (hash3(x, y, z) > 0.9) return { c: [200, 255, 250], g: true };
+      return { t: true, c: tone(mix([60, 200, 200], [180, 255, 250], Math.min(1, y / 34)), x, y, z, 0.2) };
+    },
+    rifts: [{ type: 'box', f: [6, 7, 6], t: [10, 29, 10] }],
+    seed: { type: 'teardrop', c: [8, 18, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const minis = [0, 1, 2].map(k => {
+        const g = new THREE.Group();
+        g.add(instanced([0, 1, 2].map(i => ({ x: -0.5, y: i - 1.5, z: -0.5, c: [180, 255, 248] })), glowMat));
+        group.add(g); return g;
+      });
+      const p = particles(30, 0xaafff6, { r0: 2, rs: 9, y0: 3, h: 34, swirl: 0.3 });
+      group.add(p.obj);
+      return t => {
+        minis.forEach((g, k) => {
+          const a = t * 0.5 + k * 2.09;
+          g.position.set((8 + Math.cos(a) * 6) * PX, (33 + Math.sin(t + k) * 1.5) * PX, (8 + Math.sin(a) * 6) * PX);
+          g.rotation.set(0.4, t, 0.3);
+        });
+        p.update(t);
+      };
+    },
+  },
+  {
+    round: 2, name: 'Unfurled Seed',
+    line: 'A seed of a world, hatching.',
+    story: 'A tall arcane seed-pod of verdigris metal rests on a stone cradle, its four plates sealed along gold seams. Runes sleep in the patina. It is closed, heavy and patient.',
+    change: 'The pod splits along its seams and the four plates swing open like the petals of a metal flower, slowly breathing. Their inner faces shine pearl-gold. In the open heart floats a sphere of deep space, and inside it a tiny newborn world turns.',
+    code: ['Petals: four moving parts drawn by the block entity, opening and breathing', 'Rift: a sphere of space, vanilla gateway colours', 'Seed: a spinning planet', 'Motes: golden particles rising from the heart'],
+    swatches: [['#366c66', 'Verdigris'], ['#d6a23c', 'Gold seams'], ['#ffe4b4', 'Pearl lining'], ['#8cf0ff', 'Patina runes'], ['#b4aa96', 'Cradle stone'], ['#60d276', 'Newborn world']],
+    rift: [[0.30, 1.0, 0.85], [0.62, 0.48, 1.0], [0.012, 0.018, 0.04]],
+    light: 0xffd89a,
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz);
+      if (y <= 1) return rr < 7.8 ? 'cradle' : null;
+      if (y === 2) return rr < 6.6 ? 'cradle' : null;
+      if (y === 3) return rr < 5.4 ? (rr >= 3.4 ? 'gold' : 'cradle') : null;
+      return null;
+    },
+    paint(k, x, y, z) {
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      return { c: tone([180, 170, 150], x, y, z, 0.18) };
+    },
+    rifts: [{ type: 'sphere', c: [8, 16, 8], r: 4.6 }],
+    seed: { type: 'planet', c: [8, 16, 8] },
+    extras(L, group) {
+      const petals = CORNERS.map(q => {
+        const part = voxPart({
+          bounds: { x0: -2, x1: 18, y0: 3, y1: 29 },
+          shape: (x, y, z) => podShell(x, y, z, q),
+          paint: (k, x, y, z, e) => {
+            if (k === 'rim') return { c: goldTone(x, y, z) };
+            if (k === 'inner') return L ? { c: tone([255, 228, 180], x, y, z, 0.15), g: true } : { c: [40, 60, 58] };
+            if (hash3(x, y, z + 9) > 0.92 && y % 3 === 0) return L ? { c: [140, 240, 255], g: true } : { c: [38, 80, 76] };
+            return { c: tone([54, 108, 102], x, y, z, 0.25) };
+          },
+          pivot: [8 + q[0] * 2.2, 5, 8 + q[1] * 2.2],
+        });
+        group.add(part);
+        const axis = new THREE.Vector3(q[1], 0, -q[0]).normalize();
+        return { part, axis };
+      });
+      const p = L ? particles(26, 0xffd89a, { r0: 1, rs: 4, y0: 10, h: 26, swirl: 0.4 }) : null;
+      if (p) group.add(p.obj);
+      return t => petals.forEach(({ part, axis }, i) => {
+        part.quaternion.setFromAxisAngle(axis, L ? 0.62 + 0.05 * Math.sin(t * 1.2 + i * 0.7) : 0);
+        if (p && i === 0) p.update(t);
+      });
+    },
+  },
+  {
+    round: 2, name: 'The Gyre',
+    line: 'A broken vault that reassembles itself around a tear in the sky.',
+    story: 'A round basin of basalt holds a heap of rune-cut stones, fallen and cold, as if something that once stood here collapsed long ago.',
+    change: 'The stones lift out of the basin and wheel around a vertical tear in reality on tilted orbits, slowly tumbling, their runes lit white. A gold halo turns above them and the rune circle in the basin floor ignites.',
+    code: ['Nine orbiting stones and the halo: moving parts drawn by the block entity', 'Rift: a vertical column of space, vanilla gateway colours', 'Seed: floats in the column', 'Dust: particles rising through the column'],
+    swatches: [['#32303c', 'Basalt'], ['#d6a23c', 'Gold veins'], ['#b4f0ff', 'White runes'], ['#5a5866', 'Basin rim'], ['#6dffb5', 'World Seed'], ['#0a1020', 'Rift']],
+    rift: [[0.30, 1.0, 0.85], [0.62, 0.48, 1.0], [0.012, 0.018, 0.04]],
+    light: 0xb4f0ff,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz);
+      if (y <= 1) return rr < 8 ? 'basalt' : null;
+      if (y <= 3 && rr >= 6 && rr < 8) return 'wall';
+      if (y === 2 && rr < 6) return 'floor';
+      if (!L) for (const f of FRAGS) {
+        const [w, h, d] = f.dims, [rx, ry, rz] = f.rest;
+        if (x >= rx && x < rx + w && y >= ry && y < ry + h && z >= rz && z < rz + d) return 'frag';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz);
+      if (k === 'wall' && y === 3 && e.py) return { c: goldTone(x, y, z) };
+      if (k === 'floor' && e.py && rr >= 3.4 && rr < 4.4) return L ? { c: [180, 240, 255], g: true } : { c: [36, 34, 44] };
+      if (k === 'frag') return fragPaint(false)(k, x, y, z, e);
+      return { c: tone(k === 'floor' ? [40, 38, 48] : [70, 68, 82], x, y, z, 0.22) };
+    },
+    rifts: [{ type: 'cylinder', c: [8, 19, 8], r: 2.2, h: 30 }],
+    seed: { type: 'teardrop', c: [8, 19, 8] },
+    extras(L, group) {
+      if (!L) return null;
+      const stones = FRAGS.map(f => {
+        const [w, h, d] = f.d;
+        const part = voxPart({ bounds: { x0: 0, x1: Math.max(w, d), y0: 0, y1: h }, shape: (x, y, z) => (x < w && z < d ? 'frag' : null), paint: fragPaint(true), pivot: [w / 2, h / 2, d / 2] });
+        group.add(part);
+        return { part, f };
+      });
+      const halo = voxPart({
+        bounds: { x0: -1, x1: 17, y0: 0, y1: 2 },
+        shape: (x, y, z) => { const r = Math.hypot(x + 0.5 - 8, z + 0.5 - 8); return r >= 6.2 && r < 7.8 ? 'halo' : null; },
+        paint: (k, x, y, z) => ((Math.floor((Math.atan2(z - 8, x - 8) + Math.PI) * 4) % 3 === 0) ? { c: [255, 236, 170], g: true } : { c: goldTone(x, y, z) }),
+        pivot: [8, 1, 8],
+      });
+      group.add(halo);
+      const p = particles(30, 0xc8f4ff, { r0: 0, rs: 2.5, y0: 4, h: 30, swirl: 0.8 });
+      group.add(p.obj);
+      return t => {
+        stones.forEach(({ part, f }) => {
+          const o = f.orbit, a = o.a0 + t * o.sp;
+          part.position.set((8 + o.R * Math.cos(a)) * PX, (o.h + o.R * Math.sin(a) * Math.sin(o.tilt)) * PX, (8 + o.R * Math.sin(a) * Math.cos(o.tilt)) * PX);
+          part.rotation.set(t * 0.3 + o.a0, t * 0.2, o.tilt);
+        });
+        halo.position.y = (35 + 0.6 * Math.sin(t * 0.9)) * PX;
+        halo.rotation.set(0.12 * Math.sin(t * 0.5), t * 0.25, 0.1);
+        p.update(t);
+      };
+    },
+  },
+  {
+    round: 2, name: 'Halo Gate',
+    line: 'A standing ring of keystones that becomes a door to another world.',
+    story: 'A great ring of pale cut stone stands on a stepped plinth, nine gold-capped keystones set around it. Its centre is empty air. Through it you see only what stands behind.',
+    change: 'An inner ring of gold glyphs begins to turn, the runes in the stone light up blue-white, and the empty centre fills edge to edge with deep space. The seed hangs at the heart of the gate like a key in a lock, and light spirals inward.',
+    code: ['Inner glyph ring: a moving part, turning slowly', 'Rift: a full disc of space, vanilla gateway colours, visible from both sides', 'Seed: floats at the centre of the gate', 'Vortex: particles spiralling inward', 'Needs a facing direction when placed, like a door'],
+    swatches: [['#cec6b6', 'Pale gatestone'], ['#5c5864', 'Plinth'], ['#d6a23c', 'Keystone gold'], ['#82e6ff', 'Gate runes'], ['#6dffb5', 'World Seed'], ['#0a1020', 'Rift']],
+    rift: [[0.30, 1.0, 0.85], [0.62, 0.48, 1.0], [0.012, 0.018, 0.04]],
+    light: 0x82e6ff,
+    shape(x, y, z) {
+      const { cx } = C(x, z), cy = y + 0.5 - GATE_CY, d = Math.hypot(cx, cy);
+      if (y <= 1) return (cx > -13.5 && cx < 13.5 && z >= 2 && z <= 13) ? 'plinth' : null;
+      if (y <= 3 && cx > -10.5 && cx < 10.5 && z >= 4 && z <= 11) return 'plinth';
+      const a = Math.atan2(cy, cx);
+      for (let k = 0; k < 9; k++) {
+        const ak = Math.PI / 2 + k * 2 * Math.PI / 9;
+        if (angDiff(a, ak) * d < 1.6 && d >= 10 && d < 15.6 && z >= 4 && z <= 11) return k === 0 ? 'crown' : 'key';
+      }
+      if (d >= 10.5 && d < 14.5 && z >= 5 && z <= 10) return 'ring';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx } = C(x, z), cy = y + 0.5 - GATE_CY, d = Math.hypot(cx, cy), a = Math.atan2(cy, cx);
+      const face = e.nz || e.pz;
+      if (k === 'plinth') return { c: tone(e.py ? [104, 100, 112] : [84, 80, 92], x, y, z, 0.18) };
+      if (k === 'crown' && face && d >= 12 && d < 13.6 && Math.abs(cx) < 1.1) return L ? { c: [150, 255, 210], g: true } : { c: [40, 44, 52] };
+      if (k === 'key' || k === 'crown') return { c: face || d >= 15 ? goldTone(x, y, z) : tone([200, 192, 176], x, y, z, 0.12) };
+      if (face && d >= 12 && d < 13) return (Math.floor((a + Math.PI) * 9) % 2 === 0) ? (L ? { c: [130, 230, 255], g: true } : { c: [150, 142, 128] }) : { c: tone([206, 198, 182], x, y, z, 0.1) };
+      if (((a / (2 * Math.PI)) * 18 % 1 + 1) % 1 < 0.06) return { c: [150, 142, 128] };
+      return { c: tone([206, 198, 182], x, y, z, 0.1) };
+    },
+    rifts: [{ type: 'disc', c: [8, GATE_CY, 8], r: 9.6 }],
+    seed: { type: 'teardrop', c: [8, GATE_CY, 8] },
+    extras(L, group) {
+      const ring = voxPart({
+        bounds: { x0: -3, x1: 19, y0: 7, y1: 29 },
+        shape: (x, y, z) => { const d = Math.hypot(x + 0.5 - 8, y + 0.5 - GATE_CY); return d >= 9.2 && d < 10.4 && z >= 6 && z <= 9 ? 'iring' : null; },
+        paint: (k, x, y, z, e) => {
+          const a = Math.atan2(y + 0.5 - GATE_CY, x + 0.5 - 8) + Math.PI;
+          if ((e.nz || e.pz) && Math.floor(a * 12) % 3 === 0) return L ? { c: [255, 236, 170], g: true } : { c: [140, 100, 40] };
+          return { c: goldTone(x, y, z) };
+        },
+        pivot: [8, GATE_CY, 8],
+      });
+      group.add(ring);
+      if (!L) return null;
+      const p = particles(40, 0xa8eeff, { vortex: true, cy: GATE_CY });
+      group.add(p.obj);
+      return t => { ring.rotation.z = t * 0.35; p.update(t); };
+    },
+  },
+  {
+    round: 2, name: "Maker's Hand",
+    line: 'The hand of something vast, offering you a world.',
+    story: 'A colossal pale stone hand breaks up through the earth, the arm bound in a gold bracer, the fingers ringed in gold and curled shut into a fist. It looks like a statue of a god.',
+    change: 'The fist opens. The fingers spread and lift into an offering cup, the runes along the forearm light up, the palm glows, and above the fingertips rises a sphere of deep space with a tiny living world inside.',
+    code: ['Rift: a floating sphere of space, vanilla gateway colours', 'Seed: a spinning planet inside the sphere', 'Motes: particles rising from the palm', 'Open and closed hand are two models switched by the linked state'],
+    swatches: [['#d6d0c4', 'Godstone'], ['#d6a23c', 'Gold rings'], ['#b4f5ff', 'Forearm runes'], ['#6e6a62', 'Broken earth'], ['#60d276', 'The world'], ['#0a1020', 'Rift']],
+    rift: [[0.30, 1.0, 0.85], [0.62, 0.48, 1.0], [0.012, 0.018, 0.04]],
+    light: 0xb4f5ff,
+    shape(x, y, z, L) {
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      if (y <= 1 && rr < 8.2 && rr > 3.4 && hash3(x, y, z) > (rr > 6.4 ? 0.45 : 0.1)) return 'earth';
+      const ar = 3.9 - y * 0.04;
+      if (y <= 11 && rr < ar) return (y >= 6 && y <= 8 && rr >= ar - 1.1) ? 'gold' : 'stone';
+      const dx = (p[0] - 8) / 5.2, dy = (p[1] - 12.5) / 2.2, dz = (p[2] - 9) / 4.8;
+      if (dx ** 4 + dy ** 4 + dz ** 4 < 1) return 'palm';
+      const fingers = L ? HAND_OPEN : HAND_SHUT;
+      for (let i = 0; i < fingers.length; i++) {
+        const r = i === 4 ? 1.45 : 1.25;
+        const pd = polyDist(p, fingers[i]);
+        if (pd.d < r) return (pd.seg === 1 && pd.t > 0.35 && pd.t < 0.6 && pd.d > r - 0.75) ? 'gold' : 'stone';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z);
+      if (k === 'earth') return { c: e.py && hash3(x, 9, z) > 0.6 ? tone([86, 130, 60], x, y, z, 0.3) : tone([110, 104, 96], x, y, z, 0.3) };
+      if (k === 'gold') {
+        if (y === 7 && anySide(e) && (x + z) % 3 === 0) return L ? { c: [180, 245, 255], g: true } : { c: [150, 108, 44] };
+        return { c: goldTone(x, y, z) };
+      }
+      if (k === 'palm' && e.py && Math.hypot(x + 0.5 - 8, z + 0.5 - 9) < 2.2) return L ? { c: [210, 250, 255], g: true } : { c: tone([190, 184, 172], x, y, z, 0.1) };
+      if (k === 'stone' && y <= 11 && anySide(e)) {
+        const f = ((Math.atan2(cz, cx) / (2 * Math.PI)) * 6 % 1 + 1) % 1;
+        if (f < 0.08 && y >= 1 && (y < 6 || y > 8)) return L ? { c: [180, 245, 255], g: true } : { c: [150, 146, 136] };
+      }
+      if (hash3(x, y, z + 1) > 0.94) return { c: [150, 146, 136] };
+      return { c: tone([214, 208, 196], x, y, z, 0.1) };
+    },
+    rifts: [{ type: 'sphere', c: [8, 28, 11], r: 4.2 }],
+    seed: { type: 'planet', c: [8, 28, 11] },
+    extras(L, group) {
+      if (!L) return null;
+      const p = particles(26, 0xc8f8ff, { r0: 0.5, rs: 3, y0: 14, h: 20, swirl: 0.5, cz: 10 });
+      group.add(p.obj);
+      return p.update;
+    },
+  },
+
+  // ===================================================================== R1
+  {
+    round: 1, name: 'Seed Reliquary',
+    line: 'A carved reliquary that cradles the seed between gilded cups.',
+    story: 'Stone pillars and gold cups stand around an empty chamber, carved with runes that wait in the dark.',
+    change: 'The carved runes wake in cyan, a cube of deep space opens in the chamber, and the seed floats between the cups.',
+    code: ['Rift: End gateway effect in a box', 'Seed: floats and turns', 'Motes: cyan particles'],
+    swatches: [['#606482', 'Arcane stone'], ['#d49e38', 'Gilded trim'], ['#7ff0ff', 'Rune light'], ['#6dffb5', 'World Seed']],
+    rift: [[0.30, 1.0, 0.85], [0.62, 0.48, 1.0], [0.012, 0.018, 0.04]],
+    light: 0x7ff0ff,
+    shape(x, y, z) { return A_AT.has(x + ',' + y + ',' + z) ? 'a' : null; },
+    paint(k, x, y, z, L) {
+      const p = A_AT.get(x + ',' + y + ',' + z);
+      if (p.m === 'gold' || (p.sigil && y === 31 && (d => d >= 4.6 && d < 5.7)(Math.hypot(x + 0.5 - 8, z + 0.5 - 8)))) return { c: goldTone(x, y, z) };
+      if (aRune(p, x, y, z)) return L ? { c: [127, 240, 255], g: true } : { c: [36, 38, 56] };
+      const n = hash3(x, y, z); let c = [96, 100, 130];
+      if (y % 3 === 0) c = shade(c, 0.8);
+      if ((x + z + (Math.floor(y / 3) % 2) * 3) % 6 === 0) c = shade(c, 0.82);
+      return { c: shade(c, 0.93 + n * 0.14) };
+    },
+    rifts: [{ type: 'box', f: [4, 12, 4], t: [12, 22, 12] }],
+    seed: { type: 'teardrop', c: [8, 17, 8] },
+    extras(L, group) { if (!L) return null; const p = particles(28, 0x8ff6ff, { r0: 2, rs: 7, y0: 4, h: 26, swirl: 0.35, sink: true }); group.add(p.obj); return p.update; },
+  },
+  {
+    round: 1, name: 'Astral Orrery',
+    line: 'An instrument that charts the birth of a world.',
+    story: 'Lapis stone and a pavilion of starmetal posts. Three brass rings lie folded flat inside.',
+    change: 'The rings spin around a sphere of sky with a tiny planet at its centre. Constellation runes glow amber.',
+    code: ['Rings: three rotating ring models', 'Rift: sphere of space, blue and gold', 'Seed: spinning planet'],
+    swatches: [['#2c3c80', 'Lapis stone'], ['#c4cadc', 'Starmetal'], ['#e2b048', 'Brass rings'], ['#ffc86e', 'Amber runes']],
+    rift: [[0.45, 0.65, 1.0], [1.0, 0.8, 0.45], [0.01, 0.015, 0.05]],
+    light: 0xffc86e,
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 1) return oct(cx, cz, 8, 4) ? 'stone' : null;
+      if (y === 2) return oct(cx, cz, 7, 3) ? 'silver' : null;
+      if (y <= 5) return oct(cx, cz, 5, 2) ? 'drum' : null;
+      if (y === 6) return oct(cx, cz, 6, 2) ? 'silver' : null;
+      if (y <= 24) return (ax >= 5 && ax < 7 && az >= 5 && az < 7) ? ((y === 12 || y === 19) ? 'brass' : 'silver') : null;
+      if (y === 25) return oct(cx, cz, 6, 2) ? 'silver' : null;
+      if (y <= 28) return oct(cx, cz, 5, 2) ? 'drum' : null;
+      if (y === 29) return oct(cx, cz, 7, 2) ? 'silver' : null;
+      return y < 32 ? 'cap' : null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'silver') return { c: tone([204, 210, 226], x, y, z, 0.1) };
+      if (k === 'brass') return { c: tone([226, 176, 72], x, y, z, 0.12) };
+      if (k === 'drum') { const sf = sideFace(e, x, z); if (sf && ((sf.u * 3 + y * 5 + sf.f) % 7) === 0) return L ? { c: [255, 200, 110], g: true } : { c: [86, 102, 168] }; }
+      if (hash3(x, y, z) > 0.93) return { c: [176, 192, 250] };
+      return { c: tone([44, 60, 128], x, y, z, 0.16) };
+    },
+    rifts: [{ type: 'sphere', c: [8, 16, 8], r: 4.1 }],
+    seed: { type: 'planet', c: [8, 16, 8] },
+    extras(L, group) {
+      const pivot = new THREE.Group(); pivot.position.set(8 * PX, 16 * PX, 8 * PX); group.add(pivot);
+      const rings = [6.8, 5.8, 4.9].map((R, i) => {
+        const vox = ringVoxels(R, i, L), g = new THREE.Group();
+        const solid = vox.filter(v => !v.g), glow = vox.filter(v => v.g);
+        if (solid.length) g.add(instanced(solid, solidMat)); if (glow.length) g.add(instanced(glow, glowMat));
+        pivot.add(g); return g;
+      });
+      if (!L) return null;
+      return t => { rings[0].rotation.set(t * 0.45, 0, 0.35); rings[1].rotation.set(0.6, t * 0.3, t * 0.62); rings[2].rotation.set(t * 0.8, t * 0.5, 0); };
+    },
+  },
+  {
+    round: 1, name: 'Sundered Monolith',
+    line: 'A sealed monolith that splits as the realm tears through it.',
+    story: 'One block of black stone bound shut with gold bands, a hairline seam down every face.',
+    change: 'The quarters wrench apart, the bands snap, the split runs molten and shards orbit the wound.',
+    code: ['Rift: cross-shaped fissure plus core, magenta', 'Shards: four orbiting fragments'],
+    swatches: [['#241e32', 'Black stone'], ['#ce983a', 'Gold bands'], ['#ff5cd6', 'Magenta cracks'], ['#ffa848', 'Molten edge']],
+    rift: [[1.0, 0.35, 0.85], [0.55, 0.35, 1.0], [0.03, 0.01, 0.04]],
+    light: 0xff5cd6,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z) || y >= 32) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 2) return (y === 2 && (x === 0 || x === 15) && (z === 0 || z === 15)) ? null : 'rubble';
+      if (y >= 30) return 'cap';
+      let ox = x, oz = z;
+      if (L) { if (x === 7 || x === 8 || z === 7 || z === 8) return null; ox = x < 8 ? x + 1 : x - 1; oz = z < 8 ? z + 1 : z - 1; }
+      if (ox < 1 || ox > 14 || oz < 1 || oz > 14) return null;
+      if (Math.abs(ox + 0.5 - 8) > 6 && Math.abs(oz + 0.5 - 8) > 6 && hash3(ox, Math.floor(y / 4), oz) > 0.45) return null;
+      if (L && ax < 3 && az < 3 && y >= 12 && y <= 21) return null;
+      return 'mono';
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (k === 'rubble') return { c: tone([58, 50, 70], x, y, z, 0.3) };
+      if (k === 'cap') return { c: obsidian(x, y, z) };
+      const sides = anySide(e);
+      if (L && ((x === 6 && e.px) || (x === 9 && e.nx) || (z === 6 && e.pz) || (z === 9 && e.nz) || (y >= 12 && y <= 21 && ax < 4 && az < 4 && (sides || e.py || e.ny)))) return { c: [255, 168, 72], g: true };
+      if (!L && (((e.nz || e.pz) && x === 7) || ((e.nx || e.px) && z === 7))) return { c: [14, 10, 20] };
+      if ((y === 10 || y === 23) && sides && !(L && ((e.nz || e.pz) ? ax : az) < 3.5)) return { c: tone([206, 152, 58], x, y, z, 0.15) };
+      if (sides) { const f = e.nz ? 0 : e.pz ? 1 : e.nx ? 2 : 3; if (CRACKS[L ? 1 : 0].has(f + '|' + (f < 2 ? x : z) + '|' + y)) return L ? { c: [255, 92, 214], g: true } : { c: [66, 44, 88] }; }
+      return { c: obsidian(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [7, 3, 0], t: [9, 30, 16] }, { type: 'box', f: [0, 3, 7], t: [16, 30, 9] }, { type: 'box', f: [5, 12, 5], t: [11, 22, 11] }],
+    seed: { type: 'teardrop', c: [8, 17, 8] },
+  },
+  {
+    round: 1, name: 'Worldroot',
+    line: 'A living elder tree that grows a world from its heart.',
+    story: 'Pale roots, a twisting trunk and a cut crown with growth rings. Dry leaves, dark veins.',
+    change: 'Sap runs gold-green, the leaves bloom, and the hollow heart opens onto green-gold sky.',
+    code: ['Rift: sphere of green-gold sky', 'Seed: glowing acorn', 'Spores: particles'],
+    swatches: [['#bcb49e', 'Elder bark'], ['#469652', 'Leaves'], ['#c4ff80', 'Sap light'], ['#ffd6e8', 'Blossom']],
+    rift: [[0.55, 1.0, 0.55], [1.0, 0.88, 0.45], [0.01, 0.035, 0.02]],
+    light: 0xc4ff80,
+    shape(x, y, z) {
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz);
+      if (y <= 2) {
+        if (rr < 5.3 - y * 0.3) return 'root';
+        const a = Math.atan2(cz, cx);
+        for (let k = 0; k < 7; k++) { const ak = k * 2 * Math.PI / 7 + 0.35; if (rr * Math.cos(a - ak) > 0 && Math.abs(rr * Math.sin(a - ak)) < 1.25 - y * 0.3 && rr < 9.2 - y * 1.6) return 'root'; }
+        return null;
+      }
+      if (y >= 32) return null;
+      if (y >= 29) return inBlock(x, z) && rr < (y === 29 ? 7.2 : 8.4) ? 'stump' : null;
+      const ox = 0.7 * Math.sin(y * 0.28), oz = 0.7 * Math.cos(y * 0.28), dx = cx - ox, dz = cz - oz, d = Math.hypot(dx, dz);
+      let R = 4.3 + 0.45 * Math.sin(y * 0.55); if (y < 6) R += (6 - y) * 0.45; if (y > 24) R += (y - 24) * 0.7;
+      if (y >= 12 && y <= 21) {
+        if (d < 3.1) return null;
+        if (y >= 13 && y <= 20) { const a = Math.atan2(dz, dx); for (let k = 0; k < 4; k++) if (angDiff(a, k * Math.PI / 2 + 0.25) < 0.45) return null; }
+      }
+      if (d < R) return 'bark';
+      if (y >= 20 && y <= 28) for (let k = 0; k < 4; k++) {
+        const bk = Math.PI / 4 + k * Math.PI / 2, r0 = 3.8 + (y - 20) / 8 * 5.2;
+        if (Math.hypot(cx - Math.cos(bk) * r0, cz - Math.sin(bk) * r0) < 1.15) return 'bark';
+        if (Math.hypot(cx - Math.cos(bk) * 9.4, y + 0.5 - 26.5, cz - Math.sin(bk) * 9.4) < 2.4) return 'leaf';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz);
+      if (k === 'leaf') { if (L && hash3(x, y, z) > 0.84) return { c: [255, 214, 236], g: true }; return { c: L ? tone([70, 150, 82], x, y, z, 0.35) : tone([132, 118, 74], x, y, z, 0.3) }; }
+      if (k === 'root') return { c: e.py && hash3(x, y, z) > 0.45 ? tone([86, 136, 58], x, y, z, 0.25) : tone([148, 136, 112], x, y, z, 0.2) };
+      if (k === 'stump' && y === 31 && e.py) { if (rr < 1.6) return L ? { c: [255, 214, 110], g: true } : { c: [120, 96, 66] }; return { c: tone(Math.floor(rr / 1.25) % 2 ? [204, 178, 130] : [176, 148, 104], x, y, z, 0.08) }; }
+      if (k === 'bark' && anySide(e)) { const f = (((Math.atan2(cz, cx) / (2 * Math.PI)) * 4 + y * 0.05) % 1 + 1) % 1; if (f < 0.085) return L ? { c: [196, 255, 128], g: true } : { c: [104, 88, 62] }; }
+      return { c: shade(tone([188, 180, 158], x, y, z, 0.1), 0.86 + hash3(x, 0, z) * 0.22) };
+    },
+    rifts: [{ type: 'sphere', c: [8, 16.5, 8], r: 3.0 }],
+    seed: { type: 'acorn', c: [8, 16.5, 8] },
+    extras(L, group) { if (!L) return null; const p = particles(40, 0xd8ff9a, { r0: 3, rs: 9, y0: 2, h: 34, swirl: 0.15 }); group.add(p.obj); return p.update; },
+  },
+  {
+    round: 1, name: 'Prism Spire',
+    line: 'A crystal lance bound in gold, holding a captive rift.',
+    story: 'A hollow octagonal crystal on a white marble base, gripped by gold claws. Clouded grey.',
+    change: 'The crystal clears to violet, showing a column of deep space with the seed inside.',
+    code: ['Crystal: translucent model', 'Rift: column inside the crystal, pink and cyan'],
+    swatches: [['#e4e0d8', 'White marble'], ['#d4a23e', 'Gold claws'], ['#b484ff', 'Violet crystal'], ['#ff8cd6', 'Pink runes']],
+    rift: [[1.0, 0.5, 0.9], [0.5, 0.9, 1.0], [0.02, 0.01, 0.05]],
+    light: 0xd29aff, trans: ['crystal'], transOpacity: [0.88, 0.4],
+    shape(x, y, z) {
+      if (!inBlock(x, z) || y >= 32) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 1) return 'marble';
+      if (y === 2) return oct(cx, cz, 7, 3) ? 'gold' : null;
+      if (y <= 4) return oct(cx, cz, 6, 2) ? 'marble' : null;
+      if (y >= 30) return (y === 31 && Math.hypot(cx, cz) < 3.6) ? 'window' : 'gold';
+      const inner = oct(cx, cz, 4.5, 2.6), s = ax + az;
+      if (s >= 8 && s < 9.2 && Math.abs(ax - az) < 1.2 && ((y >= 5 && y <= 10 && y - 5 < 6 - Math.abs(ax - az) * 3) || (y >= 25 && 29 - y < 5 - Math.abs(ax - az) * 3))) return 'gold';
+      if ((y === 5 || y === 6 || y === 28 || y === 29) && oct(cx, cz, 6, 2.5) && !inner) return 'band';
+      if (oct(cx, cz, 5.5, 3) && !inner) return 'crystal';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'marble') return { c: Math.abs(Math.sin(x * 0.7 + y * 1.3 + z * 0.45 + hash3(x, y, z) * 1.5)) < 0.14 ? tone([168, 164, 180], x, y, z, 0.1) : tone([228, 224, 216], x, y, z, 0.06) };
+      if (k === 'gold') return { c: goldTone(x, y, z) };
+      if (k === 'band') return anySide(e) && (x + z + y) % 3 === 0 ? (L ? { c: [255, 140, 214], g: true } : { c: [150, 108, 44] }) : { c: goldTone(x, y, z) };
+      if (k === 'window') return L ? { c: [236, 180, 255], g: true } : { c: [150, 140, 168] };
+      return { t: true, c: L ? (hash3(x, y, z) > 0.86 ? [236, 214, 255] : tone([180, 132, 255], x, y, z, 0.2)) : tone([140, 130, 160], x, y, z, 0.15) };
+    },
+    rifts: [{ type: 'box', f: [5, 6, 5], t: [11, 29, 11] }],
+    seed: { type: 'teardrop', c: [8, 17, 8] },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Scene
+// ---------------------------------------------------------------------------
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0d17);
+scene.fog = new THREE.Fog(0x0b0d17, 10, 24);
+
+const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 1.2;
+controls.maxDistance = 14;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.autoRotate = !reduceMotion;
+controls.autoRotateSpeed = 0.6;
+
+const hemi = new THREE.HemisphereLight(0xa9b6e8, 0x2a2618, 1.1);
+const sun = new THREE.DirectionalLight(0xffe2b0, 1.6);
+sun.position.set(4, 7, 3);
+const fill = new THREE.DirectionalLight(0x8090ff, 0.35);
+fill.position.set(-5, 3, -4);
+scene.add(hemi, sun, fill);
+
+const gridCanvas = document.createElement('canvas');
+gridCanvas.width = gridCanvas.height = 32;
+{ const g = gridCanvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 32, 32); g.strokeStyle = '#8a8a8a'; g.lineWidth = 2; g.strokeRect(1, 1, 30, 30); }
+const gridTex = new THREE.CanvasTexture(gridCanvas);
+gridTex.colorSpace = THREE.SRGBColorSpace;
+
+const grassCanvas = document.createElement('canvas');
+grassCanvas.width = grassCanvas.height = 16;
+{
+  const g = grassCanvas.getContext('2d');
+  for (let x = 0; x < 16; x++) for (let y = 0; y < 16; y++) {
+    const c = shade([88, 140, 62], 0.8 + hash3(x, y, 7) * 0.35);
+    g.fillStyle = `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+    g.fillRect(x, y, 1, 1);
+  }
+}
+const grassTex = new THREE.CanvasTexture(grassCanvas);
+grassTex.magFilter = grassTex.minFilter = THREE.NearestFilter;
+grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
+grassTex.repeat.set(15, 11);
+grassTex.colorSpace = THREE.SRGBColorSpace;
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(15, 11), new THREE.MeshStandardMaterial({ map: grassTex, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2;
+ground.position.set(0, 0, 0.5);
+scene.add(ground);
+
+const voxelGeo = new THREE.BoxGeometry(PX, PX, PX);
+const solidMat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.05 });
+const glowMat = new THREE.MeshBasicMaterial({ toneMapped: false });
+const seedMat = new THREE.MeshBasicMaterial({ toneMapped: false });
+const GLOW_BASE = 1.25;
+
+function instanced(list, mat) {
+  const mesh = new THREE.InstancedMesh(voxelGeo, mat, Math.max(1, list.length));
+  mesh.count = list.length;
+  const m = new THREE.Matrix4(), col = new THREE.Color();
+  list.forEach((v, i) => {
+    m.makeTranslation((v.x + 0.5) * PX, (v.y + 0.5) * PX, (v.z + 0.5) * PX);
+    mesh.setMatrixAt(i, m);
+    col.setRGB(v.c[0] / 255, v.c[1] / 255, v.c[2] / 255, THREE.SRGBColorSpace);
+    mesh.setColorAt(i, col);
+  });
+  return mesh;
+}
+
+function particles(n, color, o) {
+  const pos = new Float32Array(n * 3);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const seeds = Array.from({ length: n }, () => ({ a: Math.random() * 6.283, r: (o.r0 || 0) + Math.random() * (o.rs || 1), y: Math.random(), s: 0.5 + Math.random() }));
+  const mat = new THREE.PointsMaterial({ color, size: 0.035, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const obj = new THREE.Points(geo, mat);
+  const update = t => {
+    seeds.forEach((s, i) => {
+      const f = (s.y + t * 0.05 * s.s) % 1;
+      if (o.vortex) {
+        const r = 10 * (1 - f), a = s.a + f * 5;
+        pos[i * 3] = (8 + Math.cos(a) * r) * PX; pos[i * 3 + 1] = (o.cy + Math.sin(a) * r) * PX; pos[i * 3 + 2] = (8 + (s.s - 1) * 1.5) * PX;
+        return;
+      }
+      const a = s.a + t * o.swirl * s.s, r = o.sink ? s.r * (1 - f * 0.8) : s.r;
+      pos[i * 3] = (8 + Math.cos(a) * r) * PX;
+      pos[i * 3 + 1] = (o.sink ? o.y0 + o.h * (1 - f) : o.y0 + f * o.h) * PX;
+      pos[i * 3 + 2] = ((o.cz || 8) + Math.sin(a) * r) * PX;
+    });
+    geo.attributes.position.needsUpdate = true;
+  };
+  update(0);
+  return { obj, update };
+}
+
+const riftMats = [];
+function riftMaterial([a, b, bg], side = THREE.BackSide) {
+  const m = new THREE.ShaderMaterial({
+    side,
+    toneMapped: false,
+    uniforms: {
+      uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uCam: { value: new THREE.Vector2() },
+      uA: { value: new THREE.Vector3(...a) }, uB: { value: new THREE.Vector3(...b) }, uBg: { value: new THREE.Vector3(...bg) },
+    },
+    vertexShader: `void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `
+      uniform float uTime; uniform vec2 uRes; uniform vec2 uCam; uniform vec3 uA; uniform vec3 uB; uniform vec3 uBg;
+      float hash(vec2 p){ p = fract(p*vec2(123.34,456.21)); p += dot(p,p+45.32); return fract(p.x*p.y); }
+      mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
+      void main(){
+        vec2 p = (gl_FragCoord.xy - 0.5*uRes) / uRes.y;
+        vec3 col = uBg;
+        vec2 q = p*1.7 + uCam*0.35;
+        float neb = 0.5 + 0.5*sin(q.x*3.1 + uTime*0.07)*sin(q.y*2.3 - uTime*0.05);
+        col += mix(uA, uB, neb) * 0.06 * (0.5 + neb);
+        for (int i = 0; i < 12; i++) {
+          float fi = float(i);
+          vec2 s = rot(fi*2.39) * p * (6.0 + fi*2.4) + uCam*(0.8 + fi*0.55) + vec2(uTime*0.012*(fi+1.0), uTime*0.008);
+          vec2 c = floor(s), f = fract(s);
+          float h = hash(c + fi*13.1);
+          if (h > 0.62) {
+            vec2 sp = vec2(hash(c + fi*7.7), hash(c + fi*3.3 + 9.1))*0.7 + 0.15;
+            vec2 d = abs(f - sp);
+            float sq = step(max(d.x, d.y), 0.06 + 0.03*fract(h*31.0));
+            float tw = 0.65 + 0.35*sin(uTime*1.8 + h*50.0);
+            col += mix(uA, uB, fract(fi*0.618 + h)) * sq * tw * 1.7;
+          }
+        }
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+  riftMats.push(m);
+  return m;
+}
+DESIGNS.forEach(D => { D.riftMat = riftMaterial(D.rift); D.riftMatFront = riftMaterial(D.rift, THREE.FrontSide); });
+
+// A sphere built from 1-pixel cubes (only the outer faces), so it reads as Minecraft voxels
+function blockySphereGeo(R) {
+  const pos = [], n = Math.ceil(R) + 1;
+  const inside = (i, j, k) => Math.hypot(i + 0.5, j + 0.5, k + 0.5) < R;
+  for (let i = -n; i < n; i++) for (let j = -n; j < n; j++) for (let k = -n; k < n; k++) {
+    if (!inside(i, j, k)) continue;
+    const cell = [i, j, k];
+    for (let a = 0; a < 3; a++) for (const sgn of [1, -1]) {
+      const nb = [...cell]; nb[a] += sgn;
+      if (inside(...nb)) continue;
+      const b = (a + 1) % 3, c = (a + 2) % 3;
+      const p = [...cell]; if (sgn > 0) p[a] += 1;
+      const q = (db, dc) => { const v = [...p]; v[b] += db; v[c] += dc; return v.map(t => t * PX); };
+      const [p00, p10, p11, p01] = [q(0, 0), q(1, 0), q(1, 1), q(0, 1)];
+      if (sgn > 0) pos.push(...p00, ...p10, ...p11, ...p00, ...p11, ...p01);
+      else pos.push(...p00, ...p11, ...p10, ...p00, ...p01, ...p11);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return g;
+}
+
+function riftMesh(r, mat, matFront) {
+  if (r.type === 'vsphere') {
+    const m = new THREE.Mesh(blockySphereGeo(r.r), matFront);
+    m.position.set(r.c[0] * PX, r.c[1] * PX, r.c[2] * PX);
+    return m;
+  }
+  const e = 0.02 * PX;
+  let mesh;
+  if (r.type === 'sphere') {
+    mesh = new THREE.Mesh(new THREE.SphereGeometry(r.r * PX, 24, 16), mat);
+  } else if (r.type === 'cylinder') {
+    mesh = new THREE.Mesh(new THREE.CylinderGeometry(r.r * PX, r.r * PX, r.h * PX, 20), mat);
+  } else if (r.type === 'octa') {
+    mesh = new THREE.Mesh(new THREE.OctahedronGeometry(r.r * PX), mat);
+    mesh.scale.y = r.sy || 1;
+  } else if (r.type === 'disc') {
+    mesh = new THREE.Mesh(new THREE.CylinderGeometry(r.r * PX, r.r * PX, 0.6 * PX, 40), mat);
+    mesh.rotation.x = Math.PI / 2;
+  } else {
+    mesh = new THREE.Mesh(new THREE.BoxGeometry((r.t[0] - r.f[0]) * PX - 2 * e, (r.t[1] - r.f[1]) * PX - 2 * e, (r.t[2] - r.f[2]) * PX - 2 * e), mat);
+    mesh.position.set((r.f[0] + r.t[0]) / 2 * PX, (r.f[1] + r.t[1]) / 2 * PX, (r.f[2] + r.t[2]) / 2 * PX);
+    return mesh;
+  }
+  mesh.position.set(r.c[0] * PX, r.c[1] * PX, r.c[2] * PX);
+  return mesh;
+}
+
+function buildAnchor(D, L, originX) {
+  const group = new THREE.Group();
+  group.position.set(originX, 0, 0);
+  const vox = voxelizeRaw(D.bounds || DEFAULT_BOUNDS, (x, y, z) => D.shape(x, y, z, L), (k, x, y, z, e) => D.paint(k, x, y, z, L, e), D.trans);
+  if (vox.solid.length) group.add(instanced(vox.solid, solidMat));
+  if (vox.glow.length) group.add(instanced(vox.glow, glowMat));
+  if (vox.flow.length) { const fm = flowMaterial(D.core || [8, 16, 8]); if (D.flowGain) fm.color.setScalar(D.flowGain); group.add(instanced(vox.flow, fm)); }
+  if (vox.trans.length) {
+    const op = D.transOpacity[L ? 1 : 0];
+    group.add(instanced(vox.trans, D.transBasic ? new THREE.MeshBasicMaterial({ transparent: true, opacity: op, depthWrite: false, toneMapped: false })
+                                                : new THREE.MeshStandardMaterial({ transparent: true, opacity: op, depthWrite: false, roughness: 0.15 })));
+  }
+  let seed = null;
+  const riftList = [];
+  if (L) {
+    for (const r of D.rifts) { const m = riftMesh(r, D.riftMat, D.riftMatFront); riftList.push(m); group.add(m); }
+    if (D.seed) {
+      seed = new THREE.Group();
+      seed.add(instanced(seedVoxels(D.seed.type), seedMat));
+      seed.position.set(D.seed.c[0] * PX, D.seed.c[1] * PX, D.seed.c[2] * PX);
+      seed.userData = { baseY: D.seed.c[1] };
+      group.add(seed);
+    }
+    const light = new THREE.PointLight(D.light, 0.3, 1.6);
+    const lc = D.seed ? D.seed.c : (D.core || [8, 16, 8]);
+    light.position.set(lc[0] * PX, lc[1] * PX, lc[2] * PX);
+    group.add(light);
+  }
+  const update = D.extras ? D.extras(L, group, { rifts: riftList, seed }) : null;
+
+  const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 2, 1)), new THREE.LineBasicMaterial({ color: 0xd6a23c, transparent: true, opacity: 0.55 }));
+  outline.position.set(0.5, 1, 0.5);
+  outline.visible = state.grid;
+  outline.userData.outline = true;
+  group.add(outline);
+
+  const fig = playerFigure();
+  fig.position.set(25 * PX, 0, 9 * PX);
+  fig.rotation.y = -Math.PI / 2;
+  fig.visible = state.player;
+  fig.userData.player = true;
+  group.add(fig);
+
+  scene.add(group);
+  return { group, seed, update, lower: vox.countBoxes(-99, 16), upper: vox.countBoxes(16, 99) };
+}
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.4, 0.3, 0.92);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  composer.setSize(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  const v = new THREE.Vector2(); renderer.getDrawingBufferSize(v);
+  riftMats.forEach(m => m.uniforms.uRes.value.copy(v));
+}
+addEventListener('resize', resize);
+
+// ---------------------------------------------------------------------------
+// State + UI
+// ---------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
+const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
+try { const saved = localStorage.getItem('anchorDesign7'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+let anchors = [];
+
+const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
+const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === 7);
+const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
+cur.forEach(([D, i], n) => {
+  const b = document.createElement('button');
+  b.textContent = ROMAN[n] + ' · ' + D.name;
+  b.id = 'd' + i;
+  b.addEventListener('click', () => selectDesign(i));
+  $('designButtons').appendChild(b);
+});
+$('earlier').append(new Option('Earlier rounds…', ''));
+for (const n of [6, 5, 4, 3, 2, 1]) {
+  const og = document.createElement('optgroup'); og.label = 'Round ' + n;
+  og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
+  $('earlier').append(og);
+}
+$('earlier').addEventListener('change', e => { if (e.target.value !== '') selectDesign(+e.target.value); });
+
+function selectDesign(i) {
+  state.design = i;
+  try { localStorage.setItem('anchorDesign7', String(i)); } catch (e) {}
+  bloomPass.strength = DESIGNS[i].bloom || 0.4;
+  const D = DESIGNS[i];
+  cur.forEach(([, j]) => press($('d' + j), j === i));
+  $('earlier').value = D.round === 7 ? '' : String(i);
+  $('earlier').classList.toggle('active', D.round !== 7);
+  for (const a of anchors) scene.remove(a.group);
+  anchors = [buildAnchor(D, false, -2), buildAnchor(D, true, 1)];
+  applyView();
+  const pos = byRound(D.round).findIndex(([, j]) => j === i);
+  $('cIndex').textContent = `round ${D.round} · ${ROMAN[pos]} of ${byRound(D.round).length}`;
+  $('cName').textContent = D.name;
+  $('cLine').textContent = D.line;
+  $('nStory').textContent = D.story;
+  $('nChange').textContent = D.change;
+  $('rowInteract').hidden = !D.interact;
+  $('nInteract').textContent = D.interact || '';
+  $('nCode').replaceChildren(...D.code.map(t => Object.assign(document.createElement('li'), { textContent: t })));
+  const [ai, al] = anchors;
+  const heavy = Math.max(al.lower + al.upper, ai.lower + ai.upper) > 90 ? ' Curved and organic shapes cost many boxes; the conversion would simplify them.' : '';
+  $('nBoxes').innerHTML = `Inert: lower <span class="num">${ai.lower}</span>, upper <span class="num">${ai.upper}</span>. Linked: lower <span class="num">${al.lower}</span>, upper <span class="num">${al.upper}</span>. Moving parts are not counted.` + heavy;
+  $('nSwatches').replaceChildren(...D.swatches.map(([hex, name]) => {
+    const s = document.createElement('span'); s.className = 'sw';
+    const sw = document.createElement('i'); sw.style.background = hex;
+    s.append(sw, name); return s;
+  }));
+}
+
+const views = {
+  vBoth:   { show: [true, true],  target: [0.9, 1.15, 0.5], cam: [3.9, 2.5, 5.6] },
+  vInert:  { show: [true, false], target: [-1.5, 1.1, 0.5], cam: [0.3, 2.0, 3.9] },
+  vLinked: { show: [false, true], target: [1.5, 1.1, 0.5],  cam: [3.3, 2.0, 3.9] },
+};
+function applyView() {
+  const v = views[state.view];
+  anchors.forEach((a, i) => a.group.visible = v.show[i]);
+  $('lblInert').hidden = !v.show[0]; $('lblLinked').hidden = !v.show[1];
+}
+for (const id of Object.keys(views)) {
+  $(id).addEventListener('click', () => {
+    state.view = id;
+    for (const k of Object.keys(views)) press($(k), k === id);
+    controls.target.set(...views[id].target); camera.position.set(...views[id].cam);
+    applyView();
+  });
+}
+$('tGrid').addEventListener('click', e => {
+  state.grid = !state.grid; press(e.currentTarget, state.grid);
+  for (const mat of [solidMat, glowMat, seedMat]) { mat.map = state.grid ? gridTex : null; mat.needsUpdate = true; }
+  anchors.forEach(a => a.group.children.forEach(c => { if (c.userData.outline) c.visible = state.grid; }));
+});
+$('tPlayer').addEventListener('click', e => {
+  state.player = !state.player; press(e.currentTarget, state.player);
+  anchors.forEach(a => a.group.children.forEach(c => { if (c.userData.player) c.visible = state.player; }));
+});
+$('tMotion').addEventListener('click', e => { state.motion = !state.motion; press(e.currentTarget, state.motion); });
+press($('tSpin'), controls.autoRotate);
+$('tSpin').addEventListener('click', e => { controls.autoRotate = !controls.autoRotate; press(e.currentTarget, controls.autoRotate); });
+$('tNight').addEventListener('click', e => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; press(e.currentTarget, on);
+  hemi.intensity = on ? 0.25 : 1.1; sun.intensity = on ? 0.15 : 1.6; fill.intensity = on ? 0.2 : 0.35;
+  const bg = on ? 0x05060c : 0x0b0d17; scene.background.setHex(bg); scene.fog.color.setHex(bg);
+});
+$('notesToggle').addEventListener('click', e => { press(e.currentTarget, $('notes').classList.toggle('open')); });
+
+camera.position.set(...views.vBoth.cam);
+controls.target.set(...views.vBoth.target);
+selectDesign(state.design);
+resize();
+
+// ---------------------------------------------------------------------------
+// Loop
+// ---------------------------------------------------------------------------
+const clock = new THREE.Clock();
+let simTime = 0;
+const tmp = new THREE.Vector3();
+function placeLabel(el, x) {
+  tmp.set(x + 0.5, 2.7, 0.5).project(camera);
+  el.style.left = ((tmp.x + 1) / 2 * innerWidth) + 'px';
+  el.style.top = ((1 - tmp.y) / 2 * innerHeight) + 'px';
+}
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (state.motion) simTime += dt;
+  const t = simTime;
+  controls.update();
+  const az = controls.getAzimuthalAngle(), pol = controls.getPolarAngle();
+  riftMats.forEach(m => { m.uniforms.uTime.value = t; m.uniforms.uCam.value.set(az, pol); });
+  const CD = DESIGNS[state.design];
+  const flick = CD.flicker ? 0.82 + 0.36 * rnd(0, Math.floor(t * 18), 9) : 1;
+  flowTime.value = t;
+  glowMat.color.setScalar(GLOW_BASE * (CD.glow || 1) * (0.85 + 0.15 * Math.sin(t * (CD.pulse || 2.2))) * flick);
+  seedMat.color.setScalar(1.15 + 0.25 * Math.sin(t * 3.1));
+  for (const a of anchors) {
+    if (a.seed) {
+      a.seed.rotation.y = t * 0.7;
+      a.seed.position.y = (a.seed.userData.baseY + 0.6 * Math.sin(t * 1.4)) * PX;
+    }
+    if (a.update) a.update(t);
+  }
+  placeLabel($('lblInert'), -2);
+  placeLabel($('lblLinked'), 1);
+  composer.render();
+});
+</script>
