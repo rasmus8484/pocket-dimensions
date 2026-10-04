@@ -26,6 +26,9 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
     private static final float[] DEEP = {40 / 255f, 110 / 255f, 230 / 255f};
     private static final float STEADY = 1.06f;                                 // midpoint of the old pulse
 
+    /** Face order shared by SEED_DIRS and cubeFace: -z, +z, -x, +x, +y, -y. */
+    private static final int[][] SEED_DIRS = {{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
+
     private static final List<int[]> SPHERE_FACES = blockySphereFaces(3.2);
     private static final List<int[]> RING = ringPixels();
     private static final List<int[]> DISK = diskPixels();
@@ -41,7 +44,8 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
                                    Vec3 cameraPos, ModelFeatureRenderer.CrumblingOverlay crumbling) {
         BlockEntityRenderState.extractBase(be, s, crumbling);
         s.linked = be.getBlockState().getValue(WorldAnchorBlock.LINKED);
-        s.time = be.getLevel() == null ? 0 : (be.getLevel().getGameTime() + partialTick) / 20f;
+        // Wrap before converting to float: past ~2^24 ticks a float can no longer hold the partial tick and animation stutters.
+        s.time = be.getLevel() == null ? 0 : (Math.floorMod(be.getLevel().getGameTime(), 24000L * 20) + partialTick) / 20f;
     }
 
     @Override
@@ -98,10 +102,10 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         pose.translate(0.5f, (27.5f + 0.6f * (float) Math.sin(t * 1.4)) * PX, 0.5f);
         pose.mulPose(com.mojang.math.Axis.YP.rotation(t * 0.7f));
         out.submitCustomGeometry(pose, RenderTypes.lightning(), (p, vc) -> {
-            for (int[] v : SEED) {
-                float k = (v[1] + 4) / 7f;
+            for (int[] f : SEED) {
+                float k = (f[1] + 4) / 7f;
                 float[] c = {(40 + k * 120) / 255f, (200 + k * 55) / 255f, (140 + k * 75) / 255f};
-                cube(vc, p.pose(), v[0], v[1], v[2], c);
+                cubeFace(vc, p.pose(), f[0], f[1], f[2], f[3], c);
             }
         });
         pose.popPose();
@@ -134,14 +138,15 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         for (float[] f : q) for (int i = 0; i < 4; i++) vc.addVertex(m, f[i * 3], f[i * 3 + 1], f[i * 3 + 2]).setColor(c[0], c[1], c[2], a);
     }
 
-    /** One seed voxel as six faces (pixel units, centred). */
-    private static void cube(VertexConsumer vc, Matrix4f m, int x, int y, int z, float[] c) {
+    /** One outward face of a seed voxel (pixel units, centred). */
+    private static void cubeFace(VertexConsumer vc, Matrix4f m, int x, int y, int z, int face, float[] c) {
         float x0 = x * PX, x1 = (x + 1) * PX, y0 = y * PX, y1 = (y + 1) * PX, z0 = z * PX, z1 = (z + 1) * PX;
         float[][] q = {
             {x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0}, {x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1},
             {x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0}, {x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1},
             {x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0}, {x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1}};
-        for (float[] f : q) for (int i = 0; i < 4; i++) vc.addVertex(m, f[i * 3], f[i * 3 + 1], f[i * 3 + 2]).setColor(c[0], c[1], c[2], 1f);
+        float[] f = q[face];
+        for (int i = 0; i < 4; i++) vc.addVertex(m, f[i * 3], f[i * 3 + 1], f[i * 3 + 2]).setColor(c[0], c[1], c[2], 1f);
     }
 
     private static float hash(int x, int y, int z) {
@@ -204,13 +209,24 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         return px;
     }
 
-    /** Gem-shaped seed voxels {x, y, z}, centred. */
+    private static boolean inSeed(int i, int j, int k) {
+        return Math.abs(i + .5) + Math.abs(j + .5) * 0.75 + Math.abs(k + .5) < 2.7;
+    }
+
+    /**
+     * Exposed faces of the gem-shaped seed {x, y, z, face}, centred. Inner faces are skipped: with additive
+     * blending they would stack and wash the gem out to white.
+     */
     private static List<int[]> seedVoxels() {
-        List<int[]> v = new ArrayList<>();
+        List<int[]> faces = new ArrayList<>();
         for (int i = -3; i < 3; i++) for (int j = -4; j < 4; j++) for (int k = -3; k < 3; k++) {
-            if (Math.abs(i + .5) + Math.abs(j + .5) * 0.75 + Math.abs(k + .5) < 2.7) v.add(new int[]{i, j, k});
+            if (!inSeed(i, j, k)) continue;
+            for (int f = 0; f < 6; f++) {
+                int[] d = SEED_DIRS[f];
+                if (!inSeed(i + d[0], j + d[1], k + d[2])) faces.add(new int[]{i, j, k, f});
+            }
         }
-        return v;
+        return faces;
     }
 
     @Override
