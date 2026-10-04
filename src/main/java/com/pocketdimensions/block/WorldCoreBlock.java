@@ -3,6 +3,7 @@ package com.pocketdimensions.block;
 import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.init.ModBlockEntityTypes;
+import com.pocketdimensions.menu.WorldCoreMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -107,7 +108,7 @@ public class WorldCoreBlock extends BaseEntityBlock {
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer sp) {
-            sp.openMenu(be, be.getBlockPos());
+            sp.openMenu(be, buf -> WorldCoreMenu.writeExtraData(buf, be));
         }
         return InteractionResult.SUCCESS;
     }

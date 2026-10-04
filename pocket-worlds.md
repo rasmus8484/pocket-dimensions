@@ -74,6 +74,8 @@ Server enforces hard region boundaries (implementation choice), but the rule is 
 - No placement requirements (no structures or biomes)
 - No linking structures
 - The anchor itself is the realm entry point
+- Two blocks tall (lower + upper half); needs one free block above to place
+- It refuses to open from inside a pocket room or from inside the realm dimension
 
 ## 5. WorldSeed behavior (create or rekey)
 
@@ -88,6 +90,8 @@ Using a WorldSeed on a WorldAnchor:
   - Old anchor becomes invalid or unbound
 
 Anchors are replaceable; realms persist.
+
+*Implementation note: a rekey is refused while the old anchor still exists ("Sever it first"). The old anchor must be destroyed before a new one can be linked.*
 
 ---
 
@@ -139,6 +143,8 @@ After placement:
 
 Only one breacher per anchor.
 
+*Implementation note: the owner-inside requirement is not enforced yet. Siege blocks must sit directly on the anchor's upper half, which also means only one siege block (breacher or breaker) fits per anchor.*
+
 ---
 
 ## 8. Fuel (lapis) and breacher progress
@@ -172,8 +178,9 @@ If the anchor is destroyed:
 
 Destruction requirements:
 
-- WorldAnchor, World Breacher, and Anchor Breaker are destroyable with **netherite-tier or higher** harvest level
-- Breaking takes a long time and is interruptible
+- The WorldAnchor **cannot be mined** at all (hardness -1); only a completed Anchor Breaker removes it
+- World Breacher and Anchor Breaker can be mined (hardness 50, slow with any tool); breaking takes a long time and is interruptible
+- No loot tables exist yet, so broken siege blocks drop nothing
 
 ---
 
@@ -184,6 +191,8 @@ Access is evaluated only when a player attempts to use the WorldAnchor.
 Default state:
 
 - Only the owner can use their WorldAnchor to enter
+
+Players on the realm's **access list** (see section 13) can also always enter.
 
 After successful breach (100%):
 
@@ -250,3 +259,16 @@ If the WorldAnchor is destroyed:
 - Players inside are **not ejected**
 - They can exit via WorldCore
 - They cannot re-enter until the owner rekeys a new anchor
+
+---
+
+# Access list
+
+## 13. Realm access list
+
+The realm owner manages a list of players who may always enter through the WorldAnchor, independent of any siege.
+
+- Managed in the WorldCore GUI (owner only): type a player name and click **Add**, or click **x** to remove
+- Only players who have joined the server before can be added
+- Size capped by config `access.max_allowed_players` (0 = unlimited)
+- Checked only at interaction time, like all other access rules

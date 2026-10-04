@@ -17,11 +17,10 @@ public class ModCreativeTabs {
             CREATIVE_TABS.register("pocket_dimensions_tab",
                     () -> CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.pocketdimensions"))
-                            .icon(() -> new ItemStack(ModItems.POCKET_ITEM.get()))
+                            .icon(() -> new ItemStack(ModItems.POCKET_ANCHOR_ITEM.get()))
                             .displayItems((params, output) -> {
-                                output.accept(ModItems.POCKET_ITEM.get());
-                                output.accept(ModItems.WORLD_SEED.get());
                                 output.accept(ModItems.POCKET_ANCHOR_ITEM.get());
+                                output.accept(ModItems.WORLD_SEED.get());
                                 output.accept(ModItems.WORLD_ANCHOR_ITEM.get());
                                 output.accept(ModItems.WORLD_BREACHER_ITEM.get());
                                 output.accept(ModItems.ANCHOR_BREAKER_ITEM.get());

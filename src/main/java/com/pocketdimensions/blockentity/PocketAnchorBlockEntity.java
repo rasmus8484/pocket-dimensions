@@ -88,13 +88,13 @@ public class PocketAnchorBlockEntity extends BlockEntity {
     }
 
     /**
-     * Crouch + right-click: convert the anchor back into a PocketItem in the thief's inventory.
+     * Crouch + right-click: fold the anchor back into item form in the thief's inventory.
      * No warning is sent to players inside - intentional stealth mechanic.
      */
     public void stealAnchor(Player thief, Level level, BlockPos pos, BlockState state) {
         if (pocketId == null) return;
 
-        ItemStack stack = new ItemStack(ModItems.POCKET_ITEM.get());
+        ItemStack stack = new ItemStack(ModItems.POCKET_ANCHOR_ITEM.get());
         final UUID id = pocketId;
         final UUID owner = ownerUUID;
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {

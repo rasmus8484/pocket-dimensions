@@ -116,8 +116,8 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
                                   WorldBreacherBlockEntity be) {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
-        // Check that WorldAnchor is directly below
-        BlockPos anchorPos = pos.below();
+        // Check that WorldAnchor LOWER half is 2 below (siege block sits on UPPER half)
+        BlockPos anchorPos = pos.below(2);
         boolean hasAnchor = level.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity;
         WorldAnchorBlockEntity anchor = hasAnchor
                 ? (WorldAnchorBlockEntity) level.getBlockEntity(anchorPos) : null;
@@ -396,7 +396,7 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
                     case 1 -> PocketDimensionsConfig.BREACH_DURATION_TICKS.get();
                     case 2 -> {
                         if (!(level instanceof ServerLevel sl)) yield 0;
-                        BlockPos anchorPos = worldPosition.below();
+                        BlockPos anchorPos = worldPosition.below(2);
                         if (!(sl.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity anchor)) yield 0;
                         WorldCoreBlockEntity wc = findWorldCore(sl, anchor);
                         yield (wc != null && wc.hasDefenseFuel()) ? 1 : 0;

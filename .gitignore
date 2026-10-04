@@ -33,3 +33,7 @@ Thumbs.db
 # Claude
 CLAUDE.md
 .claude/
+
+# Tooling scratch
+.playwright-mcp/
+.superpowers/

@@ -71,6 +71,7 @@ public class RealmManager extends SavedData {
         public @Nullable BlockPos anchorPos     = null;
         public @Nullable BlockPos worldCorePos  = null;
         public long createdGameTime = 0;
+        public final List<UUID> allowedPlayers = new ArrayList<>();
 
         public RealmData(int plotIndex, UUID ownerUUID) {
             this.plotIndex = plotIndex;
@@ -117,7 +118,8 @@ public class RealmManager extends SavedData {
                               Optional<String> anchorDimKey,
                               Optional<Long> anchorPosLong,
                               Optional<Long> worldCorePosLong,
-                              long createdGameTime) {
+                              long createdGameTime,
+                              List<UUID> allowedPlayers) {
 
         static final Codec<RealmEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 UUIDUtil.CODEC.fieldOf("ownerUUID").forGetter(RealmEntry::ownerUUID),
@@ -126,7 +128,8 @@ public class RealmManager extends SavedData {
                 Codec.STRING.optionalFieldOf("anchorDimKey").forGetter(RealmEntry::anchorDimKey),
                 Codec.LONG.optionalFieldOf("anchorPosLong").forGetter(RealmEntry::anchorPosLong),
                 Codec.LONG.optionalFieldOf("worldCorePosLong").forGetter(RealmEntry::worldCorePosLong),
-                Codec.LONG.optionalFieldOf("createdGameTime", 0L).forGetter(RealmEntry::createdGameTime)
+                Codec.LONG.optionalFieldOf("createdGameTime", 0L).forGetter(RealmEntry::createdGameTime),
+                UUIDUtil.CODEC.listOf().optionalFieldOf("allowedPlayers", List.of()).forGetter(RealmEntry::allowedPlayers)
         ).apply(instance, RealmEntry::new));
 
         static RealmEntry from(UUID ownerUUID, RealmData data) {
@@ -135,7 +138,8 @@ public class RealmManager extends SavedData {
                     Optional.ofNullable(data.anchorDimKey),
                     Optional.ofNullable(data.anchorPos).map(BlockPos::asLong),
                     Optional.ofNullable(data.worldCorePos).map(BlockPos::asLong),
-                    data.createdGameTime);
+                    data.createdGameTime,
+                    List.copyOf(data.allowedPlayers));
         }
 
         RealmData toData() {
@@ -145,6 +149,7 @@ public class RealmManager extends SavedData {
             d.anchorPos       = anchorPosLong.map(BlockPos::of).orElse(null);
             d.worldCorePos    = worldCorePosLong.map(BlockPos::of).orElse(null);
             d.createdGameTime = createdGameTime;
+            d.allowedPlayers.addAll(allowedPlayers);
             return d;
         }
     }
@@ -564,8 +569,45 @@ public class RealmManager extends SavedData {
         fresh.anchorPos       = old.anchorPos;
         fresh.worldCorePos    = old.worldCorePos;
         fresh.createdGameTime = old.createdGameTime;
+        fresh.allowedPlayers.addAll(old.allowedPlayers);
         realms.put(newOwner, fresh);
         setDirty();
+    }
+
+    // -------------------------------------------------------------------------
+    // Allowlist
+    // -------------------------------------------------------------------------
+
+    public boolean addAllowedPlayer(UUID ownerUUID, UUID playerUUID) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null) return false;
+        if (playerUUID.equals(ownerUUID)) return false;
+        if (data.allowedPlayers.contains(playerUUID)) return false;
+        int max = PocketDimensionsConfig.MAX_ALLOWED_PLAYERS.get();
+        if (max > 0 && data.allowedPlayers.size() >= max) return false;
+        data.allowedPlayers.add(playerUUID);
+        setDirty();
+        return true;
+    }
+
+    public boolean removeAllowedPlayer(UUID ownerUUID, UUID playerUUID) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null) return false;
+        boolean removed = data.allowedPlayers.remove(playerUUID);
+        if (removed) setDirty();
+        return removed;
+    }
+
+    public boolean isAllowed(UUID ownerUUID, UUID playerUUID) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null) return false;
+        return data.allowedPlayers.contains(playerUUID);
+    }
+
+    public List<UUID> getAllowedPlayers(UUID ownerUUID) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null) return List.of();
+        return List.copyOf(data.allowedPlayers);
     }
 
     @Nullable

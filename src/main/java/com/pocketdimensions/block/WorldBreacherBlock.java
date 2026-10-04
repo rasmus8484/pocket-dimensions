@@ -17,6 +17,7 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -58,10 +59,12 @@ public class WorldBreacherBlock extends BaseEntityBlock {
                 WorldBreacherBlockEntity::serverTick);
     }
 
-    /** Only survives when placed directly on a WorldAnchor. */
+    /** Only survives when placed on the UPPER half of a WorldAnchor. */
     @Override
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-        return level.getBlockState(pos.below()).is(ModBlocks.WORLD_ANCHOR.get());
+        BlockState below = level.getBlockState(pos.below());
+        return below.is(ModBlocks.WORLD_ANCHOR.get())
+                && below.getValue(WorldAnchorBlock.HALF) == DoubleBlockHalf.UPPER;
     }
 
     /** Drop the block if the WorldAnchor below is removed. */

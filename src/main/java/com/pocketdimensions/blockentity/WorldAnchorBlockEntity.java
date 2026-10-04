@@ -124,7 +124,12 @@ public class WorldAnchorBlockEntity extends BlockEntity {
     private boolean canAccess(Player player, Level level, BlockPos anchorPos) {
         if (player.getUUID().equals(ownerUUID)) return true;
 
-        BlockPos breakerPos = anchorPos.above();
+        // Check allowlist
+        if (level.getServer() != null && RealmManager.get(level.getServer()).isAllowed(ownerUUID, player.getUUID())) {
+            return true;
+        }
+
+        BlockPos breakerPos = anchorPos.above(2); // siege block sits on top of UPPER half
         if (level.getBlockEntity(breakerPos) instanceof WorldBreacherBlockEntity breacher) {
             return breacher.isBreachComplete() && breacher.getFuel() > 0;
         }

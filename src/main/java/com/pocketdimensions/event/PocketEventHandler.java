@@ -3,7 +3,7 @@ package com.pocketdimensions.event;
 import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.init.ModBlocks;
 import com.pocketdimensions.init.ModItems;
-import com.pocketdimensions.item.PocketItem;
+import com.pocketdimensions.item.PocketAnchorItem;
 import com.pocketdimensions.manager.PocketRoomManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -103,7 +103,7 @@ public class PocketEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // Exit logic - called from tick event AND BoundaryBlock right-click
+    // Exit logic - called from the crouch+jump tick check
     // -------------------------------------------------------------------------
 
     public static void performExit(ServerPlayer player, UUID pocketId,
@@ -127,7 +127,7 @@ public class PocketEventHandler {
                 // Anchor was stolen - find who holds the pocket item and teleport near them
                 for (ServerPlayer online : server.getPlayerList().getPlayers()) {
                     if (online == player) continue;
-                    if (!holdsPocketItem(online, pocketId)) continue;
+                    if (!holdsAnchorItem(online, pocketId)) continue;
                     BlockPos safeSpot = findSafeSpotNear(online, targetLevel);
                     player.teleport(new TeleportTransition(targetLevel,
                             new Vec3(safeSpot.getX() + 0.5, safeSpot.getY(), safeSpot.getZ() + 0.5),
@@ -162,9 +162,9 @@ public class PocketEventHandler {
         var inventory = serverPlayer.getInventory();
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack stack = inventory.getItem(i);
-            if (!stack.is(ModItems.POCKET_ITEM.get())) continue;
+            if (!stack.is(ModItems.POCKET_ANCHOR_ITEM.get())) continue;
 
-            UUID pocketId = PocketItem.getPocketId(stack);
+            UUID pocketId = PocketAnchorItem.getPocketId(stack);
             if (pocketId == null) continue;
             if (mgr.getOccupants(pocketId).isEmpty()) continue;
 
@@ -217,11 +217,11 @@ public class PocketEventHandler {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private static boolean holdsPocketItem(ServerPlayer player, UUID pocketId) {
+    private static boolean holdsAnchorItem(ServerPlayer player, UUID pocketId) {
         var inv = player.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack stack = inv.getItem(i);
-            if (stack.is(ModItems.POCKET_ITEM.get()) && pocketId.equals(PocketItem.getPocketId(stack)))
+            if (stack.is(ModItems.POCKET_ANCHOR_ITEM.get()) && pocketId.equals(PocketAnchorItem.getPocketId(stack)))
                 return true;
         }
         return false;

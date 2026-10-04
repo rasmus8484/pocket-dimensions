@@ -19,29 +19,33 @@ The mod uses only two shared dimensions (`pocketdimensions:pocket` and `pocketdi
 
 ### Pocket Rooms
 
-A Pocket Item links to a 16x16x16 sealed room inside the pocket dimension, surrounded by unbreakable boundary blocks.
+A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, surrounded by unbreakable boundary blocks. It is one object with two forms — an item in your inventory and a block when placed — and every room has exactly one.
 
 **How to use:**
-1. Get a **Pocket Item** (creative tab: Pocket Dimensions)
-2. **Right-click** to enter your room — the mod allocates a room, places a Pocket Anchor, and teleports you in
+1. Get a **Pocket Anchor** (creative tab: Pocket Dimensions)
+2. **Right-click** to enter your room — the mod allocates a room, places the anchor at your feet, and teleports you in
 3. **Crouch + right-click** a block face to place the anchor without entering
-4. **Crouch + move upward** inside the room to exit back to the anchor
+4. **Crouch + jump** inside the room to exit back to the anchor (or next to whoever is carrying it, if it was stolen)
 5. Anyone can **right-click** your placed Pocket Anchor to enter your room
-6. Anyone can **crouch + right-click** your anchor to steal it (converts it back to a Pocket Item)
+6. Anyone can **crouch + right-click** your anchor to steal it (folds it back into item form)
 7. If the anchor is mined and destroyed, the room is permanently deleted and all occupants are ejected
 
-**Disconnect safety:** If a player logs off while holding a stolen Pocket Item and others are still inside that room, the mod auto-places an anchor at their feet so occupants aren't trapped.
+**Disconnect safety:** If a player logs off while holding a stolen Pocket Anchor and others are still inside that room, the mod auto-places an anchor at their feet so occupants aren't trapped.
+
+Chorus fruit teleportation is blocked inside pocket rooms.
 
 ### Realms
 
 Each player can own one realm — a region of overworld-like terrain (no structures, no natural hostile spawns) inside the shared realm dimension.
 
 **How to use:**
-1. Place a **World Anchor** anywhere in the overworld
+1. Place a **World Anchor** (two blocks tall — needs headroom). It can't be used from inside a pocket room or the realm itself
 2. Use a **World Seed** on the anchor — the seed crumbles into the anchor and condenses a dimensional tunnel to your realm
-3. **Right-click** the linked anchor to enter your realm (owner always has access)
+3. **Right-click** the linked anchor to enter your realm — the owner always has access, players on the realm's access list too, and anyone else only after a successful breach
 4. **Right-click** the **World Core** (indestructible block at your realm's center) to exit back to where you entered
-5. As the owner, **crouch + right-click** the World Core to open its GUI — shows realm info (owner, age, siege status), a lapis fuel slot for defense, and an Exit Realm button
+5. As the owner, **crouch + right-click** the World Core to open its GUI — shows realm info (owner, age, siege status), a lapis fuel slot for defense, an Exit Realm button, and the **realm access list**
+
+**Access list:** In the World Core GUI the owner can type a player name and click **Add** to let them through the anchor, or click **x** next to a name to remove them. The list size is capped by `access.max_allowed_players` (0 = unlimited).
 
 The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core's beacon turns red and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
@@ -51,7 +55,7 @@ The World Anchor is indestructible by normal mining — it can only be removed t
 
 ### Siege System
 
-Two siege blocks can be placed on top of a World Anchor, both fueled by lapis lazuli:
+Two siege blocks can be placed on top of a World Anchor (on its upper half — **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
 
 **World Breacher** (`world_breacher`, netherite block texture)
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
@@ -66,17 +70,19 @@ Two siege blocks can be placed on top of a World Anchor, both fueled by lapis la
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks while fueled
 - When complete, permanently destroys the World Anchor
-- The Anchor Breaker drops itself when the anchor disappears
+- The Anchor Breaker breaks when the anchor disappears
 - Destroying the breaker resets all progress
 
-**Defense:** The realm owner can insert lapis into the World Core to slow siege progress by 3x. Both attacker and defender lapis are consumed over time, creating a resource war.
+**Defense:** The realm owner can insert lapis into the World Core to slow siege progress by 3x (`core_slow_factor`). While a siege block is progressing, one attacker lapis and one defender lapis are consumed every `core_fuel_burn_ticks`, creating a resource war. Defender lapis is only used while a siege is actually running.
 
 **Beacon indicator:** The World Core emits a beacon beam visible from the realm:
 - **Blue** — no active siege
 - **Pink** — World Breacher is present on the anchor
 - **Red** — Anchor Breaker is active and fueled, or the anchor has been destroyed
 
-Both siege blocks require placement directly on top of a World Anchor and will drop if the anchor is removed.
+Both siege blocks require placement directly on top of a World Anchor and break if the anchor is removed. There are no loot tables yet, so siege blocks drop nothing when broken or mined.
+
+**Boss bars:** Players within `siege_bossbar_range` blocks of an active siege block, and everyone inside the besieged realm, see its progress as a boss bar.
 
 **Cross-dimension awareness:** Siege blocks and the World Core force-load each other's chunks across dimensions, so boss bars are visible to players inside the realm during an active siege and the beacon color stays accurate regardless of which dimension players are in.
 
@@ -93,6 +99,8 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 | `siege.breaker_duration_ticks` | 24000 | Anchor Breaker anchor-destroy time |
 | `siege.core_slow_factor` | 3 | Defense slowdown (progress every N ticks) |
 | `siege.core_fuel_burn_ticks` | 200 | Ticks between each lapis consumed |
+| `siege.siege_bossbar_range` | 64 | Radius in blocks for seeing siege boss bars |
+| `access.max_allowed_players` | 0 | Max players on a realm's access list (0 = unlimited) |
 
 ---
 
@@ -101,8 +109,7 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 These are not yet implemented:
 
 **Anti-Exploit (Phase 5)**
-- Piston protection for anchors, siege blocks, and boundary blocks
-- Explosion protection for anchors and siege blocks
+- Wither protection for Pocket Anchors and siege blocks (TNT/creepers already can't break them; pistons can't move any of the mod's blocks)
 - Ender pearl and chorus fruit blocking across realm boundaries
 - Command teleport restrictions for non-admins in realms
 - Hopper/dispenser interaction prevention with anchors
@@ -111,14 +118,12 @@ These are not yet implemented:
 - Crafting recipes for all items and blocks (currently creative-only)
 - Loot tables and block drop tables
 - Advancements and progression milestones
-- Custom textures (all blocks currently use vanilla placeholder textures)
-- Custom block models beyond the current cube_all placeholders
+- Custom textures and models (only the World Anchor has them so far; everything else uses vanilla placeholder textures)
 - Visual/audio feedback during siege progression
 - Warning particles and sounds when anchors are being destroyed
 
 **Gameplay Refinements**
 - World Breacher placement gating (require realm owner to be inside)
-- Prevention of stacking both siege blocks on the same anchor
 - Optional passive mob spawn control in realms
 - Anchor break warning effects for room occupants
 

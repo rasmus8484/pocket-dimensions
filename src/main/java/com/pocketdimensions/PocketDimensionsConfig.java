@@ -38,6 +38,11 @@ public class PocketDimensionsConfig {
     /** Radius in blocks within which players see siege boss bars. */
     public static final ForgeConfigSpec.IntValue SIEGE_BOSSBAR_RANGE;
 
+    // ---- Access config ----
+
+    /** Maximum players on a realm's allowlist. 0 = unlimited. */
+    public static final ForgeConfigSpec.IntValue MAX_ALLOWED_PLAYERS;
+
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
@@ -82,6 +87,14 @@ public class PocketDimensionsConfig {
         SIEGE_BOSSBAR_RANGE = builder
                 .comment("Radius in blocks within which players see siege boss bars.")
                 .defineInRange("siege_bossbar_range", 64, 8, 256);
+
+        builder.pop();
+
+        builder.comment("Access control settings").push("access");
+
+        MAX_ALLOWED_PLAYERS = builder
+                .comment("Maximum players on a realm's allowlist. 0 = unlimited.")
+                .defineInRange("max_allowed_players", 0, 0, 1000);
 
         builder.pop();
 

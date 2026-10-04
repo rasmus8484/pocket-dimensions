@@ -119,7 +119,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         var anchorEntry = optAnchor.get();
         ServerLevel anchorLevel = server.getLevel(anchorEntry.getKey());
         if (anchorLevel == null) return STATE_NORMAL;
-        BlockPos siegePos = anchorEntry.getValue().above();
+        BlockPos siegePos = anchorEntry.getValue().above(2); // siege block sits on top of UPPER half
         BlockEntity siegeBe = anchorLevel.getBlockEntity(siegePos);
         if (siegeBe instanceof AnchorBreakerBlockEntity ab && ab.hasFuel()) return STATE_BREAKING;
         if (siegeBe instanceof WorldBreacherBlockEntity) return STATE_BREACHING;

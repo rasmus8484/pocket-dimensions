@@ -10,6 +10,7 @@ import com.pocketdimensions.init.ModChunkGenerators;
 import com.pocketdimensions.init.ModCreativeTabs;
 import com.pocketdimensions.init.ModItems;
 import com.pocketdimensions.init.ModMenuTypes;
+import com.pocketdimensions.network.ModNetworking;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
@@ -47,6 +48,8 @@ public class PocketDimensionsMod {
         ModCreativeTabs.CREATIVE_TABS.register(modBusGroup);
         ModChunkGenerators.CHUNK_GENERATORS.register(modBusGroup);
         ModMenuTypes.MENU_TYPES.register(modBusGroup);
+
+        ModNetworking.register();
 
         new PocketEventHandler();
         new RealmEventHandler();

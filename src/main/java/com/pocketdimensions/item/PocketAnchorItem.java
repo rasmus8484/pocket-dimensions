@@ -15,18 +15,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
 
 /**
- * Pocket Item - the key/token for a pocket room.
+ * Pocket Anchor in item form - the same object as the placed {@code pocket_anchor} block.
+ * Placing it and stealing it back just toggles between the two forms.
  * <p>
  * Carries {@code pocket_id} (UUID as int array) in item CustomData. The UUID is never used to
  * derive coordinates; only the server-side PocketRoomManager mapping is authoritative.
@@ -36,14 +38,15 @@ import java.util.UUID;
  * - Right-click on block face (no shift) -> enter room (allocate if needed, place anchor at feet)
  * - Right-click in air (use())           -> same as right-click block without shift
  */
-public class PocketItem extends Item {
+public class PocketAnchorItem extends BlockItem {
 
-    public PocketItem(Properties properties) {
-        super(properties);
+    public PocketAnchorItem(Block block, Properties properties) {
+        super(block, properties);
     }
 
     // -------------------------------------------------------------------------
     // useOn - right-click on a block face
+    // Fully replaces BlockItem placement: a blank anchor must never be placed.
     // -------------------------------------------------------------------------
 
     @Override

@@ -1,6 +1,7 @@
 package com.pocketdimensions.item;
 
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.init.ModBlocks;
 import com.pocketdimensions.manager.RealmManager;
@@ -15,6 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
 import java.util.Map;
 import java.util.UUID;
@@ -52,7 +54,9 @@ public class WorldSeedItem extends Item {
 
         // --- Server side only below ---
 
-        BlockPos anchorPos = ctx.getClickedPos();
+        // Resolve to LOWER half (which holds the block entity)
+        BlockPos anchorPos = clicked.getValue(WorldAnchorBlock.HALF) == DoubleBlockHalf.UPPER
+                ? ctx.getClickedPos().below() : ctx.getClickedPos();
 
         // Check 1: is this anchor already linked to someone's realm?
         if (level.getBlockEntity(anchorPos) instanceof WorldAnchorBlockEntity anchorBe

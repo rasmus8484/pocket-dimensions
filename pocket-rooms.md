@@ -25,7 +25,7 @@ No room is its own dimension.
 Boundary is a **custom mod block** with:
 
 - Pure white texture
-- Emits light level **15** (glowstone strength)
+- Emits light level **15** (glowstone strength) — *not yet implemented: the block currently sets no light level*
 - Unbreakable / extremely high hardness
 - High blast resistance
 - Not movable by pistons
@@ -49,16 +49,24 @@ No door, hatch, portal, or deliberate gap exists.
 
 Each pocket room is assigned a **3x3 chunk region** (48x48 blocks).
 
-- The **center chunk** contains the sealed 20x20x20 room.
-- The surrounding 8 chunks are a buffer to prevent overlap / interaction.
+- The sealed 20x20x20 room sits in the middle of the plot (offset 14 blocks from the plot corner).
+- The remaining space around it is a buffer to prevent overlap / interaction.
 
-This is required because the room is larger than a single chunk footprint.
+This is required because the room is larger than a single chunk footprint (it straddles chunk borders).
 
 ---
 
-## 4. Pocket Item binding
+## 4. Pocket Anchor binding
 
-Each Pocket Item carries an identifier:
+The **Pocket Anchor** is a single object with two forms:
+
+- **Item form** — carried in an inventory (`pocketdimensions:pocket_anchor` item)
+- **Placed form** — the anchor block in the world (`pocketdimensions:pocket_anchor` block)
+
+Each room has exactly one anchor, and it is always in one of the two forms.
+Placing it, entering with it, or stealing it simply toggles between them.
+
+Both forms carry the same identifier:
 
 - `pocket_id` (UUID)
 
@@ -69,21 +77,26 @@ The server stores authoritative mapping:
 The item is never trusted to provide coordinates.
 The server resolves coordinates from `pocket_id`.
 
+A blank anchor (no `pocket_id`) allocates a new room on first use.
+If the linked room has been destroyed, a new room is allocated instead.
+
 ---
 
 # Pocket Anchor (PvP intrusion + lifecycle)
 
-The Pocket Anchor is the placed block that represents the active pocket entry point.
+The placed Pocket Anchor represents the active pocket entry point.
 
 ---
 
-## 5. Activating a Pocket Item (entering the room)
+## 5. Entering with the anchor in item form
 
-When a player uses a Pocket Item to enter:
+When a player right-clicks while holding the anchor (in the air or on a block):
 
-- Pocket Item is **removed from inventory**
-- A **Pocket Anchor** block entity is placed at the activation location
+- The anchor leaves the player's inventory
+- It is **placed at the player's feet** (or an adjacent free spot)
 - Player is teleported into the linked pocket room
+
+A player never enters while still carrying the anchor — entering always leaves the placed anchor behind as the way back out.
 
 The anchor stores:
 - `pocket_id`
@@ -104,7 +117,7 @@ Right-clicking the Pocket Anchor teleports the player into the room.
 ### B) Crouch + right-click (silent theft)
 Crouch-right-clicking the Pocket Anchor:
 
-- Instantly converts the anchor into a Pocket Item in the thief's inventory
+- Instantly folds the anchor back into item form in the thief's inventory (same `pocket_id`, same room)
 - Removes the anchor block
 - Sends **no warning** to players inside
 
@@ -121,25 +134,32 @@ While being mined:
 
 If fully mined (broken):
 - The player(s) inside are force-ejected
-- The Pocket Item is **permanently destroyed**
+- The anchor is **permanently destroyed**
 - The pocket room is **permanently deleted**
 - All contents inside are **permanently lost**
 - Nothing drops
 
 This is intentional irreversible loss.
 
+### D) Chorus fruit
+Chorus fruit teleportation is cancelled inside pocket rooms.
+
 Tool gating:
 - Requires **netherite-tier or higher** harvest level (long break time)
+
+*Implementation note: the code currently requires a diamond-tier pickaxe (hardness 50), and only the miner gets a warning — an action-bar message if players are inside. Particles, sounds and occupant warnings are not implemented.*
 
 ---
 
 ## 7. Manual placement of anchor (pre-placement)
 
-If a player is holding a Pocket Item and crouch-right-clicks a valid block face:
+If a player is holding the anchor in item form and crouch-right-clicks a valid block face:
 
-- A Pocket Anchor is placed
-- Pocket Item is removed from inventory
+- The anchor is placed on that face
+- It leaves the player's inventory
 - Player remains outside
+
+A blank anchor cannot be pre-placed; it must be used once to allocate its room.
 
 Players can then right-click the anchor to enter.
 Others may invade immediately.
@@ -156,18 +176,18 @@ Players inside the pocket room exit via **crouch + jump** (server detected).
 
 On normal exit:
 - Player teleports to the anchor location
-- The Pocket Item does **not** drop as an item entity
-- A **placed pickup anchor** remains on the ground at exit location
-- Player must **crouch + right-click** to retrieve the Pocket Item
+- The anchor does **not** drop as an item entity
+- The placed anchor remains on the ground at the exit location
+- Player must **crouch + right-click** to pick the anchor back up
 - This creates a forced interaction window (PvP exposure)
 
-(Effectively: after exit, the item remains as a placed anchor block until picked up.)
+(Effectively: after exit, the anchor stays in placed form until picked up.)
 
 ---
 
 ## 9. Exit when another player holds the item
 
-If someone silently stole the Pocket Item into their inventory,
+If someone silently stole the anchor into their inventory,
 and a player exits the pocket room:
 
 - Exiting player appears in a safe open space **adjacent to the item holder**
@@ -200,17 +220,19 @@ The server must store each player's pocket entry location for this failsafe.
 
 ---
 
-## 12. Player disconnects while holding stolen Pocket Item and players are inside
-If a player has stolen the Pocket Item into inventory, and players remain inside,
+## 12. Player disconnects while holding a stolen anchor and players are inside
+If a player has stolen the anchor into inventory, and players remain inside,
 then on logout/disconnect:
 
 - A Pocket Anchor is automatically placed at the disconnecting player's feet
-- The Pocket Item is removed from their inventory
+- The anchor leaves their inventory (it changes form, it is not duplicated)
 - Players inside remain linked to the anchor
 
 If the exact feet position is invalid:
 - Place at nearest valid block at/under that position
 - Fallback to last known valid on-ground position
+
+*Implementation note: the code tries the feet position and its 8 horizontal neighbours; if all are blocked, no anchor is placed.*
 
 This prevents trapping occupants by logging off with the stolen item.
 

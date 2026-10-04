@@ -3,8 +3,11 @@ package com.pocketdimensions.menu;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.event.RealmEventHandler;
 import com.pocketdimensions.init.ModMenuTypes;
+import com.pocketdimensions.manager.RealmManager;
+import com.pocketdimensions.network.ModNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -16,7 +19,12 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.common.UsernameCache;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Server/client menu for the World Core block.
@@ -24,6 +32,8 @@ import org.jetbrains.annotations.Nullable;
  * One lapis slot backed by the block entity's persistent inventory.
  * ContainerData syncs: siegeState, createdGameTimeLow/High, currentGameTimeLow/High.
  * clickMenuButton: 0 = exit realm.
+ * <p>
+ * Also carries allowlist and online player data for the access management panel.
  */
 public class WorldCoreMenu extends AbstractContainerMenu {
 
@@ -33,6 +43,11 @@ public class WorldCoreMenu extends AbstractContainerMenu {
     private final ContainerData data;
     private final @Nullable WorldCoreBlockEntity blockEntity;
     private final BlockPos pos;
+
+    /** Allowlist entries (synced via custom packet). */
+    private List<ModNetworking.PlayerEntry> allowedPlayers = new ArrayList<>();
+    /** Online non-owner, non-allowlisted players (synced via custom packet). */
+    private List<ModNetworking.PlayerEntry> onlinePlayers = new ArrayList<>();
 
     /** Server-side constructor (from MenuProvider). */
     public WorldCoreMenu(int containerId, Inventory playerInv, WorldCoreBlockEntity be) {
@@ -54,6 +69,17 @@ public class WorldCoreMenu extends AbstractContainerMenu {
     public WorldCoreMenu(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
         super(ModMenuTypes.WORLD_CORE.get(), containerId);
         this.pos = buf != null ? buf.readBlockPos() : BlockPos.ZERO;
+
+        // Read allowlist data from extra buf written by server openMenu
+        int allowedCount = buf != null ? buf.readVarInt() : 0;
+        for (int i = 0; i < allowedCount; i++) {
+            allowedPlayers.add(new ModNetworking.PlayerEntry(buf.readUUID(), buf.readUtf(64)));
+        }
+        int onlineCount = buf != null ? buf.readVarInt() : 0;
+        for (int i = 0; i < onlineCount; i++) {
+            onlinePlayers.add(new ModNetworking.PlayerEntry(buf.readUUID(), buf.readUtf(64)));
+        }
+
         BlockEntity be = playerInv.player.level().getBlockEntity(pos);
         this.blockEntity = be instanceof WorldCoreBlockEntity wc ? wc : null;
         SimpleContainer dummy = new SimpleContainer(1) {
@@ -74,13 +100,14 @@ public class WorldCoreMenu extends AbstractContainerMenu {
     }
 
     private void addPlayerInventory(Inventory playerInv) {
+        // Shifted down by 50px from original (84→134, 142→192)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInv, col + (row + 1) * 9, 8 + col * 18, 84 + row * 18));
+                addSlot(new Slot(playerInv, col + (row + 1) * 9, 8 + col * 18, 134 + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInv, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInv, col, 8 + col * 18, 192));
         }
     }
 
@@ -140,5 +167,59 @@ public class WorldCoreMenu extends AbstractContainerMenu {
 
     public long getCurrentGameTime() {
         return Integer.toUnsignedLong(data.get(3)) | (Integer.toUnsignedLong(data.get(4)) << 32);
+    }
+
+    // -------------------------------------------------------------------------
+    // Allowlist data
+    // -------------------------------------------------------------------------
+
+    public List<ModNetworking.PlayerEntry> getAllowedPlayers() { return allowedPlayers; }
+    public List<ModNetworking.PlayerEntry> getOnlinePlayers() { return onlinePlayers; }
+
+    public void setAllowedPlayers(List<ModNetworking.PlayerEntry> list) { this.allowedPlayers = new ArrayList<>(list); }
+    public void setOnlinePlayers(List<ModNetworking.PlayerEntry> list) { this.onlinePlayers = new ArrayList<>(list); }
+
+    /** Write allowlist + online player data to the extra buf during server openMenu. */
+    public static void writeExtraData(FriendlyByteBuf buf, WorldCoreBlockEntity be) {
+        buf.writeBlockPos(be.getBlockPos());
+
+        MinecraftServer server = be.getLevel().getServer();
+        UUID ownerUUID = be.getOwnerUUID();
+        if (server == null || ownerUUID == null) {
+            buf.writeVarInt(0);
+            buf.writeVarInt(0);
+            return;
+        }
+
+        RealmManager mgr = RealmManager.get(server);
+        List<UUID> allowed = mgr.getAllowedPlayers(ownerUUID);
+
+        buf.writeVarInt(allowed.size());
+        for (UUID uuid : allowed) {
+            buf.writeUUID(uuid);
+            buf.writeUtf(resolveName(uuid, server), 64);
+        }
+
+        List<ServerPlayer> onlinePlayers = server.getPlayerList().getPlayers();
+        List<ServerPlayer> eligible = new ArrayList<>();
+        for (ServerPlayer sp : onlinePlayers) {
+            UUID spUUID = sp.getUUID();
+            if (!spUUID.equals(ownerUUID) && !allowed.contains(spUUID)) {
+                eligible.add(sp);
+            }
+        }
+        buf.writeVarInt(eligible.size());
+        for (ServerPlayer sp : eligible) {
+            buf.writeUUID(sp.getUUID());
+            buf.writeUtf(sp.getGameProfile().name(), 64);
+        }
+    }
+
+    private static String resolveName(UUID uuid, MinecraftServer server) {
+        ServerPlayer online = server.getPlayerList().getPlayer(uuid);
+        if (online != null) return online.getGameProfile().name();
+        String cached = UsernameCache.getLastKnownUsername(uuid);
+        if (cached != null) return cached;
+        return uuid.toString().substring(0, 8) + "...";
     }
 }

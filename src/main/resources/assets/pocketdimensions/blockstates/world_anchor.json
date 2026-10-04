@@ -1,5 +1,10 @@
 {
-    "variants": {
-        "": { "model": "pocketdimensions:block/world_anchor" }
+  "variants": {
+    "half=lower": {
+      "model": "pocketdimensions:block/world_anchor_lower"
+    },
+    "half=upper": {
+      "model": "pocketdimensions:block/world_anchor_upper"
     }
+  }
 }

@@ -239,6 +239,8 @@ public class RealmEventHandler {
             // Allow queued exits (WorldCore shift+right-click) - pendingRealmExits entry
             // is consumed here so the event fires only once per queued exit.
             if (pendingRealmExits.remove(player.getUUID())) return false; // allow queued exit
+            // Allow pocket room entry (Pocket Anchor teleport to pocket dimension)
+            if (event.getDimension().equals(PocketDimensionsMod.POCKET_DIM)) return false;
             return true; // cancel - block portals out of the realm
         }
         return false; // allow all other dimension travel
