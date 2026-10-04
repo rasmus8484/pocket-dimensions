@@ -1,6 +1,7 @@
 package com.pocketdimensions.client;
 
 import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
+import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.client.screen.SiegeBlockScreen;
 import com.pocketdimensions.client.screen.WorldCoreScreen;
@@ -26,6 +27,9 @@ public class ClientSetup {
         event.<WorldCoreBlockEntity, WorldCoreRenderState>registerBlockEntityRenderer(
                 ModBlockEntityTypes.WORLD_CORE.get(),
                 ctx -> new WorldCoreBlockEntityRenderer(ctx));
+        event.<WorldAnchorBlockEntity, WorldAnchorRenderState>registerBlockEntityRenderer(
+                ModBlockEntityTypes.WORLD_ANCHOR.get(),
+                ctx -> new WorldAnchorBlockEntityRenderer(ctx));
         event.<WorldBreacherBlockEntity, WorldCoreRenderState>registerBlockEntityRenderer(
                 ModBlockEntityTypes.WORLD_BREACHER.get(),
                 ctx -> new WorldBreacherBlockEntityRenderer(ctx));
