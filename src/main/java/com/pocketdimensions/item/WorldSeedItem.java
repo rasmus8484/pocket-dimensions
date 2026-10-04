@@ -104,6 +104,7 @@ public class WorldSeedItem extends Item {
 
         be.setOwnerUUID(playerUUID);
         be.setLinked(true);
+        WorldAnchorBlock.setLinked(level, anchorPos, true);
         mgr.setAnchorLocation(playerUUID, level.dimension(), anchorPos);
 
         // Generate the realm now if the dimension is already loaded

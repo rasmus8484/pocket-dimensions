@@ -1,6 +1,7 @@
 package com.pocketdimensions.blockentity;
 
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.event.RealmEventHandler;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.manager.RealmManager;
@@ -19,6 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -113,6 +115,25 @@ public class WorldAnchorBlockEntity extends BlockEntity {
         this.ownerUUID = null;
         this.linked = false;
         setChanged();
+        if (level != null && !level.isClientSide()) WorldAnchorBlock.setLinked(level, worldPosition, false);
+    }
+
+    /** Anchors linked before the LINKED block state existed load as inert; fix them up once. */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        // Deferred to the next server tick: setting blocks while the chunk is still loading is unsafe.
+        if (level instanceof ServerLevel sl && getBlockState().getValue(WorldAnchorBlock.LINKED) != linked) {
+            sl.getServer().execute(() -> {
+                if (sl.getBlockEntity(worldPosition) == this) WorldAnchorBlock.setLinked(sl, worldPosition, linked);
+            });
+        }
+    }
+
+    /** The black hole and seed reach into the upper block. */
+    @Override
+    public AABB getRenderBoundingBox() {
+        return new AABB(worldPosition).expandTowards(0, 1, 0);
     }
 
     /**

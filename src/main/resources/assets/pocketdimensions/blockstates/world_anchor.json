@@ -1,10 +1,8 @@
 {
   "variants": {
-    "half=lower": {
-      "model": "pocketdimensions:block/world_anchor_lower"
-    },
-    "half=upper": {
-      "model": "pocketdimensions:block/world_anchor_upper"
-    }
+    "half=lower,linked=false": { "model": "pocketdimensions:block/world_anchor_inert_lower" },
+    "half=upper,linked=false": { "model": "pocketdimensions:block/world_anchor_inert_upper" },
+    "half=lower,linked=true":  { "model": "pocketdimensions:block/world_anchor_linked_lower" },
+    "half=upper,linked=true":  { "model": "pocketdimensions:block/world_anchor_linked_upper" }
   }
 }

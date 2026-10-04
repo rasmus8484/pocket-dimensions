@@ -1,6 +1,1 @@
-{
-    "model": {
-        "type": "minecraft:model",
-        "model": "pocketdimensions:block/world_anchor_lower"
-    }
-}
+{ "model": { "type": "minecraft:model", "model": "pocketdimensions:item/world_anchor" } }

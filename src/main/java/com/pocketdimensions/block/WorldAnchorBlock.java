@@ -11,6 +11,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -22,20 +23,28 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 public class WorldAnchorBlock extends BaseEntityBlock {
 
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
+    /** True once a World Seed has linked this anchor to a realm; swaps the inert and linked models. */
+    public static final BooleanProperty LINKED = BooleanProperty.create("linked");
+    private static final VoxelShape LOWER_SHAPE = Shapes.or(Block.box(0, 0, 0, 16, 5, 16), Block.box(2, 5, 2, 14, 16, 14));
+    private static final VoxelShape UPPER_SHAPE = Block.box(2, 0, 2, 14, 15, 14);
     public static final MapCodec<WorldAnchorBlock> CODEC = simpleCodec(WorldAnchorBlock::new);
 
     public WorldAnchorBlock(BlockBehaviour.Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER));
+        registerDefaultState(stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER).setValue(LINKED, false));
     }
 
     @Override
@@ -44,8 +53,23 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return state.getValue(HALF) == DoubleBlockHalf.LOWER ? LOWER_SHAPE : UPPER_SHAPE;
+    }
+
+    /** Sets LINKED on both halves of the anchor whose lower half is at lowerPos. */
+    public static void setLinked(Level level, BlockPos lowerPos, boolean linked) {
+        for (BlockPos p : new BlockPos[]{lowerPos, lowerPos.above()}) {
+            BlockState s = level.getBlockState(p);
+            if (s.getBlock() instanceof WorldAnchorBlock && s.getValue(LINKED) != linked) {
+                level.setBlock(p, s.setValue(LINKED, linked), 3);
+            }
+        }
+    }
+
+    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(HALF);
+        builder.add(HALF, LINKED);
     }
 
     // -------------------------------------------------------------------------

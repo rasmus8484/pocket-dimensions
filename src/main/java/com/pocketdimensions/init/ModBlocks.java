@@ -33,6 +33,7 @@ public class ModBlocks {
             () -> new WorldAnchorBlock(BlockBehaviour.Properties.of()
                     .setId(BLOCKS.key("world_anchor"))
                     .strength(-1.0f, 3600000.0f)
+                    .lightLevel(state -> state.getValue(WorldAnchorBlock.LINKED) ? 10 : 0)
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops()
                     .noOcclusion()));
