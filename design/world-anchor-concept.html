@@ -94,9 +94,9 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
 
 <header class="card">
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
-  <h1 id="cName">Weathered Geode</h1>
+  <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">55 · geode materials</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">59 · cosmic minerals, rune helix</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3183,6 +3183,25 @@ function holeFx(group, ctx, c, ring, deep, spin = 1) {
   };
 }
 
+// Runes climbing the beacon in a slow double helix (in game: client particles with a helical path)
+function runeHelix(group, rgb, y0) {
+  const N = 14, col = new THREE.Color().setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace);
+  const parts = Array.from({ length: N }, (_, i) => {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: RUNE_TEX[i % RUNE_TEX.length], color: col, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    sp.scale.set(6 * 0.6 * PX, 7 * 0.6 * PX, 1);
+    group.add(sp);
+    return { sp, off: i / N };
+  });
+  const LIFE = 7, RISE = 7, R = 4.5, TURNS = 1.6;   // seconds per rune, px per second, radius px, turns per climb
+  return t => parts.forEach((q, i) => {
+    const f = (t / LIFE + q.off) % 1, a = f * LIFE;
+    const ang = f * TURNS * 2 * Math.PI + (i % 2) * Math.PI;   // two interleaved strands
+    q.sp.position.set((8 + Math.cos(ang) * R) * PX, (y0 + a * RISE) * PX, (8 + Math.sin(ang) * R) * PX);
+    q.sp.material.opacity = Math.min(1, f * 6) * Math.min(1, (1 - f) * 3) * 0.85;
+  });
+}
+
 // Vanilla-style beacon beam rising out of the black hole
 function coreBeam(group, y0, hex) {
   const mk = (w, op) => {
@@ -3219,8 +3238,9 @@ function coreDesign(d) {
       const beam = coreBeam(group, d.c[1], P.beam);
       const motes = particles(P.spin < 1 ? 6 : 22, P.mote, { r0: 4, rs: 3, y0: d.c[1] - 6, h: 12, swirl: 0.25, sink: true });
       group.add(motes.obj);
+      const helix = runeHelix(group, P.rune, d.helixY0 || d.c[1] + 8);
       const extra = d.extras ? d.extras(L, group, ctx) : null;
-      return t => { hole(t); beam(t); motes.update(t); extra && extra(t); };
+      return t => { hole(t); beam(t); motes.update(t); helix(t); extra && extra(t); };
     },
   };
 }
@@ -3248,12 +3268,12 @@ const BASALT_COL = x => (x <= 2 ? 0 : x >= 4 && x <= 6 ? 1 : x >= 9 && x <= 11 ?
 // The Geode Heart, as a function of the mineral it is made of (round 16 compares materials)
 function geodeDesign(m) {
   return coreDesign({
-    name: m.name, round: m.round, c: [8, 17.5, 8],
+    name: m.name, round: m.round, c: [8, 17.5, 8], helixY0: 30,
     line: m.line,
     story: '' + m.lead + ' A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
     change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core dies. The black hole collapses, the beacon goes out, every glow fades to dull crystal and dark carved runes, and the boulder falls the hand\'s breadth it used to float, landing on the ground among the shards that fell with it. Pick the state with the Siege buttons.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
-    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
+    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole', 'Rune helix: rune particles climbing the beacon in a slow double helix, about three blocks above the crown (client particles with a helical path, coloured by siege state, none once inert)'],
     swatches: m.swatches,
     shape(x, y0, z, L) {
       if (!inBlock(x, z)) return null;
@@ -3525,10 +3545,121 @@ const R15 = [
 
 const R16 = GEODE_MATS.map(m => geodeDesign({ ...m, round: 16 }));
 
+// Round 17: fantastical minerals leaning into the void and the cosmos (the weathered original and starstone kept for comparison)
+const segDist2 = (px, py, ax, ay, bx, by) => {
+  const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+};
+// one constellation per face, in face coordinates (u 0..15, y); kept on the crown, clear of the openings and tablets
+const CONSTELLATIONS = [
+  [[3, 23], [6, 26], [9, 25], [12, 28]],
+  [[2, 27], [5, 24], [8, 27], [11, 24], [13, 26]],
+  [[3, 25], [7, 28], [10, 24], [12, 26]],
+  [[2, 24], [5, 27], [8, 23], [11, 27], [13, 24]],
+];
+// jagged cracks per face (random walks in face coordinates), for the void-veined crust
+const VOID_CRACKS = (() => {
+  const set = new Set();
+  let seed = 7;
+  const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let f = 0; f < 4; f++) for (let k = 0; k < 7; k++) {
+    // start on the crown or on the solid pillars beside the openings, where the crust is visible
+    const crown = k < 4;
+    let u = crown ? 2 + Math.floor(rnd() * 12) : (k % 2 ? 1 + Math.floor(rnd() * 2) : 13 + Math.floor(rnd() * 2));
+    let y = crown ? 23 + Math.floor(rnd() * 6) : 12 + Math.floor(rnd() * 10), du = rnd() < 0.5 ? -1 : 1;
+    for (let i = 0; i < 16; i++) {
+      set.add(f + '|' + u + '|' + y);
+      if (rnd() < 0.3) set.add(f + '|' + (u + du) + '|' + y);
+      if (rnd() < 0.6) y += rnd() < 0.7 ? 1 : -1; else u += du;
+      if (rnd() < 0.2) du = -du;
+      u = Math.max(0, Math.min(15, u));
+    }
+  }
+  return set;
+})();
+const STARRY = (inert, x, y, z, base, rate = 0.95) => {
+  const h = hash3(x * 7, y * 3, z * 5);
+  return h > rate ? { c: h > 0.985 ? [255, 255, 255] : [170, 220, 255], g: !inert } : { c: tone(base, x, y, z, 0.2) };
+};
+const GEODE_MATS2 = [
+  { ...GEODE_MATS[0], name: 'Weathered' },
+  { ...GEODE_MATS[2], name: 'Starstone' },
+  { name: 'Void-Veined', line: 'Your weathered stone, but only a crust: where it has cracked, the starry void it formed around shows through.',
+    lead: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. It is only a crust: wherever it has cracked, the starry void it formed around shows through.',
+    rock: (x, y, z, e, inert) => {
+      const sf = sideFace(e, x, z);
+      const crack = sf && VOID_CRACKS.has(sf.f + '|' + sf.u + '|' + y);
+      if (crack) { const h = hash3(x * 3, y * 7, z); return h > 0.6 ? { c: h > 0.88 ? [255, 255, 255] : [150, 210, 255], g: !inert } : { c: tone([8, 10, 24], x, y, z, 0.3) }; }
+      return { c: tone([112, 108, 120], x, y, z, 0.18) };
+    },
+    crown: (x, y, z) => tone([104, 120, 88], x, y, z, 0.2),
+    tablet: (x, y, z) => tone([128, 124, 138], x, y, z, 0.07),
+    band: (x, y, z) => tone([222, 224, 228], x, y, z, 0.08),
+    swatches: [['#706c78', 'Weathered crust'], ['#68785a', 'Lichen'], ['#080a18', 'Void in the cracks'], ['#96d2ff', 'Stars'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Constellation', line: 'Midnight stone whose stars are joined into constellations, one on each face, like a star map drawn by the spell itself.',
+    lead: 'A tall, rough boulder of midnight stone floats above the ground. Faint stars are scattered through it, and on the crown above each opening a constellation is drawn in thin lines of light, a star map the spell left behind.',
+    rock: (x, y, z, e, inert) => {
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 22) {
+        const pts = CONSTELLATIONS[sf.f];
+        if (pts.some(([u, v]) => u === sf.u && v === y)) return { c: [255, 255, 255], g: !inert };
+        for (let i = 1; i < pts.length; i++) if (segDist2(sf.u, y, pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]) < 0.5) return { c: [110, 160, 230], g: !inert };
+      }
+      return STARRY(inert, x, y, z, [40, 44, 72], 0.975);
+    },
+    crown: null,
+    tablet: (x, y, z) => tone([54, 58, 90], x, y, z, 0.06),
+    band: (x, y, z) => tone([176, 186, 214], x, y, z, 0.08),
+    swatches: [['#282c48', 'Midnight stone'], ['#ffffff', 'Stars'], ['#6ea0e6', 'Constellation lines'], ['#363a5a', 'Tablet'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Nebula', line: 'Stone from deep in the void: indigo, clouded with faint magenta and teal nebulae, with stars caught in the clouds.',
+    lead: 'A tall, rough boulder of nebula stone, deep indigo clouded with faint magenta and teal and full of caught stars, floats above the ground.',
+    rock: (x, y, z, e, inert) => {
+      const a = 0.5 + 0.5 * Math.sin(x * 0.35 + y * 0.22 + hash3(x >> 2, y >> 2, z >> 2) * 2.2), b = 0.5 + 0.5 * Math.sin(z * 0.4 - y * 0.27 + hash3(z >> 2, x >> 2, y >> 2) * 2.2);
+      const base = mix(mix([22, 18, 46], [110, 36, 104], Math.max(0, a - 0.55) * 1.8), [28, 96, 118], Math.max(0, b - 0.6) * 1.8);
+      return STARRY(inert, x, y, z, base, 0.955);
+    },
+    crown: null,
+    tablet: (x, y, z) => tone([40, 34, 70], x, y, z, 0.06),
+    band: (x, y, z) => tone([200, 170, 230], x, y, z, 0.08),
+    swatches: [['#16122e', 'Indigo'], ['#6e2468', 'Magenta nebula'], ['#1c6076', 'Teal nebula'], ['#aadcff', 'Stars'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Aurora', line: 'Dark stone with curtains of aurora light drifting up through it, green at the root and violet at the crown.',
+    lead: 'A tall, rough boulder of dark stone floats above the ground, curtains of aurora light drifting slowly up through it, green near its base and violet toward its crown.',
+    rock: (x, y, z, e, inert) => {
+      const sf = sideFace(e, x, z), u = sf ? sf.u : x;
+      const curtain = 0.5 + 0.5 * Math.sin(u * 0.9 + Math.sin(y * 0.3 + u * 0.2) * 1.6);
+      if (!inert && curtain > 0.86 && y > 12) return { c: mix([60, 255, 170], [170, 90, 255], Math.min(1, (y - 12) / 16)), fl: true };
+      return { c: tone([34, 38, 54], x, y, z, 0.16) };
+    },
+    crown: null,
+    tablet: (x, y, z) => tone([48, 54, 72], x, y, z, 0.06),
+    band: (x, y, z) => tone([170, 230, 210], x, y, z, 0.08),
+    swatches: [['#222636', 'Dark stone'], ['#3cffaa', 'Aurora green'], ['#aa5aff', 'Aurora violet'], ['#303648', 'Tablet'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Moonfall', line: 'A fragment of a moon that fell when the realm was made: pale, cratered regolith, faintly silver.',
+    lead: 'A tall, rough boulder of pale moon rock, cratered and faintly silver, a fragment of a moon that fell when the realm was made, floats above the ground.',
+    rock: (x, y, z, e) => {
+      const sf = sideFace(e, x, z);
+      if (sf) {
+        const cu = Math.floor(sf.u / 5) * 5 + 2 + Math.floor(hash3(sf.f, Math.floor(y / 6), Math.floor(sf.u / 5)) * 2), cy = Math.floor(y / 6) * 6 + 3;
+        const r = 1.2 + hash3(Math.floor(sf.u / 5), Math.floor(y / 6), sf.f * 3) * 1.4, d = Math.hypot(sf.u - cu, y - cy);
+        if (hash3(sf.f * 5, Math.floor(y / 6), Math.floor(sf.u / 5)) > 0.35) {
+          if (d < r - 0.6) return { c: tone([128, 130, 140], x, y, z, 0.1) };
+          if (d < r + 0.4) return { c: tone([206, 208, 216], x, y, z, 0.06) };
+        }
+      }
+      return { c: tone([170, 172, 180], x, y, z, 0.12) };
+    },
+    crown: null,
+    tablet: (x, y, z) => tone([150, 152, 164], x, y, z, 0.05),
+    band: (x, y, z) => tone([210, 214, 230], x, y, z, 0.06),
+    swatches: [['#aaacb4', 'Regolith'], ['#ced0d8', 'Crater rims'], ['#80828c', 'Crater floors'], ['#9698a4', 'Tablet'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+];
+const R17 = GEODE_MATS2.map(m => geodeDesign({ ...m, round: 17 }));
+
 // ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R17,
   ...R16,
   ...R15,
   ...R14,
@@ -4248,11 +4379,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign16'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign17'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-const CUR_ROUND = 16;
+const CUR_ROUND = 17;
 const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === CUR_ROUND);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
@@ -4263,7 +4394,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -4272,7 +4403,7 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign16', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign17', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
