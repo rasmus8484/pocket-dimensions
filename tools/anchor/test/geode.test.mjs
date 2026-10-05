@@ -36,3 +36,13 @@ test('each rune tablet carries glowing glyph pixels while the core lives', () =>
 test('the shaft is open from the crown to the underside', () => {
   for (let y = 4; y < 32; y++) for (const [x, z] of [[7, 7], [8, 8], [7, 8], [8, 7]]) assert.equal(shape(x, y, z, 'normal'), null, `shaft blocked at y${y}`);
 });
+
+test('once lost, the dull crown crystals are part of the static model (they no longer move or glow)', () => {
+  let crystals = 0, live = 0;
+  for (let y = 0; y < 32; y++) for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
+    if (shape(x, y, z, 'lost') === 'deadCrystal') crystals++;
+    if (shape(x, y, z, 'normal') === 'deadCrystal') live++;
+  }
+  assert.ok(crystals >= 20, `dead crystal voxels ${crystals}`);
+  assert.equal(live, 0);
+});

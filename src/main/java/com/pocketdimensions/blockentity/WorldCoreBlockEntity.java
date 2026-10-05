@@ -134,6 +134,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         int siege = state.getValue(WorldCoreBlock.SIEGE);
         long t = level.getGameTime();
         if (siege == STATE_ANCHOR_LOST || t % 15 != 0) return;
+        if (!(level.getBlockState(pos.above()).getBlock() instanceof WorldCoreBlock)) return;   // no crown to climb from yet
         double strand = (t / 15) % 2 == 0 ? 0 : Math.PI;
         level.addParticle(com.pocketdimensions.init.ModParticles.RUNE_HELIX.get(),
                 pos.getX() + 0.5, pos.getY() + 30 / 16.0, pos.getZ() + 0.5, strand, 0, HELIX_RGB[siege]);

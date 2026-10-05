@@ -51,7 +51,6 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
     private static final List<int[]> SHAFT = faces(shaftShards());
     private static final List<Leak> LEAKS = leaks();
     private static final List<int[]> CRYSTALS = faces(crystals(0, true));
-    private static final List<int[]> CRYSTALS_FALLEN = faces(crystals(4, false));
 
     private record Leak(int x, int y, int z, float phase, float speed, float amp) {}
 
@@ -70,7 +69,9 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
         s.time = level == null ? 0 : (Math.floorMod(level.getGameTime(), 24000L * 20) + partialTick) / 20f;
         s.beamTime = level == null ? 0 : Math.floorMod(level.getGameTime(), 24000L * 20) + partialTick;
         s.beamHeight = 0;
-        if (level != null && s.siege != LOST) {
+        // an old one-block core whose upper half could not grow yet: nothing may poke through the block above it
+        s.upper = level != null && level.getBlockState(be.getBlockPos().above()).getBlock() instanceof WorldCoreBlock;
+        if (level != null && s.siege != LOST && s.upper) {
             BlockPos top = be.getBlockPos().above(2);
             int h = 0;
             for (int i = 0; i < 256; i++) { if (!level.getBlockState(top.above(i)).isAir()) break; h = i + 1; }
@@ -81,11 +82,8 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
     @Override
     public void submit(GeodeRenderState s, PoseStack pose, SubmitNodeCollector out, CameraRenderState camera) {
         float t = s.time;
-        if (s.siege == LOST) {
-            // inert: the black hole has collapsed, the beam is out; the crown crystals stand dull and still
-            drawCrystals(pose, out, CRYSTALS_FALLEN, -1, t);
-            return;
-        }
+        // inert: the black hole has collapsed and the beam is out; the dull crown crystals are in the static model
+        if (s.siege == LOST) return;
         BlackHoleRenderer.submit(pose, out, camera, 0.5f, CY * PX, 0.5f,
                 s.siege == 0 ? BlackHoleRenderer.RingPalette.GLOW : BlackHoleRenderer.RingPalette.EMBER, t);
 
@@ -107,7 +105,7 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
             drawShards(pose, out, List.of(new int[]{l.x, l.y, l.z, 63, 0, 1000}), t * spin / 5, c);
             pose.popPose();
         }
-        drawCrystals(pose, out, CRYSTALS, s.siege, t);
+        if (s.upper) drawCrystals(pose, out, CRYSTALS, s.siege, t);
     }
 
     /** Glowing shards turning about the core's vertical axis by angle a (radians). */
@@ -125,22 +123,17 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
         pose.popPose();
     }
 
-    /** Translucent aurora crystals; siege < 0 = inert (dull, still). */
+    /** Translucent aurora crystals, colour drifting through the northern lights (swallowed by the siege colour). */
     private static void drawCrystals(PoseStack pose, SubmitNodeCollector out, List<int[]> vox, int siege, float t) {
         out.submitCustomGeometry(pose, RenderTypes.debugQuads(), (p, vc) -> {
             for (int[] v : vox) {
-                float sh = v[5] / 1000f, r, g, b, a;
-                if (siege < 0) {
-                    float h = BlackHoleRenderer.hash(v[0], v[1], v[2]);
-                    r = (90 + 30 * h) * sh; g = (100 + 32 * h) * sh; b = (120 + 36 * h) * sh; a = 0.85f;
-                } else {
-                    float[] col = aurora(t * 0.07f + v[4] * 0.37f + v[1] * 0.03f);
-                    if (siege > 0) {   // under siege the aurora is swallowed by the state colour
-                        float[] hi = SHARD[siege][1];
-                        for (int i = 0; i < 3; i++) col[i] += (hi[i] - col[i]) * 0.6f;
-                    }
-                    r = col[0] * sh; g = col[1] * sh; b = col[2] * sh; a = 0.78f;
+                float sh = v[5] / 1000f;
+                float[] col = aurora(t * 0.07f + v[4] * 0.37f + v[1] * 0.03f);
+                if (siege > 0) {   // under siege the aurora is swallowed by the state colour
+                    float[] hi = SHARD[siege][1];
+                    for (int i = 0; i < 3; i++) col[i] += (hi[i] - col[i]) * 0.6f;
                 }
+                float r = col[0] * sh, g = col[1] * sh, b = col[2] * sh, a = 0.78f;
                 cube(vc, p.pose(), v[0], v[1], v[2], v[3], Math.min(1f, r / 255f), Math.min(1f, g / 255f), Math.min(1f, b / 255f), a);
             }
         });

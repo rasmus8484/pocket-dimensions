@@ -33,12 +33,35 @@ function sideFace(e, x, z) {
   return null;
 }
 
+/**
+ * The five faceted aurora crystals driven down through the crown, fallen with the boulder (same rasterisation as
+ * WorldCoreBlockEntityRenderer.crystals). While the core lives the renderer draws them; once it is inert they are
+ * dull and still, so they become part of the static model: key -> facet shade.
+ */
+const DEAD_CRYSTALS = (() => {
+  const m = new Map();
+  const full3 = [[0, 0, 1], [-1, 0, 0.82], [1, 0, 0.95], [0, -1, 0.88], [0, 1, 1.08]], full2 = [[0, 0, 1], [1, 0, 0.84], [0, 1, 1.06], [1, 1, 0.92]];
+  for (let i = 0; i < 5; i++) {
+    const a = i * 2 * Math.PI / 5 + 0.5, r = 3.0 + hash3(i, 1, 2) * 0.9, len = 7 + hash3(i, 2, 3) * 2.5, lean = (hash3(i, 5, 5) - 0.5) * 0.25;
+    const base = [8 + Math.cos(a) * r, 35 - hash3(i, 4, 4) * 2.5, 8 + Math.sin(a) * r], d = [Math.cos(a) * lean, -1, Math.sin(a) * lean];
+    const dl = Math.hypot(...d), thick = i < 2 ? 3 : 2, full = thick === 3 ? full3 : full2;
+    for (let t = 0; t <= len; t += 0.35) {
+      const q = [0, 1, 2].map(c => Math.floor(base[c] + d[c] / dl * t - (c === 1 ? FALL : 0)));
+      const tip = t < 1.2 ? 0 : t < 2.4 ? 1 : 2;
+      const sec = tip === 0 ? [[0, 0, 1.1]] : tip === 1 ? full.slice(0, thick === 3 ? 3 : 2) : full;
+      for (const [ox, oz, sh] of sec) if (q[1] >= 0 && q[1] <= 35) m.set(`${q[0] + ox},${q[1]},${q[2] + oz}`, sh);
+    }
+  }
+  return m;
+})();
+
 /** Voxel kind at world (x, y, z) for a siege state, or null. */
 export function shape(x, y0, z, state) {
   if (!inBlock(x, z)) return null;
   const inert = STATES[state].inert, y = inert ? y0 + FALL : y0;   // once inert it has fallen the 4 px it used to float
   const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - CORE[1], rr = Math.hypot(cx, cz);
   if (inert && y0 === 0 && rr >= 6.2 && rr < 7.8 && hash3(x, 77, z) > 0.85) return 'deadShard';   // shards that fell with it
+  if (inert && DEAD_CRYSTALS.has(`${x},${y0},${z}`)) return 'deadCrystal';                         // the crown crystals, dull and still
   if (y <= 3 || (y === 4 && hash3(x, y, z) > 0.6)) return null;                                  // floating, broken underside
   const ds = dy < 0 ? dy * 0.42 : dy * 0.62;
   const n = (hash3(x >> 1, y >> 1, z >> 1) - 0.5) * 1.2;
@@ -62,6 +85,7 @@ export function shape(x, y0, z, state) {
 export function paint(k, x, y0, z, state, e) {
   const P = STATES[state], inert = !!P.inert, y = inert ? y0 + FALL : y0;
   if (k === 'deadShard') return { c: mix(P.lo, P.hi, hash3(x, y, z)) };
+  if (k === 'deadCrystal') { const h = hash3(x, y0, z), sh = DEAD_CRYSTALS.get(`${x},${y0},${z}`); return { c: [90 + 30 * h, 100 + 32 * h, 120 + 36 * h].map(v => Math.min(255, v * sh)) }; }
   if (k === 'crystal' || k === 'bore') return { c: mix(P.lo, P.hi, hash3(x, y, z)), g: !inert };
   if (k === 'calcite') return { c: tone([222, 224, 228], x, y, z, 0.08) };
   const sf = sideFace(e, x, z);

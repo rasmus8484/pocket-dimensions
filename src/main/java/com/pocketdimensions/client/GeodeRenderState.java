@@ -10,6 +10,8 @@ public class GeodeRenderState extends BlockEntityRenderState {
     public float time;
     /** Beam length in whole blocks above the black hole (0 = blocked). */
     public int beamHeight;
+    /** False while an old one-block core is still missing its upper half (something is built on top). */
+    public boolean upper;
     /** Game time + partial tick for the beacon beam's own animation. */
     public float beamTime;
 }
