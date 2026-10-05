@@ -4,6 +4,14 @@ import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.AnchorBreakerBlockEntity;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.init.ModBlocks;
+import com.pocketdimensions.init.ModParticles;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,15 +36,51 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Anchor Breaker - siege block placed on top of a WorldAnchor.
+ * Anchor Breaker (the Unmaker) - siege block placed on top of a WorldAnchor.
  * On completion destroys the WorldAnchor (and drops itself via neighborChanged).
  */
 public class AnchorBreakerBlock extends BaseEntityBlock {
 
     public static final MapCodec<AnchorBreakerBlock> CODEC = simpleCodec(AnchorBreakerBlock::new);
+    /** Breaking progress quarter: 0 not started, 1..4 = 0-25 % .. 75-100 %. Fills the coils; 2..4 add lightning sets. */
+    public static final IntegerProperty CHARGE = IntegerProperty.create("charge", 0, 4);
+    /** Shoulders and housing, plus the coils and spire on top; the clamps reaching into the anchor are visual only. */
+    private static final VoxelShape SHAPE = Shapes.or(Block.box(0, 0, 0, 16, 8, 16), Block.box(3, 8, 3, 13, 15, 13));
 
     public AnchorBreakerBlock(BlockBehaviour.Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(CHARGE, 0));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(CHARGE);
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return SHAPE;
+    }
+
+    /**
+     * Client-only: while fueled over a linked anchor, red motes pour out of the black hole through the windows to
+     * the clamp feet, and siphon motes rise from it into the funnel.
+     */
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        BlockState below = level.getBlockState(pos.below());
+        if (!below.is(ModBlocks.WORLD_ANCHOR.get()) || !below.getValue(WorldAnchorBlock.LINKED)) return;
+        if (!(level.getBlockEntity(pos) instanceof AnchorBreakerBlockEntity be) || !be.hasFuel()) return;
+        double cx = pos.getX() + 0.5, cy = pos.getY() + (13.5 - 32) / 16.0, cz = pos.getZ() + 0.5;
+        double footY = (19.5 - 32) / 16.0 - (13.5 - 32) / 16.0;
+        for (int n = 0; n < 2; n++) {
+            double fx = (random.nextBoolean() ? 7 : -7) / 16.0, fz = (random.nextBoolean() ? 7 : -7) / 16.0;
+            level.addParticle(ModParticles.UNMAKE.get(), cx, cy, cz, fx, footY, fz);
+        }
+        for (int n = 0; n < 2; n++) {
+            double ox = (random.nextDouble() - 0.5) * 1.2 / 16.0, oz = (random.nextDouble() - 0.5) * 1.2 / 16.0;
+            level.addParticle(ModParticles.SIPHON.get(), cx + ox, cy, cz + oz, -ox, -(13.5 - 32) / 16.0, -oz);
+        }
     }
 
     @Override

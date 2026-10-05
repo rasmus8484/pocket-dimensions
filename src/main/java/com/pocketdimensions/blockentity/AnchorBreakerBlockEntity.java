@@ -2,7 +2,12 @@ package com.pocketdimensions.blockentity;
 
 import com.pocketdimensions.PocketDimensionsConfig;
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.block.AnchorBreakerBlock;
+import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.init.ModBlockEntityTypes;
+import com.pocketdimensions.init.ModSounds;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.AABB;
 import com.pocketdimensions.manager.RealmManager;
 import com.pocketdimensions.menu.SiegeBlockMenu;
 import net.minecraft.core.BlockPos;
@@ -65,6 +70,12 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
     /** Transient boss bar — not saved to NBT; recreated lazily after server restart. */
     private ServerBossEvent bossBar = null;
 
+    /** Fuel presence last sent to clients (null = not yet this session); the siphon stream shows only while fueled. */
+    @Nullable private Boolean syncedFuel = null;
+
+    /** Volume of the reality crack; variable-range sounds reach 16 blocks per unit of volume. */
+    private static final float CRACK_VOLUME = 4.0f;
+
     public AnchorBreakerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntityTypes.ANCHOR_BREAKER.get(), pos, state);
         inventory.addListener(c -> setChanged());
@@ -88,6 +99,16 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
             if (!slot.isEmpty()) slot.shrink(1);
         }
         setChanged();
+    }
+
+    /** Breaking quarter for the given progress: 0 not started, then 1..4 for 0-25 % .. 75-100 %. */
+    public static int chargeLevel(int progressTicks, int durationTicks) {
+        if (progressTicks <= 0) return 0;
+        return 1 + Math.min(3, (int) (4L * progressTicks / Math.max(1, durationTicks)));
+    }
+
+    private static void playCrack(Level level, BlockPos anchorPos) {
+        level.playSound(null, anchorPos.above(), ModSounds.REALITY_CRACK.get(), SoundSource.BLOCKS, CRACK_VOLUME, 1.0f);
     }
 
     /** Insert lapis into the inventory slot. Returns the amount actually inserted. */
@@ -146,9 +167,27 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
                 }
                 // Destroying the anchor triggers neighborChanged on this block -> drops this block
                 // setRemoved will clean up the boss bar
+                playCrack(level, anchorPos);
                 level.setBlock(anchorPos, Blocks.AIR.defaultBlockState(), 3);
                 return;  // do not touch `be` after block removal
             }
+        }
+
+        // Visual level: the anchor's DAMAGE (cracks, sigil, heated runes) and our CHARGE (coils, lightning sets).
+        // CHARGE is a saved block state, so after a restart the level matches it and no crack replays.
+        int charge = chargeLevel(be.progressTicks, PocketDimensionsConfig.BREAKER_DURATION_TICKS.get());
+        int shown = state.getValue(AnchorBreakerBlock.CHARGE);
+        if (hasAnchor && (charge != shown || level.getGameTime() % 20 == 0)) {
+            WorldAnchorBlock.setDamage(level, anchorPos, charge);
+            if (charge != shown) {
+                if (charge > shown && charge >= 2) playCrack(level, anchorPos);   // a new lightning set at 25/50/75 %
+                level.setBlock(pos, state.setValue(AnchorBreakerBlock.CHARGE, charge), 3);
+            }
+        }
+        // Tell clients when fuel runs out or returns (the siphon stream and motes show only while fueled)
+        if (be.syncedFuel == null || be.syncedFuel != be.hasFuel()) {
+            be.syncedFuel = be.hasFuel();
+            level.sendBlockUpdated(pos, state, state, 3);
         }
 
         // Force-load the WorldCore chunk in realm so it can tick (beacon color, defense fuel)
@@ -356,6 +395,12 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
     // -------------------------------------------------------------------------
 
     public int getProgressTicks() { return progressTicks; }
+
+    /** The lightning reaches about 4.3 blocks from the black hole two blocks below. */
+    @Override
+    public AABB getRenderBoundingBox() {
+        return new AABB(worldPosition).inflate(5);
+    }
     public int getFuel() { return fuel; }
     public SimpleContainer getInventory() { return inventory; }
 
