@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Uprooted Heart</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">50 · fewer leaks</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">51 · 5 + 4 leaks, clean shaft</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3332,9 +3332,10 @@ const R15 = [
         shape: (x, y, z) => { const { dy, r, h } = at(x, y, z); return r >= 5.0 && r < 6.0 && Math.abs(dy) > 1.6 && h > 0.8 ? 's' : null; },
         paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
       });
+      // shaft shards keep to the walls, so the middle of the hole stays clean
       const shaft = voxPart({
         bounds: { x0: 0, x1: 16, y0: 4, y1: 30 },
-        shape: (x, y, z) => { const { dy, rr, h } = at(x, y, z); return Math.abs(dy) > 4.5 && rr < 1.9 && h > 0.87 ? 's' : null; },
+        shape: (x, y, z) => { const { dy, rr, h } = at(x, y, z); return Math.abs(dy) > 4.5 && rr > 1.2 && rr < 2.2 && h > 0.9 ? 's' : null; },
         paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
       });
       // leaked shards: each its own little group so it can bob independently
@@ -3343,14 +3344,16 @@ const R15 = [
       spillInner.position.set(-c[0] * PX, -c[1] * PX, -c[2] * PX);
       spillOuter.add(spillInner);
       const bobbers = [];
-      for (let y = 0; y < 36; y++) for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
-        if (y > 3 && y < 30) continue;
-        const { rr } = at(x, y, z), out = y >= 30 ? y - 30 : 3 - y;
-        if (y > 33 || rr >= 1.3 + out * 0.6 || hash3(x * 3 + 1, y, z * 7) < 0.975) continue;
-        const g = new THREE.Group();
-        g.add(instanced([{ x, y, z, c: shardCol(x, y, z).c }], glowMat));
-        spillInner.add(g);
-        bobbers.push({ g, phase: hash3(x, y, z) * 6.283, speed: 0.35 + hash3(z, x, y) * 0.3, amp: 0.8 + hash3(y, z, x) * 0.8 });
+      // five fanned around the crown, four in the gap under the boulder (kept a pixel above the ground at their lowest)
+      for (const [n, y0, ySpan, amp0, off] of [[5, 30, 3, 0.8, 0.4], [4, 2, 2, 0.5, 1.2]]) {
+        for (let i = 0; i < n; i++) {
+          const a = off + i * 2 * Math.PI / n + (hash3(i, y0, 3) - 0.5) * 0.6, r = 1.8 + hash3(i, y0, 5) * 1.4;
+          const x = Math.floor(8 + Math.cos(a) * r), z = Math.floor(8 + Math.sin(a) * r), y = y0 + Math.floor(hash3(i, y0, 7) * ySpan);
+          const g = new THREE.Group();
+          g.add(instanced([{ x, y, z, c: shardCol(x, y, z).c }], glowMat));
+          spillInner.add(g);
+          bobbers.push({ g, phase: hash3(x, y, z) * 6.283, speed: 0.35 + hash3(z, x, y) * 0.3, amp: amp0 + hash3(y, z, x) * 0.5 });
+        }
       }
       group.add(ring, shaft, spillOuter);
       return t => {
