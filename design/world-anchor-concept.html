@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Uprooted Heart</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">45 · rounder boulder</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">47 · flat underside, tablets on the wide body</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3269,50 +3269,74 @@ const R15 = [
     },
   }),
   coreDesign({
-    name: 'Geode Heart', c: [8, 16.5, 8],
+    name: 'Geode Heart', c: [8, 17.5, 8],
     line: 'Stone grew around the singularity the way a geode grows around a hollow, and the spell wrote itself into the rock.',
-    story: 'A tall, rough boulder of weathered rock, lichen on its crown, rises two blocks out of the ground. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal, with crystal points growing inward. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole, and the beacon leaves through a vent in the crown.',
-    change: 'Under siege the runes, the veins and the crystal lining turn ember and hot red, the black hole burns ember and the beacon turns red.',
+    story: 'A tall, rough boulder of weathered rock, lichen on its crown, floats a hand\'s breadth above a scorched patch of ground where crystal has started to grow. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole, circled by loose crystal shards, and the beacon leaves through a vent in the crown.',
+    change: 'Under siege the runes, the veins, the shards and the crystal lining turn ember and hot red, the black hole burns ember and the beacon turns red.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
-    code: ['Boulder, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal: full-bright faces, so the hollow glows at night', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole out of the crown', 'Motes: client particles sinking into the black hole'],
+    code: ['Boulder, calcite, crystal lining, rune tablets and ground patch: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards around the black hole: drawn by the renderer, circling with the disk at a third of its speed', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole out of the crown', 'Motes: client particles sinking into the black hole'],
     swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']],
     shape(x, y, z) {
       if (!inBlock(x, z)) return null;
-      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - 16.5;
-      // the rune tablets: below each opening the rock has flowed out into a smooth flat face
-      const rag = y === 3 || y === 9 ? 3.6 + hash3(x + z, y, 1) * 0.8 : 5;   // ragged top and bottom edge
-      if (y >= 3 && y <= 9 && ((az < rag && ax < 6.5) || (ax < rag && az < 6.5))) return 'tablet';
-      if (y >= 3 && y <= 9 && (az < rag || ax < rag)) return null;  // nothing rough in front of the tablet faces
-      if (y <= 1) return oct(cx, cz, 7, 3) ? 'rock' : null;            // the root of the boulder, spread into the ground
-      const ds = dy < 0 ? dy * 0.42 : dy * 0.56;                  // stretched to two blocks, flattened into the ground
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - 17.5, rr = Math.hypot(cx, cz);
+      // the ground under it: a scorched patch where crystal has started to grow
+      if (y === 0) return oct(cx, cz, 7, 3) ? 'ground' : null;
+      if (y <= 2) return rr > 2.5 && rr < 6.5 && hash3(x >> 1, y >> 1, z >> 1) > 0.72 && hash3(x, 9, z) > 0.3 && (y === 1 || hash3(x, y, z) > 0.4) ? 'shard' : null;
+      // the floating boulder, stretched to fill the two blocks; a gap of one pixel under its broken flat underside
+      if (y === 3 || (y === 4 && hash3(x, y, z) > 0.6)) return null;
+      const ds = dy < 0 ? dy * 0.42 : dy * 0.62;
       const n = (hash3(x >> 1, y >> 1, z >> 1) - 0.5) * 1.2;
       const d = 0.25 * Math.max(ax, az, Math.abs(ds)) + 0.75 * Math.hypot(cx, cz, ds);
       if (d > 7.6 + n * 0.8) return null;
+      // rune tablets: below each opening the rock flowed smooth and flat
+      if (y >= 5 && y <= 11) {
+        const rag = y === 5 || y === 11 ? 3.6 + hash3(x + z, y, 1) * 0.8 : 5;
+        if ((az < rag && ax >= 5.5) || (ax < rag && az >= 5.5)) return null;
+        if ((az < rag && ax >= 4.5) || (ax < rag && az >= 4.5)) return 'tablet';
+      }
       const r = Math.hypot(cx, cz, dy);
-      if (r < 6.0) return r >= 5.0 && Math.abs(dy) > 1.6 && hash3(x, y, z) > 0.8 ? 'point' : null;
+      if (r < 6.0) return null;                                    // the hollow (its loose shards are drawn by the renderer)
       const w = 2.8 + 1.6 * Math.max(0, 1 - Math.abs(dy) / 5.5) + (hash3(Math.round(dy), cx > 0 ? 1 : 2, cz > 0 ? 3 : 4) - 0.5) * 1.2;
       if (Math.abs(dy) < 5.5 && ((az < w && ax > 2.5) || (ax < w && az > 2.5))) return null;   // split open on four sides
-      if (dy > 3 && Math.hypot(cx, cz) < 1.8) return null;                                       // the vent the beacon leaves through
+      if (dy > 3 && rr < 1.8) return null;                                                     // the vent the beacon leaves through
       return r < 7.0 ? 'crystal' : r < 7.9 ? 'calcite' : 'rock';
     },
     paint(k, x, y, z, L, e) {
-      if (k === 'point') return { c: L ? EMBERC : [205, 250, 255], g: true };
+      if (k === 'shard') return { c: L ? (hash3(x, y, z) > 0.5 ? EMBERC : HOT) : mix([60, 130, 255], [150, 240, 255], hash3(x, y, z)), g: true };
+      if (k === 'ground') {
+        const { cx, cz } = C(x, z);
+        return { c: e.py && Math.hypot(cx, cz) < 5 ? C_OBSID(x, y, z) : C_DEEP(x, y, z) };
+      }
       if (k === 'crystal') { const b = hash3(x, y, z); return { c: L ? (b > 0.6 ? EMBERC : HOT) : mix([60, 130, 255], [150, 240, 255], b), g: true }; }
       if (k === 'calcite') return { c: tone([222, 224, 228], x, y, z, 0.08) };
       const sf = sideFace(e, x, z);
       const rune = L ? HOT : CORE_RUNE;
-      if (sf && sf.u === (y % 2 ? 7 : 8) && y >= 4 && y <= 11) return { c: L ? EMBERC : [200, 250, 255], fl: true };   // vein feeding the hollow
+      if (sf && sf.u === (y % 2 ? 7 : 8) && y >= 6 && y <= 12) return { c: L ? EMBERC : [200, 250, 255], fl: true };   // vein feeding the hollow
       if (k === 'tablet') {
-        if (sf && y >= 4 && y <= 8) {
-          const v = y - 4;
+        if (sf && y >= 6 && y <= 10) {
+          const v = y - 6;
           if (sf.u >= 3 && sf.u <= 6 && GLYPHS[(sf.f * 2) % 6][4 - v][sf.u - 3] === 'X') return { c: rune, g: true };
           if (sf.u >= 9 && sf.u <= 12 && GLYPHS[(sf.f * 2 + 1) % 6][4 - v][sf.u - 9] === 'X') return { c: rune, g: true };
         }
         return { c: tone([128, 124, 138], x, y, z, 0.07) };
       }
-      if (y === 0) return { c: C_DEEP(x, y, z) };
       if (e.py && y > 22 && hash3(x, y, z) > 0.5) return { c: tone([104, 120, 88], x, y, z, 0.2) };
       return { c: tone([112, 108, 120], x, y, z, 0.18) };
+    },
+    extras(L, group) {
+      // Loose crystal shards in the hollow, circling with the disk at a third of its speed
+      const c = [8, 17.5, 8];
+      const shards = voxPart({
+        bounds: { x0: 0, x1: 16, y0: 6, y1: 30 },
+        shape: (x, y, z) => {
+          const r = Math.hypot(x + 0.5 - c[0], y + 0.5 - c[1], z + 0.5 - c[2]);
+          return r >= 5.0 && r < 6.0 && Math.abs(y + 0.5 - c[1]) > 1.6 && hash3(x, y, z) > 0.8 ? 's' : null;
+        },
+        paint: (k, x, y, z) => ({ c: L ? (hash3(x, y, z) > 0.5 ? EMBERC : HOT) : (hash3(x, y, z) > 0.5 ? [205, 250, 255] : [120, 200, 255]), g: true }),
+        pivot: c,
+      });
+      group.add(shards);
+      return t => { shards.rotation.y = t * 0.6 / 3; };
     },
   }),
   coreDesign({
