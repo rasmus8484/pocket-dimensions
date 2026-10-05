@@ -11,8 +11,10 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -233,6 +235,34 @@ public class PocketRoomManager extends SavedData {
                 origin.getY() + SHELL_OFFSET_Y + SPAWN_OFFSET_Y,
                 origin.getZ() + SPAWN_OFFSET_XZ
         );
+    }
+
+    /**
+     * Where to put someone entering the room: the usual spawn if it is free, otherwise the nearest spot inside the room
+     * with room for feet and head and something to stand on, so blocks built over the spawn can't trap anyone. If the
+     * room is packed full, the two blocks at the spawn are broken open (they drop as items, nothing is lost).
+     */
+    public BlockPos findSafeSpawn(UUID pocketId, ServerLevel level) {
+        BlockPos spawn = getSpawnPos(pocketId);
+        RoomData data = rooms.get(pocketId);
+        if (data == null) return spawn;
+        BlockPos origin = plotOrigin(data.plotIndex);
+        int x0 = origin.getX() + SHELL_OFFSET_XZ + 2, y0 = origin.getY() + SHELL_OFFSET_Y + 2, z0 = origin.getZ() + SHELL_OFFSET_XZ + 2;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        int[] p = SpawnSearch.find(spawn.getX(), spawn.getY(), spawn.getZ(),
+                x0, y0, z0, x0 + AIR_SIZE - 1, y0 + AIR_SIZE - 1, z0 + AIR_SIZE - 1,
+                (x, y, z) -> isFreeToStandIn(level, m.set(x, y, z)),
+                (x, y, z) -> !level.getBlockState(m.set(x, y, z)).getCollisionShape(level, m).isEmpty());
+        if (p != null) return new BlockPos(p[0], p[1], p[2]);
+        level.destroyBlock(spawn, true);
+        level.destroyBlock(spawn.above(), true);
+        return spawn;
+    }
+
+    /** Nothing to collide with, no fluid, no fire. */
+    private static boolean isFreeToStandIn(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.getCollisionShape(level, pos).isEmpty() && state.getFluidState().isEmpty() && !state.is(BlockTags.FIRE);
     }
 
     // -------------------------------------------------------------------------

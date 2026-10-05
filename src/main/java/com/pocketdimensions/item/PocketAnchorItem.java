@@ -168,7 +168,7 @@ public class PocketAnchorItem extends BlockItem {
                 player.getYRot(), player.getXRot());
         mgr.addOccupant(finalPocketId, player.getUUID());
 
-        BlockPos spawn = mgr.getSpawnPos(finalPocketId);
+        BlockPos spawn = mgr.findSafeSpawn(finalPocketId, pocketLevel);
         Vec3 dest = new Vec3(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5);
         ((ServerPlayer) player).teleport(new TeleportTransition(pocketLevel, dest, Vec3.ZERO, 0f, 0f, TeleportTransition.DO_NOTHING));
 
