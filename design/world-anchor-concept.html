@@ -94,9 +94,9 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
 
 <header class="card">
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
-  <h1 id="cName">Uprooted Heart</h1>
+  <h1 id="cName">Weathered Geode</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">54 · anchor lost: fallen and inert</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">55 · geode materials</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3198,7 +3198,7 @@ function coreBeam(group, y0, hex) {
 
 function coreDesign(d) {
   return {
-    round: 15, bounds: { x0: -1, x1: 17, y0: 0, y1: 32 }, alwaysLive: true,
+    round: d.round || 15, bounds: { x0: -1, x1: 17, y0: 0, y1: 32 }, alwaysLive: true,
     get labels() { return ['At peace', CORE_PAL[CORE_SIEGE].name]; },
     get sublabels() { return ['blue beacon', CORE_PAL[CORE_SIEGE].sub]; },
     siegeStates: true,
@@ -3244,6 +3244,156 @@ function debrisChunk(s, seed, L) {
 }
 
 const BASALT_COL = x => (x <= 2 ? 0 : x >= 4 && x <= 6 ? 1 : x >= 9 && x <= 11 ? 2 : x >= 13 ? 3 : -1);
+
+// The Geode Heart, as a function of the mineral it is made of (round 16 compares materials)
+function geodeDesign(m) {
+  return coreDesign({
+    name: m.name, round: m.round, c: [8, 17.5, 8],
+    line: m.line,
+    story: '' + m.lead + ' A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
+    change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core dies. The black hole collapses, the beacon goes out, every glow fades to dull crystal and dark carved runes, and the boulder falls the hand\'s breadth it used to float, landing on the ground among the shards that fell with it. Pick the state with the Siege buttons.',
+    interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
+    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
+    swatches: m.swatches,
+    shape(x, y0, z, L) {
+      if (!inBlock(x, z)) return null;
+      const inert = corePal(L).inert, y = inert ? y0 + 4 : y0;   // once inert it has fallen the 4 px it used to float
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - 17.5, rr = Math.hypot(cx, cz);
+      if (inert && y0 === 0 && rr >= 6.2 && rr < 7.8 && hash3(x, 77, z) > 0.85) return 'deadShard';   // shards that fell with it
+      // the floating boulder, stretched to fill the two blocks, with a broken flat underside
+      if (y <= 3 || (y === 4 && hash3(x, y, z) > 0.6)) return null;
+      const ds = dy < 0 ? dy * 0.42 : dy * 0.62;
+      const n = (hash3(x >> 1, y >> 1, z >> 1) - 0.5) * 1.2;
+      const d = 0.25 * Math.max(ax, az, Math.abs(ds)) + 0.75 * Math.hypot(cx, cz, ds);
+      if (d > 7.6 + n * 0.8) return null;
+      // rune tablets: below each opening the rock flowed smooth and flat
+      if (y >= 5 && y <= 11) {
+        const rag = y === 5 || y === 11 ? 3.6 + hash3(x + z, y, 1) * 0.8 : 5;
+        if ((az < rag && ax >= 5.5) || (ax < rag && az >= 5.5)) return null;
+        if ((az < rag && ax >= 4.5) || (ax < rag && az >= 4.5)) return 'tablet';
+      }
+      const r = Math.hypot(cx, cz, dy);
+      if (r < 6.0) return null;                                    // the hollow (its loose shards are drawn by the renderer)
+      if (rr < 2.2) return null;                                   // the shaft melted straight down through it
+      if (rr < 3.2) return 'bore';
+      const w = 2.8 + 1.6 * Math.max(0, 1 - Math.abs(dy) / 5.5) + (hash3(Math.round(dy), cx > 0 ? 1 : 2, cz > 0 ? 3 : 4) - 0.5) * 1.2;
+      if (Math.abs(dy) < 5.5 && ((az < w && ax > 2.5) || (ax < w && az > 2.5))) return null;   // split open on four sides
+      return r < 7.0 ? 'crystal' : r < 7.9 ? 'calcite' : 'rock';
+    },
+    paint(k, x, y0, z, L, e) {
+      const inert = corePal(L).inert, y = inert ? y0 + 4 : y0;
+      if (k === 'deadShard') return { c: mix(corePal(L).lo, corePal(L).hi, hash3(x, y, z)) };
+      // the shaft is lined with the same glowing crystal as the hollow
+      if (k === 'crystal' || k === 'bore') { const P = corePal(L); return { c: mix(P.lo, P.hi, hash3(x, y, z)), g: !inert }; }
+      if (k === 'calcite') return { c: m.band(x, y, z) };
+      const sf = sideFace(e, x, z);
+      const rune = corePal(L).rune;
+      if (!inert && sf && sf.u === (y % 2 ? 7 : 8) && y >= 6 && y <= 12) return { c: corePal(L).bright, fl: true };   // vein feeding the hollow
+      if (k === 'tablet') {
+        if (sf && y >= 6 && y <= 10) {
+          const v = y - 6;
+          if (sf.u >= 3 && sf.u <= 6 && GLYPHS[(sf.f * 2) % 6][4 - v][sf.u - 3] === 'X') return { c: rune, g: !inert };
+          if (sf.u >= 9 && sf.u <= 12 && GLYPHS[(sf.f * 2 + 1) % 6][4 - v][sf.u - 9] === 'X') return { c: rune, g: !inert };
+        }
+        return { c: m.tablet(x, y, z) };
+      }
+      if (m.crown && e.py && y > 22 && hash3(x, y, z) > 0.5) return { c: m.crown(x, y, z) };
+      return m.rock(x, y, z, e, inert);
+    },
+    extras(L, group) {
+      if (corePal(L).inert) return null;   // nothing left holding them up
+      // Loose crystal shards. Around the black hole they turn with the disk at a third of its speed; down the
+      // shaft at a fifth; the few that leaked out of either end also bob slowly, each on its own rhythm.
+      const c = [8, 17.5, 8];
+      const P = corePal(L);
+      const shardCol = (x, y, z) => ({ c: hash3(x, y, z) > 0.5 ? P.bright : mix(P.lo, P.hi, 0.5), g: true });
+      const at = (x, y, z) => { const dy = y + 0.5 - c[1], rr = Math.hypot(x + 0.5 - c[0], z + 0.5 - c[2]); return { dy, rr, r: Math.hypot(rr, dy), h: hash3(x, y, z) }; };
+      const ring = voxPart({
+        bounds: { x0: 0, x1: 16, y0: 6, y1: 30 },
+        shape: (x, y, z) => { const { dy, r, h } = at(x, y, z); return r >= 5.0 && r < 6.0 && Math.abs(dy) > 1.6 && h > 0.8 ? 's' : null; },
+        paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
+      });
+      // shaft shards keep to the walls, so the middle of the hole stays clean
+      const shaft = voxPart({
+        bounds: { x0: 0, x1: 16, y0: 4, y1: 30 },
+        shape: (x, y, z) => { const { dy, rr, h } = at(x, y, z); return Math.abs(dy) > 4.5 && rr > 1.2 && rr < 2.2 && h > 0.9 ? 's' : null; },
+        paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
+      });
+      // leaked shards: each its own little group so it can bob independently
+      const spillOuter = new THREE.Group(), spillInner = new THREE.Group();
+      spillOuter.position.set(c[0] * PX, c[1] * PX, c[2] * PX);
+      spillInner.position.set(-c[0] * PX, -c[1] * PX, -c[2] * PX);
+      spillOuter.add(spillInner);
+      const bobbers = [];
+      // five fanned around the crown, four in the gap under the boulder (kept a pixel above the ground at their lowest)
+      for (const [n, y0, ySpan, amp0, off] of [[5, 30, 3, 0.8, 0.4], [4, 2, 2, 0.5, 1.2]]) {
+        for (let i = 0; i < n; i++) {
+          const a = off + i * 2 * Math.PI / n + (hash3(i, y0, 3) - 0.5) * 0.6, r = 1.8 + hash3(i, y0, 5) * 1.4;
+          const x = Math.floor(8 + Math.cos(a) * r), z = Math.floor(8 + Math.sin(a) * r), y = y0 + Math.floor(hash3(i, y0, 7) * ySpan);
+          const g = new THREE.Group();
+          g.add(instanced([{ x, y, z, c: shardCol(x, y, z).c }], glowMat));
+          spillInner.add(g);
+          bobbers.push({ g, phase: hash3(x, y, z) * 6.283, speed: 0.35 + hash3(z, x, y) * 0.3, amp: amp0 + hash3(y, z, x) * 0.5 });
+        }
+      }
+      group.add(ring, shaft, spillOuter);
+      return t => {
+        // once the anchor is lost the shards stop circling and the leaked ones sink to rest
+        ring.rotation.y = t * 0.6 / 3 * (P.spin < 1 ? 0 : 1);
+        shaft.rotation.y = spillOuter.rotation.y = t * 0.6 / 5 * (P.spin < 1 ? 0 : 1);
+        for (const b of bobbers) b.g.position.y = P.spin < 1 ? -b.amp * 0.5 * PX : Math.sin(t * b.speed + b.phase) * b.amp * PX;
+      };
+    },
+  });
+}
+
+const GEODE_MATS = [
+  { name: 'Weathered Geode', line: 'The original: weathered grey rock with lichen on its crown.',
+    lead: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground.',
+    rock: (x, y, z) => ({ c: tone([112, 108, 120], x, y, z, 0.18) }),
+    crown: (x, y, z) => tone([104, 120, 88], x, y, z, 0.2),
+    tablet: (x, y, z) => tone([128, 124, 138], x, y, z, 0.07),
+    band: (x, y, z) => tone([222, 224, 228], x, y, z, 0.08),
+    swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Obsidian Geode', line: 'Volcanic glass, black as the void inside it, with a violet sheen where the light catches.',
+    lead: 'A tall, rough boulder of obsidian, glassy black with a violet sheen, floats above the ground.',
+    rock: (x, y, z, e) => { const h = hash3(x * 5, y, z * 3); return { c: e.py ? tone([62, 50, 86], x, y, z, 0.15) : h > 0.9 ? tone([96, 66, 150], x, y, z, 0.15) : tone([30, 22, 44], x, y, z, 0.25) }; },
+    crown: null,
+    tablet: (x, y, z) => tone([46, 38, 64], x, y, z, 0.06),
+    band: (x, y, z) => tone([150, 120, 196], x, y, z, 0.08),
+    swatches: [['#1e162c', 'Obsidian'], ['#604296', 'Violet sheen'], ['#2e2640', 'Polished tablet'], ['#9678c4', 'Violet band'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Starstone Geode', line: 'A fantastical stone that remembers the void it formed in: midnight blue and full of tiny stars.',
+    lead: 'A tall, rough boulder of starstone, midnight blue and full of tiny cold stars, floats above the ground.',
+    rock: (x, y, z, e, inert) => { const h = hash3(x * 7, y * 3, z * 5); return h > 0.95 ? { c: h > 0.985 ? [255, 255, 255] : [170, 220, 255], g: !inert } : { c: tone([28, 32, 66], x, y, z, 0.2) }; },
+    crown: null,
+    tablet: (x, y, z) => tone([44, 50, 92], x, y, z, 0.06),
+    band: (x, y, z) => tone([176, 186, 214], x, y, z, 0.08),
+    swatches: [['#1c2042', 'Starstone'], ['#aadcff', 'Stars'], ['#2c325c', 'Tablet'], ['#b0bad6', 'Silver band'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Moonmarble Geode', line: 'Pale marble veined with the anchor\'s gold, as if the spell gilded the stone as it grew.',
+    lead: 'A tall boulder of pale moonmarble, veined with gold, floats above the ground.',
+    rock: (x, y, z) => Math.abs(Math.sin(x * 0.6 + y * 0.9 + z * 0.4 + hash3(x >> 1, y >> 1, z >> 1) * 1.6)) < 0.11 ? { c: goldTone(x, y, z) } : { c: tone([224, 222, 228], x, y, z, 0.06) },
+    crown: null,
+    tablet: (x, y, z) => tone([236, 234, 230], x, y, z, 0.04),
+    band: (x, y, z) => tone([236, 214, 150], x, y, z, 0.08),
+    swatches: [['#e0dee4', 'Moonmarble'], ['#d6a23c', 'Gold veins'], ['#eceae6', 'Tablet'], ['#ecd696', 'Gold band'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Riftstone Geode', line: 'A fantastical stone that cannot settle on a colour: bands of teal, violet and deep blue slide across it like oil on water.',
+    lead: 'A tall, rough boulder of riftstone, its dark surface banded teal, violet and deep blue like oil on water, floats above the ground.',
+    rock: (x, y, z) => {
+      const t = 0.5 + 0.5 * Math.sin(x * 0.45 + y * 0.32 - z * 0.38 + hash3(x >> 2, y >> 2, z >> 2) * 1.5);
+      return { c: tone(t < 0.5 ? mix([36, 110, 120], [96, 52, 140], t * 2) : mix([96, 52, 140], [34, 52, 130], (t - 0.5) * 2), x, y, z, 0.12) };
+    },
+    crown: null,
+    tablet: (x, y, z) => tone([58, 54, 88], x, y, z, 0.05),
+    band: (x, y, z) => tone([196, 176, 234], x, y, z, 0.08),
+    swatches: [['#246e78', 'Teal'], ['#60348c', 'Violet'], ['#223482', 'Deep blue'], ['#3a3658', 'Tablet'], ['#c4b0ea', 'Lilac band'], ['#8cebff', 'Runes and bright crystal']] },
+  { name: 'Verdigris Geode', line: 'A crust of weathered copper, green-blue, with bright copper where it has broken.',
+    lead: 'A tall, rough boulder crusted in verdigris, green-blue, with bright copper showing where it has broken, floats above the ground.',
+    rock: (x, y, z) => hash3(x * 3, y * 5, z) > 0.86 ? { c: tone([196, 112, 72], x, y, z, 0.15) } : { c: tone([76, 146, 124], x, y, z, 0.16) },
+    crown: null,
+    tablet: (x, y, z) => tone([60, 112, 98], x, y, z, 0.05),
+    band: (x, y, z) => tone([214, 150, 110], x, y, z, 0.08),
+    swatches: [['#4c927c', 'Verdigris'], ['#c47048', 'Copper'], ['#3c7062', 'Tablet'], ['#d6966e', 'Copper band'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
+];
 
 const R15 = [
   coreDesign({
@@ -3296,104 +3446,7 @@ const R15 = [
       return { c: y < 25 ? C_DEEP(x, y, z) : C_STONE(x, y, z) };
     },
   }),
-  coreDesign({
-    name: 'Geode Heart', c: [8, 17.5, 8],
-    line: 'Stone grew around the singularity the way a geode grows around a hollow, and the spell wrote itself into the rock.',
-    story: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
-    change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core dies. The black hole collapses, the beacon goes out, every glow fades to dull crystal and dark carved runes, and the boulder falls the hand\'s breadth it used to float, landing on the ground among the shards that fell with it. Pick the state with the Siege buttons.',
-    interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
-    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
-    swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']],
-    shape(x, y0, z, L) {
-      if (!inBlock(x, z)) return null;
-      const inert = corePal(L).inert, y = inert ? y0 + 4 : y0;   // once inert it has fallen the 4 px it used to float
-      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - 17.5, rr = Math.hypot(cx, cz);
-      if (inert && y0 === 0 && rr >= 6.2 && rr < 7.8 && hash3(x, 77, z) > 0.85) return 'deadShard';   // shards that fell with it
-      // the floating boulder, stretched to fill the two blocks, with a broken flat underside
-      if (y <= 3 || (y === 4 && hash3(x, y, z) > 0.6)) return null;
-      const ds = dy < 0 ? dy * 0.42 : dy * 0.62;
-      const n = (hash3(x >> 1, y >> 1, z >> 1) - 0.5) * 1.2;
-      const d = 0.25 * Math.max(ax, az, Math.abs(ds)) + 0.75 * Math.hypot(cx, cz, ds);
-      if (d > 7.6 + n * 0.8) return null;
-      // rune tablets: below each opening the rock flowed smooth and flat
-      if (y >= 5 && y <= 11) {
-        const rag = y === 5 || y === 11 ? 3.6 + hash3(x + z, y, 1) * 0.8 : 5;
-        if ((az < rag && ax >= 5.5) || (ax < rag && az >= 5.5)) return null;
-        if ((az < rag && ax >= 4.5) || (ax < rag && az >= 4.5)) return 'tablet';
-      }
-      const r = Math.hypot(cx, cz, dy);
-      if (r < 6.0) return null;                                    // the hollow (its loose shards are drawn by the renderer)
-      if (rr < 2.2) return null;                                   // the shaft melted straight down through it
-      if (rr < 3.2) return 'bore';
-      const w = 2.8 + 1.6 * Math.max(0, 1 - Math.abs(dy) / 5.5) + (hash3(Math.round(dy), cx > 0 ? 1 : 2, cz > 0 ? 3 : 4) - 0.5) * 1.2;
-      if (Math.abs(dy) < 5.5 && ((az < w && ax > 2.5) || (ax < w && az > 2.5))) return null;   // split open on four sides
-      return r < 7.0 ? 'crystal' : r < 7.9 ? 'calcite' : 'rock';
-    },
-    paint(k, x, y0, z, L, e) {
-      const inert = corePal(L).inert, y = inert ? y0 + 4 : y0;
-      if (k === 'deadShard') return { c: mix(corePal(L).lo, corePal(L).hi, hash3(x, y, z)) };
-      // the shaft is lined with the same glowing crystal as the hollow
-      if (k === 'crystal' || k === 'bore') { const P = corePal(L); return { c: mix(P.lo, P.hi, hash3(x, y, z)), g: !inert }; }
-      if (k === 'calcite') return { c: tone([222, 224, 228], x, y, z, 0.08) };
-      const sf = sideFace(e, x, z);
-      const rune = corePal(L).rune;
-      if (!inert && sf && sf.u === (y % 2 ? 7 : 8) && y >= 6 && y <= 12) return { c: corePal(L).bright, fl: true };   // vein feeding the hollow
-      if (k === 'tablet') {
-        if (sf && y >= 6 && y <= 10) {
-          const v = y - 6;
-          if (sf.u >= 3 && sf.u <= 6 && GLYPHS[(sf.f * 2) % 6][4 - v][sf.u - 3] === 'X') return { c: rune, g: !inert };
-          if (sf.u >= 9 && sf.u <= 12 && GLYPHS[(sf.f * 2 + 1) % 6][4 - v][sf.u - 9] === 'X') return { c: rune, g: !inert };
-        }
-        return { c: tone([128, 124, 138], x, y, z, 0.07) };
-      }
-      if (e.py && y > 22 && hash3(x, y, z) > 0.5) return { c: tone([104, 120, 88], x, y, z, 0.2) };
-      return { c: tone([112, 108, 120], x, y, z, 0.18) };
-    },
-    extras(L, group) {
-      if (corePal(L).inert) return null;   // nothing left holding them up
-      // Loose crystal shards. Around the black hole they turn with the disk at a third of its speed; down the
-      // shaft at a fifth; the few that leaked out of either end also bob slowly, each on its own rhythm.
-      const c = [8, 17.5, 8];
-      const P = corePal(L);
-      const shardCol = (x, y, z) => ({ c: hash3(x, y, z) > 0.5 ? P.bright : mix(P.lo, P.hi, 0.5), g: true });
-      const at = (x, y, z) => { const dy = y + 0.5 - c[1], rr = Math.hypot(x + 0.5 - c[0], z + 0.5 - c[2]); return { dy, rr, r: Math.hypot(rr, dy), h: hash3(x, y, z) }; };
-      const ring = voxPart({
-        bounds: { x0: 0, x1: 16, y0: 6, y1: 30 },
-        shape: (x, y, z) => { const { dy, r, h } = at(x, y, z); return r >= 5.0 && r < 6.0 && Math.abs(dy) > 1.6 && h > 0.8 ? 's' : null; },
-        paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
-      });
-      // shaft shards keep to the walls, so the middle of the hole stays clean
-      const shaft = voxPart({
-        bounds: { x0: 0, x1: 16, y0: 4, y1: 30 },
-        shape: (x, y, z) => { const { dy, rr, h } = at(x, y, z); return Math.abs(dy) > 4.5 && rr > 1.2 && rr < 2.2 && h > 0.9 ? 's' : null; },
-        paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
-      });
-      // leaked shards: each its own little group so it can bob independently
-      const spillOuter = new THREE.Group(), spillInner = new THREE.Group();
-      spillOuter.position.set(c[0] * PX, c[1] * PX, c[2] * PX);
-      spillInner.position.set(-c[0] * PX, -c[1] * PX, -c[2] * PX);
-      spillOuter.add(spillInner);
-      const bobbers = [];
-      // five fanned around the crown, four in the gap under the boulder (kept a pixel above the ground at their lowest)
-      for (const [n, y0, ySpan, amp0, off] of [[5, 30, 3, 0.8, 0.4], [4, 2, 2, 0.5, 1.2]]) {
-        for (let i = 0; i < n; i++) {
-          const a = off + i * 2 * Math.PI / n + (hash3(i, y0, 3) - 0.5) * 0.6, r = 1.8 + hash3(i, y0, 5) * 1.4;
-          const x = Math.floor(8 + Math.cos(a) * r), z = Math.floor(8 + Math.sin(a) * r), y = y0 + Math.floor(hash3(i, y0, 7) * ySpan);
-          const g = new THREE.Group();
-          g.add(instanced([{ x, y, z, c: shardCol(x, y, z).c }], glowMat));
-          spillInner.add(g);
-          bobbers.push({ g, phase: hash3(x, y, z) * 6.283, speed: 0.35 + hash3(z, x, y) * 0.3, amp: amp0 + hash3(y, z, x) * 0.5 });
-        }
-      }
-      group.add(ring, shaft, spillOuter);
-      return t => {
-        // once the anchor is lost the shards stop circling and the leaked ones sink to rest
-        ring.rotation.y = t * 0.6 / 3 * (P.spin < 1 ? 0 : 1);
-        shaft.rotation.y = spillOuter.rotation.y = t * 0.6 / 5 * (P.spin < 1 ? 0 : 1);
-        for (const b of bobbers) b.g.position.y = P.spin < 1 ? -b.amp * 0.5 * PX : Math.sin(t * b.speed + b.phase) * b.amp * PX;
-      };
-    },
-  }),
+  geodeDesign({ ...GEODE_MATS[0], name: 'Geode Heart', line: 'Stone grew around the singularity the way a geode grows around a hollow, and the spell wrote itself into the rock.' }),
   coreDesign({
     name: 'The Gathering', c: [8, 16.5, 8],
     line: 'Its pull tore the first stones out of the ground, and it never let them go.',
@@ -3470,10 +3523,13 @@ const R15 = [
   }),
 ];
 
+const R16 = GEODE_MATS.map(m => geodeDesign({ ...m, round: 16 }));
+
 // ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R16,
   ...R15,
   ...R14,
   ...R13,
@@ -4192,11 +4248,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign15'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign16'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
-const CUR_ROUND = 15;
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+const CUR_ROUND = 16;
 const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === CUR_ROUND);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
@@ -4207,7 +4263,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -4216,7 +4272,7 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign15', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign16', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
