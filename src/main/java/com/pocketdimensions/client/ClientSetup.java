@@ -1,5 +1,6 @@
 package com.pocketdimensions.client;
 
+import com.pocketdimensions.client.particle.DrainParticle;
 import com.pocketdimensions.client.particle.RuneParticle;
 import com.pocketdimensions.init.ModParticles;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
@@ -24,8 +25,12 @@ public class ClientSetup {
     public ClientSetup(BusGroup modBusGroup) {
         EntityRenderersEvent.RegisterRenderers.BUS.addListener(this::onRegisterRenderers);
         FMLClientSetupEvent.getBus(modBusGroup).addListener(this::onClientSetup);
-        RegisterParticleProvidersEvent.BUS.addListener(e ->
-                e.registerSpriteSet(ModParticles.RUNE.get(), RuneParticle.Provider::new));
+        RegisterParticleProvidersEvent.BUS.addListener(e -> {
+            e.registerSpriteSet(ModParticles.RUNE.get(), s -> new RuneParticle.Provider(s, RuneParticle.CYAN));
+            e.registerSpriteSet(ModParticles.RUNE_PINK.get(), s -> new RuneParticle.Provider(s, RuneParticle.PINK));
+            e.registerSpriteSet(ModParticles.RUNE_GOLD.get(), s -> new RuneParticle.Provider(s, RuneParticle.GOLD));
+            e.registerSpriteSet(ModParticles.DRAIN.get(), DrainParticle.Provider::new);
+        });
     }
 
     private void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {

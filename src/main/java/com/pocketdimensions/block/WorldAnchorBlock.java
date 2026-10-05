@@ -78,7 +78,12 @@ public class WorldAnchorBlock extends BaseEntityBlock {
             double z = pos.getZ() + 0.5 + nz * 6.8 / 16.0 + (nx != 0 ? along : 0);
             double out = (0.5 + random.nextDouble() * 0.5) / 16.0 / 20.0;       // 0.5–1 px per second
             double up = (1.2 + random.nextDouble() * 0.8) / 16.0 / 20.0;        // 1.2–2 px per second
-            level.addParticle(ModParticles.RUNE.get(), x, pos.getY() + y, z, nx * out, up, nz * out);
+            // Breacher influence tints the runes that drift off: cyan, cyan/pink while breaching, pink/gold once breached
+            int influence = state.getValue(INFLUENCE);
+            var type = influence == 0 ? ModParticles.RUNE.get()
+                    : influence < 4 ? (random.nextBoolean() ? ModParticles.RUNE.get() : ModParticles.RUNE_PINK.get())
+                    : (random.nextBoolean() ? ModParticles.RUNE_PINK.get() : ModParticles.RUNE_GOLD.get());
+            level.addParticle(type, x, pos.getY() + y, z, nx * out, up, nz * out);
         }
     }
 
