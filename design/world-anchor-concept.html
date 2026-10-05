@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">68 · shorter crown crystals, sharper beard</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">69 · pocket anchor concepts</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3801,9 +3801,299 @@ const R18 = [
 ];
 
 // ---------------------------------------------------------------------------
+// ROUND 19: Pocket Anchor concepts. One block of the World Anchor's arcane stonework (basalt, gold bands, cyan
+// runes) holding a small cube of folded night: the pocket room itself. Rune rings and magic circles show it working.
+// ---------------------------------------------------------------------------
+const PK_STONE = [66, 70, 88], PK_PLINTH = [48, 50, 62], PK_RUNE = [140, 235, 255], PK_CARVED = [34, 36, 46];
+const PK_CR = 6.9, PK_C = 8;              // spherical cavity: radius and centre height (px), opens a round window per face
+const PK_TEXEL = 0.5;
+const pkWin = (cx, cz, lx, y) => Math.hypot(lx < 4 ? cz : cx, y + 0.5 - PK_C);   // distance from the window axis in a wall                     // magic circle texels per block pixel: 2 texels = 1 px
+
+// Pixel-art magic circle drawn texel by texel. 'outer' is the rim and the glyph band; 'inner' is the star and inner
+// rings; the two layers turn in opposite directions. In game: one particle sprite per layer, laid flat (or upright)
+// with a fixed rotation instead of facing the camera, the same trick as the rune helix.
+function sigilTex(N, layer, seed = 0, star = [8, 3], glyphs = true) {
+  const inR = glyphs ? 9 : 3;                         // inner rim depth: under the glyph band, or just a double rim
+  const c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d'), img = g.createImageData(N, N), R = N / 2;
+  const segD = (px, py, ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+    return Math.hypot(ax + dx * t - px, ay + dy * t - py);
+  };
+  const glyph = (x, y, r0) => {                       // glyphs written round the band, tops facing outward
+    const r = Math.hypot(x, y);
+    if (r < r0 || r >= r0 + 5) return false;
+    const row = 4 - Math.floor(r - r0), rMid = r0 + 2.5;
+    const count = Math.max(3, Math.floor(2 * Math.PI * rMid / 7)), cw = 2 * Math.PI * rMid / count;
+    const s = (Math.atan2(y, x) + Math.PI) * rMid, cell = Math.floor(s / cw);
+    const col = Math.floor(s - cell * cw - (cw - 4) / 2);
+    return col >= 0 && col < 4 && GLYPHS[(cell * 5 + seed) % 6][row][col] === 'X';
+  };
+  const draw = (x, y) => {
+    const r = Math.hypot(x, y);
+    if (layer === 'outer') {
+      if (r >= R - 1 && r < R) return 1;                                    // rim
+      if (glyphs && glyph(x, y, R - 7)) return 0.95;                        // glyph band
+      if (r >= R - inR && r < R - inR + 1) return 1;                                // inner rim
+      const a = (Math.atan2(y, x) + Math.PI) / (2 * Math.PI) * 16;          // 16 tick marks between the rims
+      if (r >= R - 2 && r < R - 1 && Math.abs(a - Math.round(a)) < 0.08) return 0.7;
+      return 0;
+    }
+    const Ri = R - inR;                                                     // star touches the inner rim
+    const [n, step] = star;
+    for (let k = 0; k < n; k++) {
+      const a0 = 2 * Math.PI * k / n + Math.PI / n, a1 = 2 * Math.PI * (k + step) / n + Math.PI / n;
+      if (segD(x, y, Math.cos(a0) * Ri, Math.sin(a0) * Ri, Math.cos(a1) * Ri, Math.sin(a1) * Ri) < 0.5) return 0.75;
+    }
+    const r2 = Ri * 0.42;
+    if (r >= r2 - 0.5 && r < r2 + 0.5) return 0.9;                          // inner ring
+    if (r < 1.5) return 1;                                                  // centre point
+    return 0;
+  };
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const a = draw(i + 0.5 - R, R - (j + 0.5));
+    if (a <= 0) continue;
+    const k = (j * N + i) * 4;
+    img.data[k] = img.data[k + 1] = img.data[k + 2] = 255; img.data[k + 3] = Math.round(a * 255);
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// A magic circle: two layers turning slowly in opposite directions. o: { c (px), N (texels), up: true = lying flat,
+// else facing along nrm [x, z]; w (rad/s), bright, star, seed }
+function sigil(group, o) {
+  const holder = new THREE.Group();
+  holder.position.set(o.c[0] * PX, o.c[1] * PX, o.c[2] * PX);
+  if (o.up) holder.rotation.x = -Math.PI / 2;
+  else holder.rotation.y = Math.atan2(o.nrm[0], o.nrm[1]);
+  group.add(holder);
+  const size = o.N * PK_TEXEL * PX;
+  const col = new THREE.Color().setRGB(PK_RUNE[0] / 255, PK_RUNE[1] / 255, PK_RUNE[2] / 255, THREE.SRGBColorSpace).multiplyScalar(o.bright);
+  const layer = (name, z) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: sigilTex(o.N, name, o.seed || 0, o.star, o.glyphs !== false),
+      color: col, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+    m.position.z = z * PX;
+    holder.add(m);
+    return m;
+  };
+  const outer = layer('outer', 0), inner = layer('inner', 0.05);
+  const dir = o.dir || 1;
+  return t => {
+    outer.rotation.z = t * o.w * dir;
+    inner.rotation.z = -t * o.w * 1.6 * dir;
+    const b = 0.9 + 0.1 * Math.sin(t * 1.1);
+    outer.material.color.copy(col).multiplyScalar(b); inner.material.color.copy(col).multiplyScalar(b);
+  };
+}
+
+// A flat ring of runes turning around the anchor, each glyph facing outward (not at the camera).
+// o: { c (px), r (px), n, w (rad/s), tiltX, tiltZ, bright, size }
+function runeRing(group, o) {
+  const holder = new THREE.Group(), spin = new THREE.Group();
+  holder.position.set(o.c[0] * PX, o.c[1] * PX, o.c[2] * PX);
+  holder.rotation.set(o.tiltX || 0, 0, o.tiltZ || 0);
+  holder.add(spin); group.add(holder);
+  const s = o.size || 0.6, geo = new THREE.PlaneGeometry(6 * s * PX, 7 * s * PX);
+  const col = new THREE.Color().setRGB(PK_RUNE[0] / 255, PK_RUNE[1] / 255, PK_RUNE[2] / 255, THREE.SRGBColorSpace);
+  const parts = Array.from({ length: o.n }, (_, i) => {
+    const a = i / o.n * 2 * Math.PI;
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: RUNE_TEX[(i * 5 + (o.seed || 0)) % RUNE_TEX.length], color: col,
+      transparent: true, opacity: o.bright, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+    m.position.set(Math.cos(a) * o.r * PX, 0, Math.sin(a) * o.r * PX);
+    m.rotation.y = Math.PI / 2 - a;
+    spin.add(m);
+    return m;
+  });
+  return t => {
+    spin.rotation.y = -t * o.w;
+    parts.forEach((m, i) => {
+      m.position.y = Math.sin(t * 0.7 + i * 1.7) * 0.35 * PX;
+      m.material.opacity = o.bright * (0.8 + 0.2 * Math.sin(t * 1.3 + i * 2.1));
+    });
+  };
+}
+
+// Runes travelling along a path, each fading in and out, facing outward from the anchor's axis.
+// path(f, i) -> [x, y, z] in px for progress f 0..1 of rune i
+function runeStream(group, n, life, bright, path) {
+  const geo = new THREE.PlaneGeometry(6 * 0.55 * PX, 7 * 0.55 * PX);
+  const col = new THREE.Color().setRGB(PK_RUNE[0] / 255, PK_RUNE[1] / 255, PK_RUNE[2] / 255, THREE.SRGBColorSpace);
+  const parts = Array.from({ length: n }, (_, i) => {
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: RUNE_TEX[(i * 5) % RUNE_TEX.length], color: col, transparent: true,
+      opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+    group.add(m);
+    return m;
+  });
+  return t => parts.forEach((m, i) => {
+    const f = (t / life + i / n) % 1, [x, y, z] = path(f, i);
+    m.position.set(x * PX, y * PX, z * PX);
+    m.rotation.y = Math.PI / 2 - Math.atan2(z - 8, x - 8);
+    m.material.opacity = Math.min(1, f * 5) * Math.min(1, (1 - f) * 4) * bright;
+  });
+}
+
+// The anchor block. style: 'window' (round window per face), 'crown' (window + claws on top), 'cage' (open frame)
+function pkShape(style) {
+  return (x, y, z) => {
+    if (!inBlock(x, z)) return null;
+    const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z);
+    if (y <= 1) return lx + lz >= 1 ? 'plinth' : null;
+    if (y === 2 && style === 'cage') return lx >= 1 && lz >= 1 ? (lx === 1 || lz === 1 ? 'band' : 'floor') : null;
+    if (y === 2) return lx >= 1 && lz >= 1 ? 'band' : null;
+    if (style === 'cage') {
+      if (y <= 12) return lx >= 1 && lz >= 1 && lx <= 3 && lz <= 3 ? 'post' : null;   // a stone post in each corner
+      if (y === 13) return lx >= 1 && lz >= 1 && (lx <= 2 || lz <= 2) ? 'band' : null;  // gold ring frame on top
+      if (y === 14) return lx >= 1 && lz >= 1 && (lx <= 3 || lz <= 3) ? 'cap' : null;
+      if (y === 15) return lx >= 2 && lz >= 2 && (lx <= 3 || lz <= 3) ? 'cap' : null;
+      return null;
+    }
+    if (y <= 12) {
+      if (lx < 2 || lz < 2) return null;
+      if (lx >= 4 && lz >= 4) return y >= 4 && y <= 11 ? null : 'body';    // hollow chamber for the cube
+      if (lx < 4 && lz < 4) return 'body';                                 // corner posts
+      return pkWin(cx, cz, lx, y) < 3.6 ? null : 'body';                   // a round window through each wall
+    }
+    if (y === 13) return lx >= 1 && lz >= 1 ? 'band' : null;
+    if (y === 14) return lx >= 2 && lz >= 2 ? 'cap' : null;
+    if (style === 'crown') {
+      if (lx >= 2 && lz >= 2 && lx <= 3 && lz <= 3) return 'claw';            // four short gold claws
+      return lx >= 4 && lz >= 4 ? (lx >= 6 && lz >= 6 ? 'socket' : 'cap') : null;
+    }
+    return lx >= 3 && lz >= 3 ? (lx >= 6 && lz >= 6 ? 'socket' : 'cap') : null;
+  };
+}
+function pkPaint(k, x, y, z, L, e) {
+  const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z);
+  const stone = () => { let c = tone(PK_STONE, x, y, z, 0.14); if (y % 4 === 0) c = shade(c, 0.88); return c; };
+  if (k === 'plinth') return { c: tone(PK_PLINTH, x, y, z, 0.16) };
+  if (k === 'band') {
+    const notch = (x + z) % 3 === 0 && (lx === 1 || lz === 1) && y === 13;
+    return notch ? { c: PK_RUNE, g: true } : { c: goldTone(x, y, z) };
+  }
+  if (k === 'cap') return { c: e.py && (lx === 3 || lz === 3 || lx === 2 || lz === 2) && y === 15 ? goldTone(x, y, z) : stone() };
+  if (k === 'socket') return { c: PK_RUNE, g: true };
+  if (k === 'floor') { const r = Math.hypot(cx, cz); return r >= 3.4 && r < 4.4 ? { c: PK_RUNE, fl: true } : { c: shade(tone(PK_STONE, x, y, z, 0.14), 0.8) }; }
+  if (k === 'claw') return { c: goldTone(x, y, z) };
+  const sf = sideFace(e, x, z);
+  if (k === 'post') {          // a dotted rune strip down the outer corner of each post
+    if (sf && (sf.u === 1 || sf.u === 14) && y >= 4 && y <= 11 && y % 3 === 1) return { c: PK_RUNE, fl: true };
+    if (sf && (sf.u === 3 || sf.u === 12) && y === 3) return { c: goldTone(x, y, z) };
+    return { c: stone() };
+  }
+  // body: window rims burn cyan, the cavity wall is dark, rune dots run down the corner posts
+  const wall = (lx < 4) !== (lz < 4), d = wall ? pkWin(cx, cz, lx, y) : 99;
+  const outer = (lz === 2 && (e.nz || e.pz)) || (lx === 2 && (e.nx || e.px));
+  if (outer && d < 4.6) return { c: shade(PK_RUNE, 0.8), g: true };          // 1 px glowing rim round each window
+  if (d < 4.6 || (lx >= 4 && lz >= 4)) return { c: shade(stone(), 0.55) };
+  return { c: stone() };
+}
+
+const PK_SWATCHES = [['#424658', 'Basalt'], ['#d6a23c', 'Gold bands'], ['#8cebff', 'Rune light'], ['#22242e', 'Carved rune'], ['#0a1020', 'Folded night']];
+function pocketDesign(d) {
+  return {
+    round: 19, kind: 'Pocket Anchor', bounds: { x0: -1, x1: 17, y0: 0, y1: 16 }, alwaysLive: true,
+    labels: ['Room empty', 'Someone inside'], sublabels: ['the anchor waits', 'its pocket room is occupied'],
+    hStory: 'The anchor at rest', hChange: 'While someone is inside',
+    rift: VANILLA, light: 0x96f0ff, bloom: 0.4, glow: 1.0, pulse: 1.1, flowGain: 0.85, core: [8, PK_C, 8],
+    camLift: -0.35, labelY: d.labelY || 1.45,
+    name: d.name, line: d.line, story: d.story, change: d.change, swatches: PK_SWATCHES,
+    interact: 'The cube of night is the way in: right-click the anchor to enter its room, crouch and right-click to take it. Everything else (rings, circles, runes) is light only, with no collision, and passes through blocks and players.',
+    code: ['Block: one static model; window rims and runes full-bright, runes with light flowing toward the centre (animated texture)', 'Cube of night: a small starry cube drawn by the renderer (end-gateway style), turning slowly', ...d.code],
+    shape: pkShape(d.style || 'window'), paint: pkPaint,
+    rifts: [{ type: 'box', f: [8 - (d.cube || 5) / 2, 8 - (d.cube || 5) / 2, 8 - (d.cube || 5) / 2], t: [8 + (d.cube || 5) / 2, 8 + (d.cube || 5) / 2, 8 + (d.cube || 5) / 2] }],
+    extras(L, group, ctx) {
+      const cube = ctx.rifts[0], fx = d.fx(L, group, ctx);
+      return t => {
+        if (cube) { cube.rotation.set(0.35 * Math.sin(t * 0.2), t * (L ? 0.35 : 0.2), 0.35 * Math.cos(t * 0.2)); }
+        fx(t);
+      };
+    },
+  };
+}
+
+const R19 = [
+  pocketDesign({
+    name: 'Rune Orbit',
+    line: 'A pocket of night locked in stone, and a ring of runes keeping it shut.',
+    story: 'A one-block version of the World Anchor: blue-grey basalt on a dark plinth, gold bands with glowing rune notches and a glowing socket on top. A round window is cut into every face, and inside, a small cube of starry night turns slowly: the pocket room itself. A ring of glyphs circles the anchor at the height of the windows, each one facing outward like writing on an invisible band.',
+    change: 'The cube turns a little faster and a second ring of runes appears lower down, turning the other way, so you can tell from a distance that someone is in there.',
+    code: ['Rune ring: 8 rune particles circling the block at window height, each turned to face outward (fixed rotation, not camera-facing), drifting up and down a little out of step', 'Occupied: a second ring of 6, lower and turning the other way'],
+    fx(L, group) {
+      const a = runeRing(group, { c: [8, 9, 8], r: 11, n: 8, w: 0.3, bright: L ? 0.95 : 0.7 });
+      const b = L ? runeRing(group, { c: [8, 4, 8], r: 10, n: 6, w: -0.22, bright: 0.8, seed: 2 }) : null;
+      return t => { a(t); b && b(t); };
+    },
+  }),
+  pocketDesign({
+    name: 'Sigil Crown', style: 'crown', labelY: 1.7,
+    line: 'A magic circle hangs over the anchor like a lid on the pocket.',
+    story: 'The same windowed basalt block with its turning cube of night, crowned with four short gold claws around a glowing socket. A hand\'s breadth above the claws floats a flat magic circle a block and a half wide: an outer ring of glyphs and an inner eight-pointed star, turning slowly in opposite directions. A thread of light rises from the socket to the circle\'s centre.',
+    change: 'The circle brightens and runes peel off its rim, spiralling slowly down into the socket, as if the room below is drawing on it.',
+    code: ['Magic circle: two flat particles (rim and glyph band, star and inner ring), 24 px wide, turning in opposite directions; a fixed horizontal rotation instead of camera-facing', 'Light thread: a thin beam from the socket to the circle (renderer)', 'Occupied: rune particles spiralling down from the circle\'s rim into the socket'],
+    fx(L, group) {
+      const circ = sigil(group, { c: [8, 21, 8], N: 48, up: true, w: 0.18, bright: L ? 1.25 : 0.85 });
+      const thread = new THREE.Mesh(new THREE.BoxGeometry(0.8 * PX, 5.6 * PX, 0.8 * PX), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x96f0ff),
+        transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      thread.position.set(8 * PX, 18.2 * PX, 8 * PX);
+      group.add(thread);
+      const fall = L ? runeStream(group, 6, 5, 0.85, (f, i) => {
+        const a = i / 6 * 2 * Math.PI + f * 2.4, r = 10 * (1 - f) + 1;
+        return [8 + Math.cos(a) * r, 21 - f * 5, 8 + Math.sin(a) * r];
+      }) : null;
+      return t => { circ(t); fall && fall(t); thread.material.opacity = 0.45 + 0.25 * Math.sin(t * 1.4); };
+    },
+  }),
+  pocketDesign({
+    name: 'Ward Circle',
+    line: 'A circle on the ground, feeding the pocket through its windows.',
+    story: 'The windowed basalt block stands at the centre of a magic circle laid on the ground, two and a half blocks across: an outer ring of glyphs and an eight-pointed star whose points touch it, turning slowly in opposite directions. Now and then a rune lifts off the circle and drifts straight in through the nearest window towards the cube of night.',
+    change: 'The circle burns brighter and the runes come twice as often, streaming in through all four windows.',
+    code: ['Ground circle: two flat particles 40 px wide, a fraction of a pixel above the ground, turning in opposite directions (fixed rotation, not camera-facing). Bumpy ground or tall grass would cut through it', 'Feeding runes: rune particles that lift off the circle and drift in through a window, facing outward, fading as they reach the cube', 'Occupied: twice as many runes, brighter circle'],
+    fx(L, group) {
+      const circ = sigil(group, { c: [8, 0.15, 8], N: 80, up: true, w: 0.1, bright: L ? 1.2 : 0.8, star: [8, 3], seed: 1 });
+      const n = L ? 8 : 4;
+      const feed = runeStream(group, n, 6, L ? 0.9 : 0.75, (f, i) => {
+        const side = i % 4, a = side * Math.PI / 2 + (((i * 7) % 5) - 2) * 0.06, r = 17 * (1 - f) + 2.5;
+        return [8 + Math.cos(a) * r, 1 + 7 * Math.sin(f * Math.PI / 2), 8 + Math.sin(a) * r];
+      });
+      return t => { circ(t); feed(t); };
+    },
+  }),
+  pocketDesign({
+    name: 'Folded Cube', style: 'cage', cube: 6.5,
+    line: 'An open frame of stone and gold, and inside it the room folded down to a cube.',
+    story: 'Four basalt corner posts on a gold-banded plinth, tied together at the top by a gold ring frame, with rune dots down their outer corners and a glowing rune ring set into the floor. The sides are open, and in the middle the cube of starry night tumbles slowly on a tilted axis, circled by a ring of runes on a tilted orbit like a gyroscope.',
+    change: 'A second ring of runes appears, tilted the other way, and the cube turns faster.',
+    code: ['Frame: one static model with open sides, so the cube is the clear click point from every side (the hitbox stays a full block)', 'Rune orbit: 7 rune particles on a tilted ring inside the frame, facing outward from the cube', 'Occupied: a second ring tilted the other way'],
+    fx(L, group) {
+      const a = runeRing(group, { c: [8, 8.5, 8], r: 5.8, n: 7, w: 0.35, tiltX: 0.45, bright: L ? 0.95 : 0.75, size: 0.5 });
+      const b = L ? runeRing(group, { c: [8, 8.5, 8], r: 5.8, n: 7, w: -0.3, tiltZ: -0.45, bright: 0.85, size: 0.5, seed: 3 }) : null;
+      return t => { a(t); b && b(t); };
+    },
+  }),
+  pocketDesign({
+    name: 'Sealed Faces',
+    line: 'Every window sealed with its own turning sigil.',
+    story: 'The windowed basalt block with its cube of night, and on each face, just in front of the window, an upright seal the size of the window: a double ring and a six-pointed star, turning slowly, each face the opposite way to its neighbours, like four seals holding the pocket closed.',
+    change: 'The seals brighten and turn a little faster, and a slow ring of runes circles above the cap.',
+    code: ['Seals: four upright particles (two layers each), 10 px wide, held just in front of each window with a fixed rotation, turning in their own plane', 'Occupied: brighter seals and a ring of 6 runes above the cap'],
+    fx(L, group) {
+      const seals = [[0, 1], [0, -1], [1, 0], [-1, 0]].map(([nx, nz], i) => sigil(group, {
+        c: [8 + nx * 6.6, PK_C, 8 + nz * 6.6], N: 20, glyphs: false, nrm: [nx, nz], w: L ? 0.3 : 0.2, dir: i % 2 ? 1 : -1, bright: L ? 1.0 : 0.65, star: [6, 2], seed: i,
+      }));
+      const ring = L ? runeRing(group, { c: [8, 18.5, 8], r: 6.5, n: 6, w: 0.25, bright: 0.8, size: 0.5 }) : null;
+      return t => { seals.forEach(s => s(t)); ring && ring(t); };
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R19,
   ...R18,
   ...R17,
   ...R16,
@@ -4525,11 +4815,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign18'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign19'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-const CUR_ROUND = 18;
+const CUR_ROUND = 19;
 const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === CUR_ROUND);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
@@ -4540,7 +4830,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -4549,7 +4839,7 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign18', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign19', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
@@ -4559,8 +4849,8 @@ function selectDesign(i) {
   $('lblInert').innerHTML = `${lb[0]}<small>${sub[0]}</small>`;
   $('lblLinked').innerHTML = `${lb[1]}<small>${sub[1]}</small>`;
   $('vInert').textContent = lb[0]; $('vLinked').textContent = lb[1];
-  $('hStory').textContent = D.round >= 15 ? 'The core at rest' : D.round >= 13 ? 'The breaker in place' : D.labels ? 'The breacher in place' : 'Inert';
-  $('hChange').textContent = D.round >= 15 ? 'When the realm is under siege' : D.round >= 13 ? 'As the anchor breaks' : D.labels ? 'Breaching and breach complete' : 'When the seed is set';
+  $('hStory').textContent = D.hStory || (D.round >= 15 ? 'The core at rest' : D.round >= 13 ? 'The breaker in place' : D.labels ? 'The breacher in place' : 'Inert');
+  $('hChange').textContent = D.hChange || (D.round >= 15 ? 'When the realm is under siege' : D.round >= 13 ? 'As the anchor breaks' : D.labels ? 'Breaching and breach complete' : 'When the seed is set');
   setCam(state.view);
   for (const a of anchors) scene.remove(a.group);
   anchors = [buildAnchor(D, false, -2), buildAnchor(D, true, 1)];
@@ -4568,7 +4858,7 @@ function selectDesign(i) {
   $('progressGroup').hidden = !D.progress;
   $('siegeGroup').hidden = !D.siegeStates;
   const pos = byRound(D.round).findIndex(([, j]) => j === i);
-  $('cKind').textContent = D.round >= 15 ? 'World Core' : 'World Anchor';
+  $('cKind').textContent = D.kind || (D.round >= 15 ? 'World Core' : 'World Anchor');
   $('cIndex').textContent = `round ${D.round} · ${ROMAN[pos]} of ${byRound(D.round).length}`;
   $('cName').textContent = D.name;
   $('cLine').textContent = D.line;
