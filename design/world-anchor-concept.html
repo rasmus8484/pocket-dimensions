@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">62 · chunkier aurora crystals</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">66 · aurora spears and helix</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3282,30 +3282,58 @@ function geodeSurfaceR(y, a) {
 }
 const AURORA_STOPS = [[60, 255, 170], [60, 200, 255], [170, 90, 255], [255, 110, 200]];
 const auroraAt = s => { const f = ((s % 1) + 1) % 1 * AURORA_STOPS.length, i = Math.floor(f); return mix(AURORA_STOPS[i], AURORA_STOPS[(i + 1) % AURORA_STOPS.length], f - i); };
-function auroraCrystals(group, L) {
-  const P = corePal(L), drop = P.inert ? 4 : 0, vox = new Map();
-  const sites = [[24, 0], [24, 1], [24, 2], [24, 3], [9, 0], [9, 1], [9, 3]];
-  sites.forEach(([y0, k], ci) => {
-    const a = Math.PI / 4 + k * Math.PI / 2, r = geodeSurfaceR(y0, a) - 0.6;
-    const out = [Math.cos(a), 0, Math.sin(a)], base = [8 + out[0] * r, y0 - drop, 8 + out[2] * r];
-    const tx = Math.sign(-out[2]), tz = Math.sign(out[0]);           // along the surface, for thickness
-    for (let j = 0; j < 3; j++) {
-      // chunky prisms leaning out of the stone and up, hugging the surface
-      const side = (j - 1) * 0.55 + (hash3(ci, j, 3) - 0.5) * 0.3;
-      const dir = [out[0] * 0.45 - out[2] * side, 0.9, out[2] * 0.45 + out[0] * side], dl = Math.hypot(...dir);
-      const len = (j === 1 ? 5 : 3) + hash3(ci, j, 9) * 1.5;
-      const b0 = [base[0] - out[2] * (j - 1) * 1.2, base[1] - (j === 1 ? 0 : 1), base[2] + out[0] * (j - 1) * 1.2];
-      for (let t = 0; t <= len; t += 0.4) {
-        const q = b0.map((v, c) => Math.floor(v + dir[c] / dl * t));
-        const cells = t < len - 1.2 ? [q, [q[0] + tx, q[1], q[2]], [q[0], q[1], q[2] + tz], [q[0] + tx, q[1], q[2] + tz]] : [q];   // 2x2, tapering to a point
-        for (const r of cells) {
-          if (r[0] < 0 || r[0] > 15 || r[2] < 0 || r[2] > 15 || r[1] < 0 || r[1] > 31) continue;
-          vox.set(r.join(','), { x: r[0], y: r[1], z: r[2], cl: ci, c: [255, 255, 255] });
-        }
+// Straight crystals: base point, direction, length, thickness at the root; rasterised into voxels
+function crystalSpears(layout, drop) {
+  const spears = [];
+  if (layout === 'clusters') {
+    [[24, 0], [24, 1], [24, 2], [24, 3], [9, 0], [9, 1], [9, 3]].forEach(([y0, k], ci) => {
+      const a = Math.PI / 4 + k * Math.PI / 2, r = geodeSurfaceR(y0, a) - 0.6, out = [Math.cos(a), 0, Math.sin(a)];
+      for (let j = 0; j < 3; j++) {
+        const side = (j - 1) * 0.55 + (hash3(ci, j, 3) - 0.5) * 0.3;
+        spears.push({ cl: ci, thick: 2, len: (j === 1 ? 5 : 3) + hash3(ci, j, 9) * 1.5,
+          base: [8 + out[0] * r - out[2] * (j - 1) * 1.2, y0 - (j === 1 ? 0 : 1), 8 + out[2] * r + out[0] * (j - 1) * 1.2],
+          dir: [out[0] * 0.45 - out[2] * side, 0.9, out[2] * 0.45 + out[0] * side] });
+      }
+    });
+  } else if (layout === 'vertical') {
+    // driven in from above through the crown, and from below through the underside
+    for (let i = 0; i < 9; i++) {
+      const a = i * 2 * Math.PI / 9 + 0.3, r = 3.6 + hash3(i, 1, 2) * 1.8, len = 9 + hash3(i, 2, 3) * 5;
+      spears.push({ cl: i, thick: i % 3 === 0 ? 2 : 1, len, base: [8 + Math.cos(a) * r, 35 - hash3(i, 4, 4) * 3, 8 + Math.sin(a) * r], dir: [0, -1, 0], from: 'top' });
+    }
+    for (let i = 0; i < 4; i++) {                                    // on the corners, clear of the rune tablets
+      const a = Math.PI / 4 + i * Math.PI / 2 + (hash3(i, 6, 1) - 0.5) * 0.3, r = 3.6 + hash3(i, 7, 2) * 1.2, len = 8 + hash3(i, 8, 3) * 3;
+      spears.push({ cl: 9 + i, thick: 1, len, base: [8 + Math.cos(a) * r, 1.5 + hash3(i, 9, 9) * 1.5, 8 + Math.sin(a) * r], dir: [0, 1, 0] });
+    }
+  } else {
+    // a spiral of straight crystals set into the stone, all leaning the same way
+    for (let i = 0; i < 15; i++) {
+      const y0 = 4 + i * 1.75, a = i * 0.85 + 0.4, dy = y0 + 0.5 - 17.5;
+      const near = Math.min(...[0, 1, 2, 3].map(q => Math.abs(((a - q * Math.PI / 2) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI)));
+      if (near < 0.55 && (Math.abs(dy) < 6.5 || (y0 >= 4 && y0 <= 12))) continue;   // keep the openings and rune tablets clear
+      const r = geodeSurfaceR(y0, a) - 1.5, out = [Math.cos(a), 0, Math.sin(a)], tan = [-Math.sin(a), 0, Math.cos(a)];
+      spears.push({ cl: i, thick: i % 2 ? 1 : 2, len: 9 + hash3(i, 3, 1) * 3, base: [8 + out[0] * r, y0, 8 + out[2] * r],
+        dir: [out[0] * 0.85 + tan[0] * 0.5, 0.35, out[2] * 0.85 + tan[2] * 0.5] });
+    }
+  }
+  const vox = new Map();
+  for (const sp of spears) {
+    const dl = Math.hypot(...sp.dir), d = sp.dir.map(v => v / dl);
+    const ta = Math.abs(d[0]) > Math.abs(d[2]) ? [0, 0, 1] : [1, 0, 0];
+    for (let t = 0; t <= sp.len; t += 0.35) {
+      const q = sp.base.map((v, c) => Math.floor(v + d[c] * t - (c === 1 ? drop : 0)));
+      const thickHere = sp.thick === 2 && (sp.from === 'top' ? t > sp.len * 0.25 : t < sp.len * 0.55);
+      const cells = thickHere ? [q, q.map((v, c) => v + ta[c])] : [q];
+      for (const r of cells) {
+        if (r[1] < 0 || r[1] > 34) continue;   // drawn by the renderer, so they may reach past the block's sides
+        vox.set(r.join(','), { x: r[0], y: r[1], z: r[2], cl: sp.cl, c: [255, 255, 255] });
       }
     }
-  });
-  const list = [...vox.values()];
+  }
+  return [...vox.values()];
+}
+function auroraCrystals(group, L, layout) {
+  const P = corePal(L), list = crystalSpears(layout === true ? 'clusters' : layout, P.inert ? 4 : 0);
   const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: P.inert ? 0.85 : 0.78, depthWrite: false, toneMapped: false });
   const mesh = instanced(list, mat);
   group.add(mesh);
@@ -3383,7 +3411,7 @@ function geodeDesign(m) {
       return m.rock(x, y, z, e, inert);
     },
     extras(L, group) {
-      const crys = m.auroraCrystals ? auroraCrystals(group, L) : null;
+      const crys = m.auroraCrystals ? auroraCrystals(group, L, m.auroraCrystals) : null;
       if (corePal(L).inert) return crys;   // nothing left holding the shards up
       // Loose crystal shards. Around the black hole they turn with the disk at a third of its speed; down the
       // shaft at a fifth; the few that leaked out of either end also bob slowly, each on its own rhythm.
@@ -3723,10 +3751,25 @@ GEODE_MATS2.push({ ...GEODE_MATS[0], name: 'Aurora Crystal', auroraCrystals: tru
   swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#3cffaa', 'Aurora green'], ['#3cc8ff', 'Aurora teal'], ['#aa5aff', 'Aurora violet'], ['#ff6ec8', 'Aurora pink']] });
 const R17 = GEODE_MATS2.map(m => geodeDesign({ ...m, round: 17 }));
 
+// Round 18: aurora crystals on the weathered stone, as long straight crystals driven into the rock
+const R18 = [
+  geodeDesign({ ...GEODE_MATS[0], name: 'Weathered', round: 18 }),
+  geodeDesign({ ...GEODE_MATS2[GEODE_MATS2.length - 1], name: 'Aurora Clusters', round: 18 }),
+  geodeDesign({ ...GEODE_MATS[0], name: 'Aurora Spears', round: 18, auroraCrystals: 'vertical',
+    line: 'Long, straight aurora crystals driven into the weathered stone: down through the crown from above, and up into the underside from below.',
+    lead: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. Long, straight crystals of aurora are driven into it, rising out of its crown as if they fell into it from the sky and hanging out of its underside as if they grew up from the ground, slightly see-through, their colours drifting slowly from green to teal to violet to pink.',
+    swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#3cffaa', 'Aurora green'], ['#3cc8ff', 'Aurora teal'], ['#aa5aff', 'Aurora violet'], ['#ff6ec8', 'Aurora pink']] }),
+  geodeDesign({ ...GEODE_MATS[0], name: 'Aurora Helix', round: 18, auroraCrystals: 'helix',
+    line: 'Long, straight aurora crystals set into the weathered stone along a spiral, all leaning the same way, echoing the runes climbing the beam.',
+    lead: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. Long, straight crystals of aurora are set into it one after another along a spiral from its foot to its crown, all leaning the same way like the runes climbing the beam above, slightly see-through, their colours drifting slowly from green to teal to violet to pink.',
+    swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#3cffaa', 'Aurora green'], ['#3cc8ff', 'Aurora teal'], ['#aa5aff', 'Aurora violet'], ['#ff6ec8', 'Aurora pink']] }),
+];
+
 // ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R18,
   ...R17,
   ...R16,
   ...R15,
@@ -4447,11 +4490,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign17'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign18'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-const CUR_ROUND = 17;
+const CUR_ROUND = 18;
 const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === CUR_ROUND);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
@@ -4462,7 +4505,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -4471,7 +4514,7 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign17', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign18', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
