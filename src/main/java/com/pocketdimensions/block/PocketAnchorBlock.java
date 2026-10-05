@@ -84,7 +84,8 @@ public class PocketAnchorBlock extends BaseEntityBlock {
         ItemStack tool = player.getMainHandItem();
         // Allow any pickaxe (vanilla or mod-added) that meets diamond tier
         if (tool.is(ItemTags.PICKAXES) && tool.isCorrectToolForDrops(state)) {
-            return super.getDestroyProgress(state, player, level, pos);
+            return com.pocketdimensions.SiegeTuning.mineProgressPerTick(
+                    com.pocketdimensions.PocketDimensionsServerConfig.POCKET_ANCHOR_MINE_SECONDS.get());   // a fixed time (server config)
         }
         return 0.0f;
     }

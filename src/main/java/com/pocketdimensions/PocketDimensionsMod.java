@@ -42,6 +42,8 @@ public class PocketDimensionsMod {
     public PocketDimensionsMod(FMLJavaModLoadingContext context) {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, PocketDimensionsConfig.SPEC,
                 "pocketdimensions-common.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, PocketDimensionsServerConfig.SPEC,
+                "pocketdimensions-server.toml");
 
         var modBusGroup = context.getModBusGroup();
         ModBlocks.BLOCKS.register(modBusGroup);

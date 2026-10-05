@@ -93,7 +93,7 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half — *
 
 Both siege blocks require placement directly on top of a World Anchor and break if the anchor is removed. There are no loot tables yet, so siege blocks drop nothing when broken or mined.
 
-**Boss bars:** Players within `siege_bossbar_range` blocks of an active siege block, and everyone inside the besieged realm, see its progress as a boss bar.
+**Boss bars:** Players within `siege_bossbar_range` blocks of an active siege block, and everyone inside the besieged realm, see its progress as a boss bar, along with how much lapis the siege block has left.
 
 **Cross-dimension awareness:** Siege blocks and the World Core force-load each other's chunks across dimensions, so boss bars are visible to players inside the realm during an active siege and the beacon color stays accurate regardless of which dimension players are in.
 
@@ -112,6 +112,18 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 | `siege.core_fuel_burn_ticks` | 200 | Ticks between each lapis consumed |
 | `siege.siege_bossbar_range` | 64 | Radius in blocks for seeing siege boss bars |
 | `access.max_allowed_players` | 0 | Max players on a realm's access list (0 = unlimited) |
+
+Per-world server settings live in `serverconfig/pocketdimensions-server.toml` inside the world folder. Forge sends them to every player who joins, so mining times and fuel limits match on both sides:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `mining.pocket_anchor_mine_seconds` | 9.4 | Seconds to mine a Pocket Anchor (still needs a diamond-tier pickaxe) |
+| `mining.world_breacher_mine_seconds` | 250 | Seconds to mine a World Breacher (any tool) |
+| `mining.anchor_breaker_mine_seconds` | 250 | Seconds to mine an Anchor Breaker (any tool) |
+| `fuel.world_breacher_max_lapis` | 64 | Lapis a World Breacher can hold (1-64) |
+| `fuel.anchor_breaker_max_lapis` | 64 | Lapis an Anchor Breaker can hold (1-64) |
+
+Mining times are fixed: enchantments, Haste and mining fatigue don't change them. 0 means the block breaks instantly.
 
 ---
 

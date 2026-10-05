@@ -88,6 +88,14 @@ public class AnchorBreakerBlock extends BaseEntityBlock {
         return CODEC;
     }
 
+    /** Takes a fixed time to mine with any tool or by hand (server config). */
+    @Override
+    public float getDestroyProgress(BlockState state, net.minecraft.world.entity.player.Player player,
+                                    net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return com.pocketdimensions.SiegeTuning.mineProgressPerTick(
+                com.pocketdimensions.PocketDimensionsServerConfig.ANCHOR_BREAKER_MINE_SECONDS.get());
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {

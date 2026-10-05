@@ -66,6 +66,12 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
         public boolean canPlaceItem(int slot, ItemStack stack) {
             return stack.is(Items.LAPIS_LAZULI);
         }
+
+        /** Lapis capacity (server config); the GUI slot reads this on both sides. */
+        @Override
+        public int getMaxStackSize() {
+            return com.pocketdimensions.PocketDimensionsServerConfig.WORLD_BREACHER_MAX_LAPIS.get();
+        }
     };
 
     /** Transient boss bar — not saved to NBT; recreated lazily after server restart. */
@@ -99,7 +105,7 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
     /** Insert lapis into the inventory slot. Returns the amount actually inserted. */
     public int insertLapis(int amount) {
         ItemStack slot = inventory.getItem(0);
-        int space = 64 - (slot.isEmpty() ? 0 : slot.getCount());
+        int space = inventory.getMaxStackSize() - (slot.isEmpty() ? 0 : slot.getCount());
         int toAdd = Math.min(amount, space);
         if (toAdd <= 0) return 0;
         if (slot.isEmpty()) {
@@ -260,6 +266,7 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
             sb.append(" \u2014 Warded");
         }
 
+        sb.append(" \u00b7 ").append(com.pocketdimensions.SiegeTuning.fuelLabel(be.fuel + be.inventory.getItem(0).getCount()));
         return Component.literal(sb.toString());
     }
 
