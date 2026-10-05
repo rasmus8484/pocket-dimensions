@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Uprooted Heart</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">53 · all siege states</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">54 · anchor lost: fallen and inert</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3114,8 +3114,8 @@ const CORE_PAL = {
     ring: CORE_EMBER_RING, deep: CORE_EMBER_DEEP, beam: 0xff44ff, mote: 0xff9ef0, spin: 1 },
   breaking: { name: 'Breaking', sub: 'an Anchor Breaker is on the anchor', lo: HOT, hi: EMBERC, rune: HOT, bright: EMBERC,
     ring: CORE_EMBER_RING, deep: CORE_EMBER_DEEP, beam: 0xff3322, mote: 0xff8050, spin: 1 },
-  lost: { name: 'Anchor lost', sub: 'the anchor is destroyed: the core goes dark', lo: [70, 22, 20], hi: [120, 40, 30], rune: [130, 42, 30], bright: [150, 55, 38],
-    ring: [150, 70, 45], deep: [50, 10, 6], beam: 0xaa2211, mote: 0x803020, spin: 0.15 },
+  lost: { name: 'Anchor lost', sub: 'the anchor is destroyed: the core falls, inert', lo: [70, 80, 100], hi: [110, 125, 150], rune: [56, 54, 64], bright: [66, 64, 76],
+    ring: [0, 0, 0], deep: [0, 0, 0], beam: 0, mote: 0, spin: 0, inert: true },
 };
 let CORE_SIEGE = 'breaking';
 const corePal = L => CORE_PAL[L ? CORE_SIEGE : 'normal'];
@@ -3209,6 +3209,12 @@ function coreDesign(d) {
     rifts: [{ type: 'vsphere', c: d.c, r: 3.2 }],
     extras(L, group, ctx) {
       const P = corePal(L);
+      if (P.inert) {   // the anchor is gone: the black hole has collapsed, the beacon is out, nothing moves
+        ctx.rifts.forEach(r => { r.visible = false; });
+        group.traverse(o => { if (o.isPointLight) o.intensity = 0; });
+        const extra = d.extras ? d.extras(L, group, ctx) : null;
+        return t => { extra && extra(t); };
+      }
       const hole = holeFx(group, ctx, d.c, P.ring, P.deep, P.spin);
       const beam = coreBeam(group, d.c[1], P.beam);
       const motes = particles(P.spin < 1 ? 6 : 22, P.mote, { r0: 4, rs: 3, y0: d.c[1] - 6, h: 12, swirl: 0.25, sink: true });
@@ -3294,13 +3300,15 @@ const R15 = [
     name: 'Geode Heart', c: [8, 17.5, 8],
     line: 'Stone grew around the singularity the way a geode grows around a hollow, and the spell wrote itself into the rock.',
     story: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
-    change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core goes dark: the glow sinks to a dim red, the disk slows to a crawl, the shards stop circling and the beacon burns a dull red. Pick the state with the Siege buttons.',
+    change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core dies. The black hole collapses, the beacon goes out, every glow fades to dull crystal and dark carved runes, and the boulder falls the hand\'s breadth it used to float, landing on the ground among the shards that fell with it. Pick the state with the Siege buttons.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
     code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
     swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']],
-    shape(x, y, z) {
+    shape(x, y0, z, L) {
       if (!inBlock(x, z)) return null;
+      const inert = corePal(L).inert, y = inert ? y0 + 4 : y0;   // once inert it has fallen the 4 px it used to float
       const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - 17.5, rr = Math.hypot(cx, cz);
+      if (inert && y0 === 0 && rr >= 6.2 && rr < 7.8 && hash3(x, 77, z) > 0.85) return 'deadShard';   // shards that fell with it
       // the floating boulder, stretched to fill the two blocks, with a broken flat underside
       if (y <= 3 || (y === 4 && hash3(x, y, z) > 0.6)) return null;
       const ds = dy < 0 ? dy * 0.42 : dy * 0.62;
@@ -3321,18 +3329,20 @@ const R15 = [
       if (Math.abs(dy) < 5.5 && ((az < w && ax > 2.5) || (ax < w && az > 2.5))) return null;   // split open on four sides
       return r < 7.0 ? 'crystal' : r < 7.9 ? 'calcite' : 'rock';
     },
-    paint(k, x, y, z, L, e) {
+    paint(k, x, y0, z, L, e) {
+      const inert = corePal(L).inert, y = inert ? y0 + 4 : y0;
+      if (k === 'deadShard') return { c: mix(corePal(L).lo, corePal(L).hi, hash3(x, y, z)) };
       // the shaft is lined with the same glowing crystal as the hollow
-      if (k === 'crystal' || k === 'bore') { const P = corePal(L); return { c: mix(P.lo, P.hi, hash3(x, y, z)), g: true }; }
+      if (k === 'crystal' || k === 'bore') { const P = corePal(L); return { c: mix(P.lo, P.hi, hash3(x, y, z)), g: !inert }; }
       if (k === 'calcite') return { c: tone([222, 224, 228], x, y, z, 0.08) };
       const sf = sideFace(e, x, z);
       const rune = corePal(L).rune;
-      if (sf && sf.u === (y % 2 ? 7 : 8) && y >= 6 && y <= 12) return { c: corePal(L).bright, fl: true };   // vein feeding the hollow
+      if (!inert && sf && sf.u === (y % 2 ? 7 : 8) && y >= 6 && y <= 12) return { c: corePal(L).bright, fl: true };   // vein feeding the hollow
       if (k === 'tablet') {
         if (sf && y >= 6 && y <= 10) {
           const v = y - 6;
-          if (sf.u >= 3 && sf.u <= 6 && GLYPHS[(sf.f * 2) % 6][4 - v][sf.u - 3] === 'X') return { c: rune, g: true };
-          if (sf.u >= 9 && sf.u <= 12 && GLYPHS[(sf.f * 2 + 1) % 6][4 - v][sf.u - 9] === 'X') return { c: rune, g: true };
+          if (sf.u >= 3 && sf.u <= 6 && GLYPHS[(sf.f * 2) % 6][4 - v][sf.u - 3] === 'X') return { c: rune, g: !inert };
+          if (sf.u >= 9 && sf.u <= 12 && GLYPHS[(sf.f * 2 + 1) % 6][4 - v][sf.u - 9] === 'X') return { c: rune, g: !inert };
         }
         return { c: tone([128, 124, 138], x, y, z, 0.07) };
       }
@@ -3340,6 +3350,7 @@ const R15 = [
       return { c: tone([112, 108, 120], x, y, z, 0.18) };
     },
     extras(L, group) {
+      if (corePal(L).inert) return null;   // nothing left holding them up
       // Loose crystal shards. Around the black hole they turn with the disk at a third of its speed; down the
       // shaft at a fifth; the few that leaked out of either end also bob slowly, each on its own rhythm.
       const c = [8, 17.5, 8];
