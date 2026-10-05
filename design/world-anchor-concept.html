@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">71 · tumbling cube</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">72 · layered cube, 13 runes per band</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -4282,7 +4282,7 @@ const R20 = [
 // their axes turning too, so together they sweep out a sphere. Everything moves, so the renderer draws it all.
 // ---------------------------------------------------------------------------
 function orreryDesign(d) {
-  const CY = 9.5;                                       // cube centre height (px): hovers with its lowest corner clear of the ground
+  const CY = 10.5;                                       // cube centre height (px): hovers with its lowest corner clear of the ground
   return {
     round: 21, kind: 'Pocket Anchor', bounds: { x0: -1, x1: 17, y0: 0, y1: 16 }, alwaysLive: true,
     labels: ['Room empty', 'Someone inside'], sublabels: ['the anchor waits', 'its pocket room is occupied'],
@@ -4293,31 +4293,47 @@ function orreryDesign(d) {
     interact: 'The cube is the click point; the hitbox is a still, head-sized box around it, so it is easy to hit however the cube is turned. Right-click to enter its room, crouch and right-click to pick it up. The rune bands are light only.',
     code: [
       'Static model: none. The block is only a head-sized hitbox; the renderer draws everything',
-      'Cube: an 8 px model drawn by the renderer, hovering and bobbing gently. Its rotation is three slow turns about different axes added together, so it never repeats in a way you notice and reads as a random tumble',
+      'Cube: a 10 px model drawn by the renderer (8 px body, corner knobs standing a pixel proud), hovering and bobbing gently. Its rotation is three slow turns about different axes added together, so it never repeats in a way you notice and reads as a random tumble',
       'Windows: an end portal cube inside (vanilla end portal render type), seen through the four open sides',
       'Runes on top and bottom: full-bright on the cube model, so they turn with it',
       'Rune bands: three rings of ' + d.n + ' glyphs drawn by the renderer as flat quads facing outward (like the rune helix, but arranged in rings); each ring turns about its own axis while that axis swings slowly round the cube, so the three together sweep out a sphere',
       'Occupied: the bands turn faster and burn brighter, the cube tumbles a little quicker'],
     shape: () => null, paint: () => ({ c: [0, 0, 0] }),
-    rifts: [{ type: 'box', f: [8 - 3.3, CY - 3.3, 8 - 3.3], t: [8 + 3.3, CY + 3.3, 8 + 3.3] }],
+    rifts: [{ type: 'box', f: [8 - 2.2, CY - 2, 8 - 2.2], t: [8 + 2.2, CY + 2, 8 + 2.2] }],
     extras(L, group, ctx) {
-      // The cube: 12 edges as the frame, open side windows, top and bottom faces carrying one rune each
+      // The cube on a 10 px grid. Depth comes from layers: corner knobs (3 x 3 x 3) stand proud of everything, the
+      // edges sit back between them, each side has a frame ring around a 4 x 4 window, and the runes on top and bottom
+      // are carved one pixel deep with the glow at the bottom of the cut.
+      const S = 9, ext = v => v === 0 || v === S, sh = v => v === 1 || v === S - 1;
+      const near = v => v <= 2 || v >= S - 2;
       const cube = voxPart({
-        bounds: { x0: 0, x1: 8, y0: 0, y1: 8 },
+        bounds: { x0: 0, x1: 10, y0: 0, y1: 10 },
         shape: (x, y, z) => {
-          const bx = x === 0 || x === 7, by = y === 0 || y === 7, bz = z === 0 || z === 7;
-          if (bx + by + bz >= 2) return bx && by && bz ? 'corner' : 'edge';
-          if (by) return 'cap';
-          return null;                                   // side windows and the hollow
+          if (near(x) && near(y) && near(z)) return ext(x) + ext(y) + ext(z) === 3 ? null : 'knob';  // tip bevelled off
+          if (ext(x) || ext(y) || ext(z)) return null;                                                 // only knobs reach the outer layer
+          if (sh(x) + sh(y) + sh(z) >= 2) return 'edge';
+          const glyphAt = (x, z, set, top) => {
+            const u = x - 3, v = top ? 7 - z : z - 2;
+            return u >= 0 && u < 4 && v >= 0 && v < 5 && GLYPHS[set][v][u] === 'X';
+          };
+          if (sh(y)) return glyphAt(x, z, y === 1 ? d.bottom : d.top, y !== 1) ? null : 'cap';     // plates, rune carved through
+          if (sh(x) || sh(z)) return null;                                                             // sides open between the edges
+          const inner = v => v === 2 || v === S - 2;
+          if (inner(y) && glyphAt(x, z, y === 2 ? d.bottom : d.top, y !== 2)) return 'glyph';         // glow at the bottom of the cut
+          if ((inner(x) || inner(z)) && y >= 2 && y <= S - 2) {                                        // window frame, set back a pixel
+            const u = inner(x) ? z : x;
+            if (u >= 2 && u <= S - 2 && (u === 2 || u === S - 2 || y === 2 || y === S - 2)) return 'ring';
+          }
+          return null;
         },
         paint: (k, x, y, z) => {
-          if (k === 'corner') return { c: d.corner(x, y, z) };
+          if (k === 'knob') return { c: d.knob(x, y, z) };
           if (k === 'edge') return { c: d.edge(x, y, z) };
-          const g = GLYPHS[y === 7 ? d.top : d.bottom], u = x - 2, v = z - 1;
-          if (u >= 0 && u < 4 && v >= 0 && v < 5 && g[v][u] === 'X') return { c: PK_RUNE, g: true };
+          if (k === 'ring') return { c: d.ring(x, y, z) };
+          if (k === 'glyph') return { c: PK_RUNE, g: true };
           return { c: d.cap(x, y, z) };
         },
-        pivot: [4, 4, 4],
+        pivot: [5, 5, 5],
       });
       cube.position.set(8 * PX, CY * PX, 8 * PX);
       group.add(cube);
@@ -4325,7 +4341,7 @@ function orreryDesign(d) {
       if (portal) { cube.add(portal); portal.position.set(0, 0, 0); }
 
       // Three rune bands: ring i turns about its own axis; the axis itself swings slowly round
-      const R = 8.6, s = L ? 1.5 : 1, bright = L ? 1.0 : 0.75;
+      const R = 10, s = L ? 1.5 : 1, bright = L ? 1.0 : 0.75;
       const col = new THREE.Color().setRGB(PK_RUNE[0] / 255, PK_RUNE[1] / 255, PK_RUNE[2] / 255, THREE.SRGBColorSpace);
       const geo = new THREE.PlaneGeometry(6 * 0.42 * PX, 7 * 0.42 * PX);
       const bands = [0, 1, 2].map(i => {
@@ -4361,19 +4377,19 @@ function orreryDesign(d) {
 
 const R21 = [
   orreryDesign({
-    name: 'Tumbling Cube', n: 11, top: 0, bottom: 3,
+    name: 'Tumbling Cube', n: 13, top: 0, bottom: 3,
     line: 'A cube of the End, turning in a cage of runes.',
-    story: 'A cube the size of a head hangs in the air above the ground, framed by gold edges, its four sides open windows onto end portal light and a glowing rune on its top and bottom. It turns slowly on several axes at once, so it never seems to settle into a pattern. Around it three bands of runes circle at once, each on its own tilt, and their tilts swing round too, so the runes trace out a sphere around the cube.',
+    story: 'A cube the size of a head hangs in the air above the ground, built in layers: heavy gold knobs on its eight corners stand proud, basalt edges sit back between them, and each of its four sides is a frame set a pixel deeper around a window onto end portal light. A rune is carved a pixel deep into its top and bottom, glowing at the bottom of the cut. It turns slowly on several axes at once, so it never seems to settle into a pattern. Around it three bands of runes circle at once, each on its own tilt, and their tilts swing round too, so the runes trace out a sphere around the cube.',
     change: 'The bands turn faster and burn brighter, and the cube tumbles a little quicker.',
-    edge: (x, y, z) => goldTone(x, y, z), corner: (x, y, z) => goldTone(x, y, z), cap: (x, y, z) => hdStone(x, y, z),
+    knob: (x, y, z) => goldTone(x, y, z), edge: (x, y, z) => shade(hdStone(x, y, z), 0.8), ring: (x, y, z) => hdStone(x, y, z), cap: (x, y, z) => hdStone(x, y, z),
     swatches: [['#d6a23c', 'Gold frame'], ['#424658', 'Basalt caps'], ['#8cebff', 'Rune light'], ['#0b1a22', 'End portal']],
   }),
   orreryDesign({
-    name: 'Basalt Tumbler', n: 11, top: 0, bottom: 3,
-    line: 'The same cube in basalt, with only its corners gilded.',
-    story: 'The same hovering, tumbling cube and three rune bands, but framed in blue-grey basalt with small gold caps on its eight corners, so the end portal windows and the runes stand out more against the dark frame.',
+    name: 'Basalt Tumbler', n: 13, top: 0, bottom: 3,
+    line: 'The same cube with basalt corners and gold edges.',
+    story: 'The same hovering, tumbling cube and three rune bands, with the materials swapped: basalt corner knobs and gold edges, so the frame reads as a gold cage held at the corners by dark stone.',
     change: 'The bands turn faster and burn brighter, and the cube tumbles a little quicker.',
-    edge: (x, y, z) => hdStone(x, y, z), corner: (x, y, z) => goldTone(x, y, z), cap: (x, y, z) => shade(hdStone(x, y, z), 0.85),
+    knob: (x, y, z) => hdStone(x, y, z), edge: (x, y, z) => goldTone(x, y, z), ring: (x, y, z) => shade(hdStone(x, y, z), 0.85), cap: (x, y, z) => shade(hdStone(x, y, z), 0.85),
     swatches: [['#424658', 'Basalt frame'], ['#d6a23c', 'Gold corners'], ['#8cebff', 'Rune light'], ['#0b1a22', 'End portal']],
   }),
 ];
