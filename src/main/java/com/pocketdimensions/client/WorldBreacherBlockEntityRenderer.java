@@ -75,8 +75,8 @@ public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<Wor
                 0,
                 state.beamHeight,
                 state.beamColor,
-                BeaconRenderer.SOLID_BEAM_RADIUS,
-                BeaconRenderer.BEAM_GLOW_RADIUS);
+                ThinBeam.SOLID_RADIUS,
+                ThinBeam.GLOW_RADIUS);
         poseStack.popPose();
     }
 

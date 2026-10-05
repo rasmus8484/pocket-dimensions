@@ -93,7 +93,7 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
             pose.pushPose();
             pose.translate(0f, CY * PX, 0f);
             BeaconRenderer.submitBeaconBeam(pose, out, BeaconRenderer.BEAM_LOCATION, 1f, s.beamTime, 0, s.beamHeight,
-                    BEAM[s.siege], 0.07f, 0.16f);   // thin enough to rise up the shaft without touching its walls
+                    BEAM[s.siege], ThinBeam.SOLID_RADIUS, ThinBeam.GLOW_RADIUS);   // rises up the shaft without touching its walls
             pose.popPose();
         }
 
