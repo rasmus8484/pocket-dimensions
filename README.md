@@ -57,11 +57,12 @@ The World Anchor is indestructible by normal mining — it can only be removed t
 
 Two siege blocks can be placed on top of a World Anchor (on its upper half — **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
 
-**World Breacher** (`world_breacher`, netherite block texture)
+**World Breacher** (`world_breacher`, the "Mandible": an iron head whose mandibles hook under the anchor's gold band)
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks (1 Minecraft day) while fueled
-- When complete, any player can use the anchor to enter the realm (as long as the breacher remains fueled)
+- When complete, any player can use the anchor to enter the realm (as long as the breacher remains fueled), and a pink beacon beam rises from the breacher's eye while it stays fueled
+- While attached, the anchor visibly falls under its influence: its black hole turns ember, its runes turn pink from the top down as the breach progresses (all pink when complete), and pink motes drain from the mandibles into the black hole
 - If fuel runs out after breach, access reverts to owner-only
 - Destroying the breacher resets all progress
 
