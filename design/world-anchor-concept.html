@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">60 · slow helix, runes facing outward</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">62 · chunkier aurora crystals</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3268,6 +3268,65 @@ function debrisChunk(s, seed, L) {
 
 const BASALT_COL = x => (x <= 2 ? 0 : x >= 4 && x <= 6 ? 1 : x >= 9 && x <= 11 ? 2 : x >= 13 ? 3 : -1);
 
+// Aurora crystals growing out of the geode's shoulders and foot (in game: drawn by the renderer, translucent,
+// colour animated). Slightly see-through, colours drifting green -> teal -> violet -> pink, each cluster out of step.
+function geodeSurfaceR(y, a) {
+  const dy = y + 0.5 - 17.5, ds = dy < 0 ? dy * 0.42 : dy * 0.62;
+  let r = 0;
+  while (r < 8) {
+    const cx = Math.cos(a) * r, cz = Math.sin(a) * r, ax = Math.abs(cx), az = Math.abs(cz);
+    if (0.25 * Math.max(ax, az, Math.abs(ds)) + 0.75 * Math.hypot(cx, cz, ds) > 7.4) break;
+    r += 0.25;
+  }
+  return r;
+}
+const AURORA_STOPS = [[60, 255, 170], [60, 200, 255], [170, 90, 255], [255, 110, 200]];
+const auroraAt = s => { const f = ((s % 1) + 1) % 1 * AURORA_STOPS.length, i = Math.floor(f); return mix(AURORA_STOPS[i], AURORA_STOPS[(i + 1) % AURORA_STOPS.length], f - i); };
+function auroraCrystals(group, L) {
+  const P = corePal(L), drop = P.inert ? 4 : 0, vox = new Map();
+  const sites = [[24, 0], [24, 1], [24, 2], [24, 3], [9, 0], [9, 1], [9, 3]];
+  sites.forEach(([y0, k], ci) => {
+    const a = Math.PI / 4 + k * Math.PI / 2, r = geodeSurfaceR(y0, a) - 0.6;
+    const out = [Math.cos(a), 0, Math.sin(a)], base = [8 + out[0] * r, y0 - drop, 8 + out[2] * r];
+    const tx = Math.sign(-out[2]), tz = Math.sign(out[0]);           // along the surface, for thickness
+    for (let j = 0; j < 3; j++) {
+      // chunky prisms leaning out of the stone and up, hugging the surface
+      const side = (j - 1) * 0.55 + (hash3(ci, j, 3) - 0.5) * 0.3;
+      const dir = [out[0] * 0.45 - out[2] * side, 0.9, out[2] * 0.45 + out[0] * side], dl = Math.hypot(...dir);
+      const len = (j === 1 ? 5 : 3) + hash3(ci, j, 9) * 1.5;
+      const b0 = [base[0] - out[2] * (j - 1) * 1.2, base[1] - (j === 1 ? 0 : 1), base[2] + out[0] * (j - 1) * 1.2];
+      for (let t = 0; t <= len; t += 0.4) {
+        const q = b0.map((v, c) => Math.floor(v + dir[c] / dl * t));
+        const cells = t < len - 1.2 ? [q, [q[0] + tx, q[1], q[2]], [q[0], q[1], q[2] + tz], [q[0] + tx, q[1], q[2] + tz]] : [q];   // 2x2, tapering to a point
+        for (const r of cells) {
+          if (r[0] < 0 || r[0] > 15 || r[2] < 0 || r[2] > 15 || r[1] < 0 || r[1] > 31) continue;
+          vox.set(r.join(','), { x: r[0], y: r[1], z: r[2], cl: ci, c: [255, 255, 255] });
+        }
+      }
+    }
+  });
+  const list = [...vox.values()];
+  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: P.inert ? 0.85 : 0.78, depthWrite: false, toneMapped: false });
+  const mesh = instanced(list, mat);
+  group.add(mesh);
+  const col = new THREE.Color();
+  const paint = t => {
+    list.forEach((v, i) => {
+      let c;
+      if (P.inert) c = mix([90, 100, 120], [120, 132, 156], hash3(v.x, v.y, v.z));
+      else {
+        c = auroraAt(t * 0.07 + v.cl * 0.37 + v.y * 0.03);
+        if (L) c = mix(c, P.hi, 0.6);                       // under siege the aurora is swallowed by the state colour
+      }
+      col.setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
+      mesh.setColorAt(i, col);
+    });
+    mesh.instanceColor.needsUpdate = true;
+  };
+  paint(0);
+  return P.inert ? null : paint;
+}
+
 // The Geode Heart, as a function of the mineral it is made of (round 16 compares materials)
 function geodeDesign(m) {
   return coreDesign({
@@ -3276,7 +3335,7 @@ function geodeDesign(m) {
     story: '' + m.lead + ' A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
     change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core dies. The black hole collapses, the beacon goes out, every glow fades to dull crystal and dark carved runes, and the boulder falls the hand\'s breadth it used to float, landing on the ground among the shards that fell with it. Pick the state with the Siege buttons.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
-    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole', 'Rune helix: rune particles climbing the beacon slowly in a double helix, about two and a half blocks above the crown, each glyph lying flat and facing outward from the beam (client particles with a helical path and a fixed rotation instead of camera-facing; coloured by siege state, none once inert)'],
+    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole', ...(m.auroraCrystals ? ['Aurora crystals: drawn by the renderer, translucent, colour drifting slowly through green, teal, violet and pink (each cluster out of step); swallowed by the siege colour under siege; dull and still once inert'] : []), 'Rune helix: rune particles climbing the beacon slowly in a double helix, about two and a half blocks above the crown, each glyph lying flat and facing outward from the beam (client particles with a helical path and a fixed rotation instead of camera-facing; coloured by siege state, none once inert)'],
     swatches: m.swatches,
     shape(x, y0, z, L) {
       if (!inBlock(x, z)) return null;
@@ -3324,7 +3383,8 @@ function geodeDesign(m) {
       return m.rock(x, y, z, e, inert);
     },
     extras(L, group) {
-      if (corePal(L).inert) return null;   // nothing left holding them up
+      const crys = m.auroraCrystals ? auroraCrystals(group, L) : null;
+      if (corePal(L).inert) return crys;   // nothing left holding the shards up
       // Loose crystal shards. Around the black hole they turn with the disk at a third of its speed; down the
       // shaft at a fifth; the few that leaked out of either end also bob slowly, each on its own rhythm.
       const c = [8, 17.5, 8];
@@ -3361,6 +3421,7 @@ function geodeDesign(m) {
       }
       group.add(ring, shaft, spillOuter);
       return t => {
+        crys && crys(t);
         // once the anchor is lost the shards stop circling and the leaked ones sink to rest
         ring.rotation.y = t * 0.6 / 3 * (P.spin < 1 ? 0 : 1);
         shaft.rotation.y = spillOuter.rotation.y = t * 0.6 / 5 * (P.spin < 1 ? 0 : 1);
@@ -3656,6 +3717,10 @@ const GEODE_MATS2 = [
     band: (x, y, z) => tone([210, 214, 230], x, y, z, 0.06),
     swatches: [['#aaacb4', 'Regolith'], ['#ced0d8', 'Crater rims'], ['#80828c', 'Crater floors'], ['#9698a4', 'Tablet'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']] },
 ];
+GEODE_MATS2.push({ ...GEODE_MATS[0], name: 'Aurora Crystal', auroraCrystals: true,
+  line: 'Your weathered stone with clusters of aurora crystal growing out of it, slightly see-through, their colours slowly shifting like the northern lights.',
+  lead: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. Clusters of aurora crystal have grown out of its shoulders and its foot, slightly see-through, their colours drifting slowly from green to teal to violet to pink like the northern lights.',
+  swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#3cffaa', 'Aurora green'], ['#3cc8ff', 'Aurora teal'], ['#aa5aff', 'Aurora violet'], ['#ff6ec8', 'Aurora pink']] });
 const R17 = GEODE_MATS2.map(m => geodeDesign({ ...m, round: 17 }));
 
 // ---------------------------------------------------------------------------
