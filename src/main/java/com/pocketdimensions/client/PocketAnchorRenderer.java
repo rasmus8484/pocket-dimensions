@@ -98,15 +98,17 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
             pose.mulPose(Axis.XP.rotation(1.0f + 0.3f * (float) Math.sin(t * 0.17f + i * 2.1f)));
             pose.mulPose(Axis.YP.rotation(p * (i % 2 == 1 ? -0.42f : 0.36f)));
             for (int tex = 0; tex < RUNE_TEX.length; tex++) {
-                out.submitCustomGeometry(pose, RenderTypes.entityCutoutNoCull(RUNE_TEX[tex]), runes(i, tex, bright, t, false));
-                out.order(1).submitCustomGeometry(pose, RenderTypes.eyes(GLOW_TEX[tex]), runes(i, tex, bright, t, true));
+                // the lit cutout only claims depth (so the cube cannot paint over it); the unlit copy on top is what you see
+                out.submitCustomGeometry(pose, RenderTypes.entityCutoutNoCull(RUNE_TEX[tex]), runes(i, tex, bright, t, 255, false));
+                out.order(1).submitCustomGeometry(pose, RenderTypes.eyes(RUNE_TEX[tex]), runes(i, tex, bright, t, 255, true));
+                out.order(1).submitCustomGeometry(pose, RenderTypes.eyes(GLOW_TEX[tex]), runes(i, tex, bright, t, 140, true));
             }
             pose.popPose();
         }
     }
 
-    /** The quads of one band that use one rune texture: the runes themselves, or their glow. */
-    private static SubmitNodeCollector.CustomGeometryRenderer runes(int band, int texture, float bright, float t, boolean glow) {
+    /** The quads of one band that use one rune texture (rune or glow sprite), at alpha (scaled by the flicker). */
+    private static SubmitNodeCollector.CustomGeometryRenderer runes(int band, int texture, float bright, float t, int alpha, boolean bothSides) {
         return (pp, vc) -> {
             for (int j = 0; j < BAND_GLYPHS; j++) {
                 if ((j * 5 + band * 2) % RUNE_TEX.length != texture) continue;
@@ -115,24 +117,25 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
                 Matrix4f m = new Matrix4f(pp.pose())
                         .translate((float) Math.cos(a) * BAND_R * PX, 0f, (float) Math.sin(a) * BAND_R * PX)
                         .rotateY((float) Math.PI / 2f - a);            // face outward from the cube
-                glyph(vc, m, k, glow);
+                glyph(vc, m, k, alpha, bothSides);
             }
         };
     }
 
     /**
-     * A rune sprite quad in its local XY plane. The rune is a depth-writing cutout, full-bright and seen from both sides;
-     * its glow is the soft halo sprite blended over and around it at about half strength.
+     * A rune sprite quad in its local XY plane. Drawn three times: a depth-writing cutout (lit, so it would take the
+     * game's face shading, but it is covered), the same rune unlit and full-bright on top, and the soft glow sprite
+     * blended over and around it at about half strength.
      */
-    private static void glyph(VertexConsumer vc, Matrix4f m, float k, boolean glow) {
-        int r = (int) (RUNE[0] * k), g = (int) (RUNE[1] * k), b = (int) (RUNE[2] * k), alpha = glow ? (int) (140 * k) : 255;
+    private static void glyph(VertexConsumer vc, Matrix4f m, float k, int alpha, boolean bothSides) {
+        int r = (int) (RUNE[0] * k), g = (int) (RUNE[1] * k), b = (int) (RUNE[2] * k), a = alpha == 255 ? 255 : (int) (alpha * k);
         float h = GLYPH / 2f;
         float[][] quad = {{-h, -h, 0, 1}, {h, -h, 1, 1}, {h, h, 1, 0}, {-h, h, 0, 0}};
-        for (int side = 0; side < (glow ? 2 : 1); side++) {   // the glow type culls back faces: give it both windings
+        for (int side = 0; side < (bothSides ? 2 : 1); side++) {   // the unlit type culls back faces: give it both windings
             for (int n = 0; n < 4; n++) {
                 float[] v = quad[side == 0 ? n : 3 - n];
-                vc.addVertex(m, v[0], v[1], 0f).setColor(r, g, b, alpha).setUv(v[2], v[3])
-                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(0f, 1f, 0f);   // lit from above: even brightness
+                vc.addVertex(m, v[0], v[1], 0f).setColor(r, g, b, a).setUv(v[2], v[3])
+                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(0f, 1f, 0f);
             }
         }
     }
