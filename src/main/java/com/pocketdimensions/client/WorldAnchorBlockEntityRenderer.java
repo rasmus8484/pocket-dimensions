@@ -22,9 +22,7 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
 
     private static final float PX = 1f / 16f;
     private static final float SC = 13.5f;
-    private static final float[] GLOW = {215 / 255f, 248 / 255f, 255 / 255f};   // ring colour mixed 45% toward white
     private static final float[] DEEP = {40 / 255f, 110 / 255f, 230 / 255f};
-    private static final float STEADY = 1.06f;                                 // midpoint of the old pulse
     /** Disk spin in radians per second; the ring shimmer completes one lap in the same time. */
     private static final float SPIN = 0.6f;
 
@@ -37,6 +35,16 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
      */
     private enum RingPalette { GLOW, EMBER }
     private static final RingPalette PALETTE = RingPalette.GLOW;
+
+    /** Inner ring colour. GLOW keeps every channel below full so per-pixel variation stays visible after clamping. */
+    private static final float[] GLOW = PALETTE == RingPalette.EMBER
+            ? new float[]{215 / 255f, 248 / 255f, 1f}
+            : new float[]{110 / 255f, 210 / 255f, 1f};
+
+    /** Per-pixel brightness from a 0..1 hash. EMBER keeps the original over-bright range that makes channels wrap. */
+    private static float shimmer(float h) {
+        return PALETTE == RingPalette.EMBER ? (0.92f + 0.16f * h) * 1.06f : 0.78f + 0.22f * h;
+    }
 
     /** Face order shared by SEED_DIRS and cubeFace: -z, +z, -x, +x, +y, -y. */
     private static final int[][] SEED_DIRS = {{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
@@ -82,7 +90,7 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         out.submitCustomGeometry(pose, RenderTypes.lightning(), (p, vc) -> {
             for (int[] px : RING) {
                 int slot = Math.floorMod(px[2] - step, RING.size());
-                float b = (0.92f + 0.16f * hash(slot, 3, 11)) * STEADY;
+                float b = shimmer(hash(slot, 3, 11));
                 quadXY(vc, p.pose(), px[0], px[1], GLOW[0] * b, GLOW[1] * b, GLOW[2] * b, 1f);
             }
         });
@@ -96,7 +104,7 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
             for (int[] px : DISK) {
                 float r = (float) Math.hypot(px[0] + 0.5, px[1] + 0.5);
                 float f = Math.min(1f, Math.max(0f, (r - 4.5f) / 1.7f));
-                float b = (0.92f + 0.16f * hash(px[0], 7, px[1])) * STEADY;
+                float b = shimmer(hash(px[0], 7, px[1]));
                 float cr = (GLOW[0] + (DEEP[0] - GLOW[0]) * f) * b, cg = (GLOW[1] + (DEEP[1] - GLOW[1]) * f) * b, cb = (GLOW[2] + (DEEP[2] - GLOW[2]) * f) * b;
                 quadXZ(vc, p.pose(), px[0], px[1], cr, cg, cb);
             }
