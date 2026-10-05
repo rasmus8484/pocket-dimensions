@@ -91,7 +91,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | CP-004 | PARTIAL | Custom textures | World Anchor uses generated Runebound Monolith textures (`tools/anchor/`); all other blocks use vanilla placeholders |
 | CP-005 | PARTIAL | Mining/tool tags | pickaxe.json and needs_diamond_tool.json only list pocket_anchor; siege blocks (hardness 50) mine slowly with any tool |
 | CP-006 | TODO | Anchor break warning FX | Particles and sounds when anchor is being mined/destroyed |
-| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker) and World Core (Geode Heart, two blocks, model per siege state): generated models (`tools/anchor/`), renderers and particles; other blocks use cube_all |
+| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker), World Core (Geode Heart, two blocks, model per siege state) and Pocket Anchor (Tumbling Cube: renderer-drawn cube, end portal windows, three rune bands, OCCUPIED state): generated models (`tools/anchor/`), renderers and particles; other blocks use cube_all |
 | CP-008 | TODO | Siege progress visual feedback | Particles, sounds, or block state changes during siege progression |
 | CP-009 | TODO | In-game documentation | Tooltips, guide book, or advancement hints explaining mechanics |
 
