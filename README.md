@@ -30,7 +30,7 @@ A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, sur
 6. Anyone can **crouch + right-click** your anchor to steal it (folds it back into item form)
 7. If the anchor is mined and destroyed, the room is permanently deleted and all occupants are ejected
 
-**Look:** the placed anchor is the Tumbling Cube. A head-sized cube hovers in the block, with gold corner knobs, set-back basalt edges, and a window on each side looking into end portal light. A rune is carved into its top and bottom. It turns slowly on several axes at once inside three bands of runes, whose axes swing round too, so together they sweep out a sphere. While anyone is in the room, the bands brighten and everything turns half again as fast. The anchor gives off light 6, or 9 while the room is occupied. The hitbox is a still, head-sized box around the cube.
+**Look:** the placed anchor is the Tumbling Cube. A head-sized cube hovers in the block, with gold corner knobs, set-back basalt edges, and a window on each side looking into end portal light. A glowing rune is drawn on its top and bottom. It turns slowly on several axes at once inside three bands of runes, whose axes swing round too, so together they sweep out a sphere. While anyone is in the room, the bands brighten and everything turns half again as fast. The anchor gives off light 6, or 9 while the room is occupied. The hitbox is a still, head-sized box around the cube.
 
 **Disconnect safety:** If a player logs off while holding a stolen Pocket Anchor and others are still inside that room, the mod auto-places an anchor at their feet so occupants aren't trapped.
 
