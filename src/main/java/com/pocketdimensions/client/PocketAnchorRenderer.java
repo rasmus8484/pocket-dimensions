@@ -84,7 +84,7 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
             pose.mulPose(Axis.YP.rotation(p * (i % 2 == 1 ? -0.42f : 0.36f)));
             for (int tex = 0; tex < RUNE_TEX.length; tex++) {
                 final int band = i, texture = tex;
-                out.submitCustomGeometry(pose, RenderTypes.eyes(RUNE_TEX[tex]), (pp, vc) -> {
+                out.submitCustomGeometry(pose, RenderTypes.entityTranslucentEmissive(RUNE_TEX[tex]), (pp, vc) -> {
                     for (int j = 0; j < BAND_GLYPHS; j++) {
                         if ((j * 5 + band * 2) % RUNE_TEX.length != texture) continue;
                         float a = j / (float) BAND_GLYPHS * 2f * (float) Math.PI;
@@ -100,7 +100,8 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
         }
     }
 
-    /** A rune sprite quad in its local XY plane, drawn from both sides (additive, full-bright). */
+    /** A rune sprite quad in its local XY plane, drawn from both sides, full-bright. It writes depth (transparent texels are
+     *  discarded), so a glyph in front of the cube stays visible whichever is drawn first. */
     private static void glyph(VertexConsumer vc, PoseStack.Pose pp, Matrix4f m, float k) {
         int r = (int) (RUNE[0] * k), g = (int) (RUNE[1] * k), b = (int) (RUNE[2] * k);
         float h = GLYPH / 2f;
