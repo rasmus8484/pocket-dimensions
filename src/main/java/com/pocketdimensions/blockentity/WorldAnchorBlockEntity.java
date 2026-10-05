@@ -152,7 +152,7 @@ public class WorldAnchorBlockEntity extends BlockEntity {
 
         BlockPos breakerPos = anchorPos.above(2); // siege block sits on top of UPPER half
         if (level.getBlockEntity(breakerPos) instanceof WorldBreacherBlockEntity breacher) {
-            return breacher.isBreachComplete() && breacher.getFuel() > 0;
+            return breacher.isBreachComplete() && breacher.hasFuel();   // slot lapis counts, not just the legacy counter
         }
 
         return false;

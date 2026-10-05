@@ -28,6 +28,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -40,13 +41,15 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
     /** True once a World Seed has linked this anchor to a realm; swaps the inert and linked models. */
     public static final BooleanProperty LINKED = BooleanProperty.create("linked");
+    /** Siege influence from a World Breacher on top: 0 none, 1..3 breaching (spreads with progress), 4 breach complete. */
+    public static final IntegerProperty INFLUENCE = IntegerProperty.create("influence", 0, 4);
     private static final VoxelShape LOWER_SHAPE = Shapes.or(Block.box(0, 0, 0, 16, 5, 16), Block.box(2, 5, 2, 14, 16, 14));
     private static final VoxelShape UPPER_SHAPE = Block.box(2, 0, 2, 14, 15, 14);
     public static final MapCodec<WorldAnchorBlock> CODEC = simpleCodec(WorldAnchorBlock::new);
 
     public WorldAnchorBlock(BlockBehaviour.Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER).setValue(LINKED, false));
+        registerDefaultState(stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER).setValue(LINKED, false).setValue(INFLUENCE, 0));
     }
 
     @Override
@@ -79,6 +82,16 @@ public class WorldAnchorBlock extends BaseEntityBlock {
         }
     }
 
+    /** Sets INFLUENCE on both halves of the anchor whose lower half is at lowerPos. */
+    public static void setInfluence(Level level, BlockPos lowerPos, int influence) {
+        for (BlockPos p : new BlockPos[]{lowerPos, lowerPos.above()}) {
+            BlockState s = level.getBlockState(p);
+            if (s.getBlock() instanceof WorldAnchorBlock && s.getValue(INFLUENCE) != influence) {
+                level.setBlock(p, s.setValue(INFLUENCE, influence), 3);
+            }
+        }
+    }
+
     /** Sets LINKED on both halves of the anchor whose lower half is at lowerPos. */
     public static void setLinked(Level level, BlockPos lowerPos, boolean linked) {
         for (BlockPos p : new BlockPos[]{lowerPos, lowerPos.above()}) {
@@ -91,7 +104,7 @@ public class WorldAnchorBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(HALF, LINKED);
+        builder.add(HALF, LINKED, INFLUENCE);
     }
 
     // -------------------------------------------------------------------------
@@ -141,6 +154,11 @@ public class WorldAnchorBlock extends BaseEntityBlock {
             BlockState below = level.getBlockState(pos.below());
             if (!below.is(this) || below.getValue(HALF) != DoubleBlockHalf.LOWER) {
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(), 35);
+                return;
+            }
+            // The breacher on top is gone: the anchor shakes off its influence
+            if (state.getValue(INFLUENCE) > 0 && !(level.getBlockState(pos.above()).getBlock() instanceof WorldBreacherBlock)) {
+                setInfluence(level, pos.below(), 0);
             }
         }
     }
