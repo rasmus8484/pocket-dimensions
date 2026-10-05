@@ -25,6 +25,10 @@ public class ModParticles {
     public static final RegistryObject<SimpleParticleType> RUNE_RED =
             PARTICLE_TYPES.register("rune_red", () -> new SimpleParticleType(false));
 
+    /** Rune climbing the World Core's beacon in a helix, facing outward from the beam. */
+    public static final RegistryObject<SimpleParticleType> RUNE_HELIX =
+            PARTICLE_TYPES.register("rune_helix", () -> new SimpleParticleType(false));
+
     /** Pink mote drained from a World Breacher's mandibles into the anchor's black hole. */
     public static final RegistryObject<SimpleParticleType> DRAIN =
             PARTICLE_TYPES.register("drain", () -> new SimpleParticleType(false));

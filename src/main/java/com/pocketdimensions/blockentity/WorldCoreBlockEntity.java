@@ -123,6 +123,22 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         }
     }
 
+    /** Rune colours per siege state for the helix climbing the beam (cyan, pink, red). */
+    private static final int[] HELIX_RGB = {0x8CEBFF, 0xFF5ADC, 0xFF5028};
+
+    /**
+     * Client: every 0.75 s a rune starts climbing the beam from the crown, alternating between the two strands of a
+     * double helix. None once the core is inert.
+     */
+    public static void clientTick(Level level, BlockPos pos, BlockState state, WorldCoreBlockEntity be) {
+        int siege = state.getValue(WorldCoreBlock.SIEGE);
+        long t = level.getGameTime();
+        if (siege == STATE_ANCHOR_LOST || t % 15 != 0) return;
+        double strand = (t / 15) % 2 == 0 ? 0 : Math.PI;
+        level.addParticle(com.pocketdimensions.init.ModParticles.RUNE_HELIX.get(),
+                pos.getX() + 0.5, pos.getY() + 30 / 16.0, pos.getZ() + 0.5, strand, 0, HELIX_RGB[siege]);
+    }
+
     private static int computeSiegeState(WorldCoreBlockEntity be, ServerLevel serverLevel) {
         if (be.ownerUUID == null) return STATE_NORMAL;
         MinecraftServer server = serverLevel.getServer();

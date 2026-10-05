@@ -92,9 +92,9 @@ public class WorldCoreBlock extends BaseEntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                    BlockEntityType<T> type) {
-        if (level.isClientSide()) return null;
-        return createTickerHelper(type, ModBlockEntityTypes.WORLD_CORE.get(),
-                WorldCoreBlockEntity::serverTick);
+        return level.isClientSide()
+                ? createTickerHelper(type, ModBlockEntityTypes.WORLD_CORE.get(), WorldCoreBlockEntity::clientTick)
+                : createTickerHelper(type, ModBlockEntityTypes.WORLD_CORE.get(), WorldCoreBlockEntity::serverTick);
     }
 
     @Override

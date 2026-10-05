@@ -150,7 +150,7 @@ GLYPHS.forEach((g, i) => {
   write(`textures/particle/rune_${i}.png`, encodePNG(8, 8, rgba));
 });
 const runeSprites = { textures: GLYPHS.map((_, i) => `pocketdimensions:rune_${i}`) };
-for (const n of ['rune', 'rune_pink', 'rune_gold', 'rune_red']) write(`particles/${n}.json`, json(runeSprites));
+for (const n of ['rune', 'rune_pink', 'rune_gold', 'rune_red', 'rune_helix']) write(`particles/${n}.json`, json(runeSprites));
 for (const n of ['drain', 'unmake', 'siphon']) write(`particles/${n}.json`, json({ textures: ['minecraft:glow'] }));
 
 // Breacher item model: the breaching state, scaled into the slot

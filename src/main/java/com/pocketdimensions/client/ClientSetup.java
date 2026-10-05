@@ -1,6 +1,7 @@
 package com.pocketdimensions.client;
 
 import com.pocketdimensions.client.particle.DrainParticle;
+import com.pocketdimensions.client.particle.HelixRuneParticle;
 import com.pocketdimensions.client.particle.RuneParticle;
 import com.pocketdimensions.init.ModParticles;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
@@ -31,6 +32,7 @@ public class ClientSetup {
             e.registerSpriteSet(ModParticles.RUNE_PINK.get(), s -> new RuneParticle.Provider(s, RuneParticle.PINK));
             e.registerSpriteSet(ModParticles.RUNE_GOLD.get(), s -> new RuneParticle.Provider(s, RuneParticle.GOLD));
             e.registerSpriteSet(ModParticles.RUNE_RED.get(), s -> new RuneParticle.Provider(s, RuneParticle.RED));
+            e.registerSpriteSet(ModParticles.RUNE_HELIX.get(), HelixRuneParticle.Provider::new);
             e.registerSpriteSet(ModParticles.DRAIN.get(), s -> new DrainParticle.Provider(s, DrainParticle.PINK, DrainParticle.Path.DRAIN));
             e.registerSpriteSet(ModParticles.UNMAKE.get(), s -> new DrainParticle.Provider(s, DrainParticle.RED, DrainParticle.Path.OUT));
             e.registerSpriteSet(ModParticles.SIPHON.get(), s -> new DrainParticle.Provider(s, DrainParticle.RED, DrainParticle.Path.STRAIGHT));
@@ -38,7 +40,7 @@ public class ClientSetup {
     }
 
     private void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.<WorldCoreBlockEntity, WorldCoreRenderState>registerBlockEntityRenderer(
+        event.<WorldCoreBlockEntity, GeodeRenderState>registerBlockEntityRenderer(
                 ModBlockEntityTypes.WORLD_CORE.get(),
                 ctx -> new WorldCoreBlockEntityRenderer(ctx));
         event.<WorldAnchorBlockEntity, WorldAnchorRenderState>registerBlockEntityRenderer(

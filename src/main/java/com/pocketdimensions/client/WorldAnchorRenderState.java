@@ -11,5 +11,5 @@ public class WorldAnchorRenderState extends BlockEntityRenderState {
      * Ring look. GLOW = calm cyan (default). EMBER = flickering red-yellow accretion glow, reserved for the
      * siege visuals (see PRD SG-011): set it from the block entity's siege state in extractRenderState.
      */
-    public WorldAnchorBlockEntityRenderer.RingPalette palette = WorldAnchorBlockEntityRenderer.RingPalette.GLOW;
+    public BlackHoleRenderer.RingPalette palette = BlackHoleRenderer.RingPalette.GLOW;
 }
