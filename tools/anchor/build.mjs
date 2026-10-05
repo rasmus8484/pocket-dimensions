@@ -6,6 +6,7 @@ import { shape as breacherShape, paint as breacherPaint, influenceAmount, MAG, Y
 import { shape as breakerShape, paint as breakerPaint, Y0 as K_Y0, Y1 as K_Y1 } from './unmaker.mjs';
 import { damageShape, damagePaint } from './damage.mjs';
 import { shape as coreShape, paint as corePaint, STATES as CORE_STATES, CORE as CORE_C } from './geode.mjs';
+import { shape as pocketShape, paint as pocketPaint } from './pocket.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
@@ -107,6 +108,11 @@ for (const st of CORE_ORDER) for (const [half, y0, y1] of [['lower', 0, 16], ['u
   core[`${st}_${half}`] = emitModel(`world_core_${st}_${half}`, voxels, y0, other, CORE_C[1]);
 }
 
+// Pocket Anchor (Tumbling Cube): the cube is drawn by the renderer (turning, hovering), so the placed block's own
+// model is empty; the cube model hangs off the never-placed cube=true state for the renderer to draw.
+const pocketCube = emitModel('pocket_anchor_cube', voxelize(pocketShape, pocketPaint, null, 0, 16), 0, () => false);
+write('models/block/pocket_anchor.json', json({ textures: { particle: pocketCube.textures.main } }));
+
 // Blockstates
 const anchorVariantsJson = {};
 for (const half of ['lower', 'upper']) for (let dmg = 0; dmg <= 4; dmg++) for (let inf = 0; inf <= 4; inf++) for (const linked of [false, true]) {
@@ -122,6 +128,10 @@ write('blockstates/world_breacher.json', json({ variants: {
 } }));
 write('blockstates/world_core.json', json({ variants: Object.fromEntries(['lower', 'upper'].flatMap(half =>
   CORE_ORDER.map((st, i) => [`half=${half},siege=${i}`, { model: `pocketdimensions:block/world_core_${st}_${half}` }]))) }));
+write('blockstates/pocket_anchor.json', json({ variants: {
+  'cube=false': { model: 'pocketdimensions:block/pocket_anchor' },
+  'cube=true': { model: 'pocketdimensions:block/pocket_anchor_cube' },
+} }));
 write('blockstates/anchor_breaker.json', json({ variants: Object.fromEntries(
   [0, 1, 2, 3, 4].map(c => [`charge=${c}`, { model: `pocketdimensions:block/anchor_breaker_c${c}` }])) }));
 
@@ -201,5 +211,21 @@ write('models/item/anchor_breaker.json', json({
     firstperson_lefthand: { rotation: [0, 225, 0], translation: [0, 2, 0], scale: [0.4, 0.4, 0.4] },
   },
 }));
+
+// Pocket Anchor item model: the cube, still
+write('models/item/pocket_anchor.json', json({
+  parent: 'minecraft:block/block',
+  textures: pocketCube.textures,
+  elements: pocketCube.m.elements,
+  display: {
+    gui: { rotation: [30, 225, 0], scale: [0.9, 0.9, 0.9] },
+    ground: { translation: [0, 3, 0], scale: [0.5, 0.5, 0.5] },
+    fixed: { scale: [0.9, 0.9, 0.9] },
+    thirdperson_righthand: { rotation: [75, 45, 0], translation: [0, 2.5, 0], scale: [0.6, 0.6, 0.6] },
+    firstperson_righthand: { rotation: [0, 45, 0], scale: [0.6, 0.6, 0.6] },
+    firstperson_lefthand: { rotation: [0, 225, 0], scale: [0.6, 0.6, 0.6] },
+  },
+}));
+write('items/pocket_anchor.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:item/pocket_anchor' } }));
 
 console.log(report.join('\n'));

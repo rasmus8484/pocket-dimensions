@@ -1,6 +1,6 @@
 {
-    "model": {
-        "type": "minecraft:model",
-        "model": "pocketdimensions:block/pocket_anchor"
-    }
+  "model": {
+    "type": "minecraft:model",
+    "model": "pocketdimensions:item/pocket_anchor"
+  }
 }
