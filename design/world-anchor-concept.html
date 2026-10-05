@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Uprooted Heart</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">52 · crystal-lined shaft</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">53 · all siege states</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -131,6 +131,12 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
       <button id="tSpin" aria-pressed="true">Spin</button>
       <button id="tNight" aria-pressed="false">Night</button>
       <button id="notesToggle" aria-pressed="false">Notes</button>
+    </div>
+    <div class="group" role="group" aria-label="Siege state" id="siegeGroup" hidden>
+      <span style="padding:0 8px;color:var(--muted);font-size:.85rem">Siege</span>
+      <button data-siege="breaching" aria-pressed="false">Breaching</button>
+      <button data-siege="breaking" aria-pressed="true">Breaking</button>
+      <button data-siege="lost" aria-pressed="false">Anchor lost</button>
     </div>
     <div class="group" role="group" aria-label="Progress" id="progressGroup" hidden>
       <label for="progress" style="padding:0 8px;color:var(--muted);font-size:.85rem">Progress <span id="progressVal" class="num">60 %</span></label>
@@ -3100,7 +3106,20 @@ R14[0].paint = (orig => function (k, x, y, z, L, e) {
 // ---------------------------------------------------------------------------
 const CORE_RUNE = [140, 235, 255], CORE_RING = [150, 240, 255], CORE_DEEP = [40, 110, 230];
 const CORE_EMBER_RING = [255, 190, 90], CORE_EMBER_DEEP = [210, 50, 20];
-const coreAcc = (L, x, y, z) => L ? (hash3(x, y, z) > 0.7 ? EMBERC : HOT) : (hash3(x, y, z) > 0.7 ? [200, 250, 255] : CORE_RUNE);
+// Siege states the World Core already tracks (WorldCoreBlockEntity.siegeState); the right-hand core shows CORE_SIEGE
+const CORE_PAL = {
+  normal: { name: 'At peace', sub: 'blue beacon', lo: [60, 130, 255], hi: [150, 240, 255], rune: CORE_RUNE, bright: [200, 250, 255],
+    ring: CORE_RING, deep: CORE_DEEP, beam: 0x4488ff, mote: 0xbff4ff, spin: 1 },
+  breaching: { name: 'Breaching', sub: 'a World Breacher is on the anchor', lo: [200, 50, 180], hi: [255, 140, 235], rune: MAG, bright: [255, 190, 245],
+    ring: CORE_EMBER_RING, deep: CORE_EMBER_DEEP, beam: 0xff44ff, mote: 0xff9ef0, spin: 1 },
+  breaking: { name: 'Breaking', sub: 'an Anchor Breaker is on the anchor', lo: HOT, hi: EMBERC, rune: HOT, bright: EMBERC,
+    ring: CORE_EMBER_RING, deep: CORE_EMBER_DEEP, beam: 0xff3322, mote: 0xff8050, spin: 1 },
+  lost: { name: 'Anchor lost', sub: 'the anchor is destroyed: the core goes dark', lo: [70, 22, 20], hi: [120, 40, 30], rune: [130, 42, 30], bright: [150, 55, 38],
+    ring: [150, 70, 45], deep: [50, 10, 6], beam: 0xaa2211, mote: 0x803020, spin: 0.15 },
+};
+let CORE_SIEGE = 'breaking';
+const corePal = L => CORE_PAL[L ? CORE_SIEGE : 'normal'];
+const coreAcc = (L, x, y, z) => { const P = corePal(L); return hash3(x, y, z) > 0.7 ? P.bright : P.rune; };
 const C_STONE = (x, y, z) => tone([122, 122, 128], x, y, z, 0.16);
 const C_DEEP = (x, y, z) => { let c = tone([70, 70, 80], x, y, z, 0.16); if (y % 3 === 0) c = shade(c, 0.9); return c; };
 const C_DIRT = (x, y, z) => tone([122, 86, 58], x, y, z, 0.16);
@@ -3109,7 +3128,7 @@ const C_OBSID = (x, y, z) => tone([30, 22, 46], x, y, z, 0.2);
 const C_BASALT = (x, y, z) => { let c = tone([66, 64, 74], x, y, z, 0.12); if (x % 2 === 0) c = shade(c, 0.93); return c; };
 
 // The anchor's black hole at centre c (px): disk spinning around the vertical axis, photon ring facing you
-function holeFx(group, ctx, c, ring, deep) {
+function holeFx(group, ctx, c, ring, deep, spin = 1) {
   const ang = (x, y) => Math.atan2(y, x);
   const glowC = mix(ring, [255, 255, 255], 0.45);
   const disk = voxPart({
@@ -3147,14 +3166,14 @@ function holeFx(group, ctx, c, ring, deep) {
   for (let i = 0; i < haloMesh.count; i++) { haloMesh.getMatrixAt(i, hm); hp.setFromMatrixPosition(hm); angs.push(Math.atan2(hp.y, hp.x)); }
   angs.map((a, i) => i).sort((p, q) => angs[p] - angs[q]).forEach((idx, slot) => { haloPix[idx] = slot; });
   return t => {
-    disk.rotation.y = t * 0.6;
+    disk.rotation.y = t * 0.6 * spin;
     camera.getWorldPosition(camLocal);
     group.worldToLocal(camLocal);
     const dir = camLocal.sub(new THREE.Vector3(c[0] * PX, c[1] * PX, c[2] * PX)).normalize();
     halo.position.set((c[0] + dir.x * 0.6) * PX, (c[1] + dir.y * 0.6) * PX, (c[2] + dir.z * 0.6) * PX);
     halo.lookAt(camera.getWorldPosition(new THREE.Vector3()));
     ctx.rifts.forEach(r => r.quaternion.copy(halo.quaternion));
-    const step = Math.floor(t * 0.6 / (2 * Math.PI) * haloPix.length);
+    const step = Math.floor(t * 0.6 * spin / (2 * Math.PI) * haloPix.length);
     haloPix.forEach((slot, i) => {
       const b = 0.92 + 0.16 * hash3((slot - step + 1000 * haloPix.length) % haloPix.length, 3, 11);
       haloCol.setRGB(glowLin[0] * b, glowLin[1] * b, glowLin[2] * b);
@@ -3180,16 +3199,19 @@ function coreBeam(group, y0, hex) {
 function coreDesign(d) {
   return {
     round: 15, bounds: { x0: -1, x1: 17, y0: 0, y1: 32 }, alwaysLive: true,
-    labels: ['At peace', 'Under siege'], sublabels: ['blue beacon', 'anchor attacked: ember hole, red beacon'],
+    get labels() { return ['At peace', CORE_PAL[CORE_SIEGE].name]; },
+    get sublabels() { return ['blue beacon', CORE_PAL[CORE_SIEGE].sub]; },
+    siegeStates: true,
     rift: VANILLA, light: 0x96f0ff, bloom: 0.4, glow: 1.0, pulse: 1.1, flowGain: 0.85, core: d.c,
     name: d.name, line: d.line, story: d.story, change: d.change, interact: d.interact, code: d.code, swatches: d.swatches,
     trans: d.trans, transOpacity: d.transOpacity,
     shape: d.shape, paint: d.paint,
     rifts: [{ type: 'vsphere', c: d.c, r: 3.2 }],
     extras(L, group, ctx) {
-      const hole = holeFx(group, ctx, d.c, L ? CORE_EMBER_RING : CORE_RING, L ? CORE_EMBER_DEEP : CORE_DEEP);
-      const beam = coreBeam(group, d.c[1], L ? 0xff3322 : 0x4488ff);
-      const motes = particles(22, L ? 0xff8050 : 0xbff4ff, { r0: 4, rs: 3, y0: d.c[1] - 6, h: 12, swirl: 0.25, sink: true });
+      const P = corePal(L);
+      const hole = holeFx(group, ctx, d.c, P.ring, P.deep, P.spin);
+      const beam = coreBeam(group, d.c[1], P.beam);
+      const motes = particles(P.spin < 1 ? 6 : 22, P.mote, { r0: 4, rs: 3, y0: d.c[1] - 6, h: 12, swirl: 0.25, sink: true });
       group.add(motes.obj);
       const extra = d.extras ? d.extras(L, group, ctx) : null;
       return t => { hole(t); beam(t); motes.update(t); extra && extra(t); };
@@ -3272,7 +3294,7 @@ const R15 = [
     name: 'Geode Heart', c: [8, 17.5, 8],
     line: 'Stone grew around the singularity the way a geode grows around a hollow, and the spell wrote itself into the rock.',
     story: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
-    change: 'Under siege the runes, the veins, the shards and the crystal lining turn ember and hot red, the black hole burns ember and the beacon turns red.',
+    change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core goes dark: the glow sinks to a dim red, the disk slows to a crawl, the shards stop circling and the beacon burns a dull red. Pick the state with the Siege buttons.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
     code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
     swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']],
@@ -3301,11 +3323,11 @@ const R15 = [
     },
     paint(k, x, y, z, L, e) {
       // the shaft is lined with the same glowing crystal as the hollow
-      if (k === 'crystal' || k === 'bore') { const b = hash3(x, y, z); return { c: L ? (b > 0.6 ? EMBERC : HOT) : mix([60, 130, 255], [150, 240, 255], b), g: true }; }
+      if (k === 'crystal' || k === 'bore') { const P = corePal(L); return { c: mix(P.lo, P.hi, hash3(x, y, z)), g: true }; }
       if (k === 'calcite') return { c: tone([222, 224, 228], x, y, z, 0.08) };
       const sf = sideFace(e, x, z);
-      const rune = L ? HOT : CORE_RUNE;
-      if (sf && sf.u === (y % 2 ? 7 : 8) && y >= 6 && y <= 12) return { c: L ? EMBERC : [200, 250, 255], fl: true };   // vein feeding the hollow
+      const rune = corePal(L).rune;
+      if (sf && sf.u === (y % 2 ? 7 : 8) && y >= 6 && y <= 12) return { c: corePal(L).bright, fl: true };   // vein feeding the hollow
       if (k === 'tablet') {
         if (sf && y >= 6 && y <= 10) {
           const v = y - 6;
@@ -3321,7 +3343,8 @@ const R15 = [
       // Loose crystal shards. Around the black hole they turn with the disk at a third of its speed; down the
       // shaft at a fifth; the few that leaked out of either end also bob slowly, each on its own rhythm.
       const c = [8, 17.5, 8];
-      const shardCol = (x, y, z) => ({ c: L ? (hash3(x, y, z) > 0.5 ? EMBERC : HOT) : (hash3(x, y, z) > 0.5 ? [205, 250, 255] : [120, 200, 255]), g: true });
+      const P = corePal(L);
+      const shardCol = (x, y, z) => ({ c: hash3(x, y, z) > 0.5 ? P.bright : mix(P.lo, P.hi, 0.5), g: true });
       const at = (x, y, z) => { const dy = y + 0.5 - c[1], rr = Math.hypot(x + 0.5 - c[0], z + 0.5 - c[2]); return { dy, rr, r: Math.hypot(rr, dy), h: hash3(x, y, z) }; };
       const ring = voxPart({
         bounds: { x0: 0, x1: 16, y0: 6, y1: 30 },
@@ -3353,9 +3376,10 @@ const R15 = [
       }
       group.add(ring, shaft, spillOuter);
       return t => {
-        ring.rotation.y = t * 0.6 / 3;
-        shaft.rotation.y = spillOuter.rotation.y = t * 0.6 / 5;
-        for (const b of bobbers) b.g.position.y = Math.sin(t * b.speed + b.phase) * b.amp * PX;
+        // once the anchor is lost the shards stop circling and the leaked ones sink to rest
+        ring.rotation.y = t * 0.6 / 3 * (P.spin < 1 ? 0 : 1);
+        shaft.rotation.y = spillOuter.rotation.y = t * 0.6 / 5 * (P.spin < 1 ? 0 : 1);
+        for (const b of bobbers) b.g.position.y = P.spin < 1 ? -b.amp * 0.5 * PX : Math.sin(t * b.speed + b.phase) * b.amp * PX;
       };
     },
   }),
@@ -4198,6 +4222,7 @@ function selectDesign(i) {
   anchors = [buildAnchor(D, false, -2), buildAnchor(D, true, 1)];
   applyView();
   $('progressGroup').hidden = !D.progress;
+  $('siegeGroup').hidden = !D.siegeStates;
   const pos = byRound(D.round).findIndex(([, j]) => j === i);
   $('cKind').textContent = D.round >= 15 ? 'World Core' : 'World Anchor';
   $('cIndex').textContent = `round ${D.round} · ${ROMAN[pos]} of ${byRound(D.round).length}`;
@@ -4265,6 +4290,16 @@ $('progress').addEventListener('input', e => {
     applyView();
   }, 60);
 });
+document.querySelectorAll('#siegeGroup button').forEach(b => b.addEventListener('click', () => {
+  CORE_SIEGE = b.dataset.siege;
+  document.querySelectorAll('#siegeGroup button').forEach(o => press(o, o === b));
+  const D = DESIGNS[state.design];
+  $('lblLinked').innerHTML = `${D.labels[1]}<small>${D.sublabels[1]}</small>`;
+  $('vLinked').textContent = D.labels[1];
+  scene.remove(anchors[1].group);
+  anchors[1] = buildAnchor(D, true, 1);
+  applyView();
+}));
 $('notesToggle').addEventListener('click', e => { press(e.currentTarget, $('notes').classList.toggle('open')); });
 
 function setCam(id) {
