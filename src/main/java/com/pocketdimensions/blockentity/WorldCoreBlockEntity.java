@@ -1,5 +1,6 @@
 package com.pocketdimensions.blockentity;
 
+import com.pocketdimensions.block.WorldCoreBlock;
 import com.pocketdimensions.event.RealmEventHandler;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.manager.RealmManager;
@@ -102,11 +103,23 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
 
         if (level.getGameTime() % 20 != 0) return;
 
+        // Cores from before the Geode Heart were one block tall: grow the upper half if there is room
+        BlockState above = level.getBlockState(pos.above());
+        if (!(above.getBlock() instanceof WorldCoreBlock) && above.canBeReplaced()) {
+            level.setBlock(pos.above(), state.setValue(WorldCoreBlock.HALF, net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 3);
+        }
+
         int newState = computeSiegeState(be, serverLevel);
         if (newState != be.siegeState) {
             be.siegeState = newState;
             be.setChanged();
             level.sendBlockUpdated(pos, state, state, 3);
+        }
+        // The siege state is also a block state: it picks the model (glow colours, fallen when inert) and the light
+        if (state.getValue(WorldCoreBlock.SIEGE) != be.siegeState
+                || (level.getBlockState(pos.above()).getBlock() instanceof WorldCoreBlock
+                    && level.getBlockState(pos.above()).getValue(WorldCoreBlock.SIEGE) != be.siegeState)) {
+            WorldCoreBlock.setSiege(level, pos, be.siegeState);
         }
     }
 

@@ -58,7 +58,9 @@ public class ModBlocks {
             () -> new WorldCoreBlock(BlockBehaviour.Properties.of()
                     .setId(BLOCKS.key("world_core"))
                     .strength(-1.0f, 3600000.0f)
-                    .lightLevel(state -> 12)
+                    // the Geode Heart glows while it lives; once the anchor is lost it falls dark
+                    .lightLevel(state -> state.getValue(WorldCoreBlock.SIEGE) == 3 ? 0 : 12)
+                    .noOcclusion()
                     .sound(SoundType.AMETHYST)
                     .requiresCorrectToolForDrops()));
 }

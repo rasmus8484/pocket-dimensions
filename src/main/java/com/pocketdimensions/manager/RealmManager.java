@@ -3,7 +3,9 @@ package com.pocketdimensions.manager;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.pocketdimensions.PocketDimensionsConfig;
+import com.pocketdimensions.block.WorldCoreBlock;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
@@ -370,6 +372,7 @@ public class RealmManager extends SavedData {
                     wc.setOwnerUUID(ownerUUID);
                 }
                 clearColumnAbove(realmLevel, landPos);
+                placeCoreUpperHalf(realmLevel, landPos);
                 data.worldCorePos = landPos;
                 data.generated = true;
                 setDirty();
@@ -396,12 +399,19 @@ public class RealmManager extends SavedData {
             wc.setOwnerUUID(ownerUUID);
         }
         clearColumnAbove(realmLevel, corePos);
+        placeCoreUpperHalf(realmLevel, corePos);
         data.worldCorePos = corePos;
         data.generated = true;
         setDirty();
     }
 
     /** Clears all blocks in the column directly above corePos up to the world surface. */
+    /** The World Core is two blocks tall; its block entity lives on the lower half. */
+    private void placeCoreUpperHalf(ServerLevel level, BlockPos corePos) {
+        level.setBlock(corePos.above(), ModBlocks.WORLD_CORE.get().defaultBlockState()
+                .setValue(WorldCoreBlock.HALF, DoubleBlockHalf.UPPER), 3);
+    }
+
     private void clearColumnAbove(ServerLevel level, BlockPos corePos) {
         int topY = level.getHeight(Heightmap.Types.WORLD_SURFACE, corePos.getX(), corePos.getZ());
         for (int y = corePos.getY() + 1; y < topY; y++) {
