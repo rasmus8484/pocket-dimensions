@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Uprooted Heart</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">51 · 5 + 4 leaks, clean shaft</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">52 · crystal-lined shaft</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3271,11 +3271,11 @@ const R15 = [
   coreDesign({
     name: 'Geode Heart', c: [8, 17.5, 8],
     line: 'Stone grew around the singularity the way a geode grows around a hollow, and the spell wrote itself into the rock.',
-    story: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. A spinning beam of magic has melted a shaft straight down through it, crown to underside, leaving the walls glassy and scored with a glowing spiral. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
+    story: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
     change: 'Under siege the runes, the veins, the shards and the crystal lining turn ember and hot red, the black hole burns ember and the beacon turns red.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
-    code: ['Boulder, melted shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
-    swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#2a2036', 'Melted glass'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']],
+    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
+    swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']],
     shape(x, y, z) {
       if (!inBlock(x, z)) return null;
       const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - 17.5, rr = Math.hypot(cx, cz);
@@ -3300,12 +3300,8 @@ const R15 = [
       return r < 7.0 ? 'crystal' : r < 7.9 ? 'calcite' : 'rock';
     },
     paint(k, x, y, z, L, e) {
-      if (k === 'bore') {   // glassy melted walls, scored with a glowing spiral by the spinning beam
-        const { cx, cz } = C(x, z);
-        const seg = Math.floor((Math.atan2(cz, cx) + Math.PI) / (2 * Math.PI) * 8) % 8;
-        return (y + seg) % 4 === 0 ? { c: coreAcc(L, x, y, z), g: true } : { c: tone([42, 32, 54], x, y, z, 0.2) };
-      }
-      if (k === 'crystal') { const b = hash3(x, y, z); return { c: L ? (b > 0.6 ? EMBERC : HOT) : mix([60, 130, 255], [150, 240, 255], b), g: true }; }
+      // the shaft is lined with the same glowing crystal as the hollow
+      if (k === 'crystal' || k === 'bore') { const b = hash3(x, y, z); return { c: L ? (b > 0.6 ? EMBERC : HOT) : mix([60, 130, 255], [150, 240, 255], b), g: true }; }
       if (k === 'calcite') return { c: tone([222, 224, 228], x, y, z, 0.08) };
       const sf = sideFace(e, x, z);
       const rune = L ? HOT : CORE_RUNE;
