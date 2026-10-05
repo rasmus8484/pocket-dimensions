@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">66 · aurora spears and helix</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">68 · shorter crown crystals, sharper beard</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3295,6 +3295,14 @@ function crystalSpears(layout, drop) {
           dir: [out[0] * 0.45 - out[2] * side, 0.9, out[2] * 0.45 + out[0] * side] });
       }
     });
+  } else if (layout === 'crown') {
+    // five faceted crystals driven down through the crown, leaning a little
+    for (let i = 0; i < 5; i++) {
+      const a = i * 2 * Math.PI / 5 + 0.5, r = 3.0 + hash3(i, 1, 2) * 0.9, len = 7 + hash3(i, 2, 3) * 2.5;   // ends inside the crown
+      const lean = (hash3(i, 5, 5) - 0.5) * 0.25;
+      spears.push({ cl: i, thick: i < 2 ? 3 : 2, len, base: [8 + Math.cos(a) * r, 35 - hash3(i, 4, 4) * 2.5, 8 + Math.sin(a) * r],
+        dir: [Math.cos(a) * lean, -1, Math.sin(a) * lean], from: 'top' });
+    }
   } else if (layout === 'vertical') {
     // driven in from above through the crown, and from below through the underside
     for (let i = 0; i < 9; i++) {
@@ -3322,12 +3330,38 @@ function crystalSpears(layout, drop) {
     const ta = Math.abs(d[0]) > Math.abs(d[2]) ? [0, 0, 1] : [1, 0, 0];
     for (let t = 0; t <= sp.len; t += 0.35) {
       const q = sp.base.map((v, c) => Math.floor(v + d[c] * t - (c === 1 ? drop : 0)));
-      const thickHere = sp.thick === 2 && (sp.from === 'top' ? t > sp.len * 0.25 : t < sp.len * 0.55);
-      const cells = thickHere ? [q, q.map((v, c) => v + ta[c])] : [q];
-      for (const r of cells) {
-        if (r[1] < 0 || r[1] > 34) continue;   // drawn by the renderer, so they may reach past the block's sides
-        vox.set(r.join(','), { x: r[0], y: r[1], z: r[2], cl: sp.cl, c: [255, 255, 255] });
+      let cells;
+      if (sp.from === 'top' && sp.thick >= 2) {
+        // faceted cross-section (3-wide plus, or 2x2), tapering to a point at the exposed tip
+        const tip = t < 1.2 ? 0 : t < 2.4 ? 1 : 2;
+        const full = sp.thick === 3 ? [[0, 0, 1], [-1, 0, 0.82], [1, 0, 0.95], [0, -1, 0.88], [0, 1, 1.08]] : [[0, 0, 1], [1, 0, 0.84], [0, 1, 1.06], [1, 1, 0.92]];
+        const sec = tip === 0 ? [[0, 0, 1.1]] : tip === 1 && sp.thick === 3 ? full.slice(0, 3) : tip === 1 ? full.slice(0, 2) : full;
+        cells = sec.map(([ox, oz, sh]) => [[q[0] + ox, q[1], q[2] + oz], sh]);
+      } else {
+        const thickHere = sp.thick === 2 && (sp.from === 'top' ? t > sp.len * 0.25 : t < sp.len * 0.55);
+        cells = (thickHere ? [q, q.map((v, c) => v + ta[c])] : [q]).map(r => [r, 1]);
       }
+      for (const [r, sh] of cells) {
+        if (r[1] < 0 || r[1] > 35) continue;   // drawn by the renderer, so they may reach past the block's sides
+        vox.set(r.join(','), { x: r[0], y: r[1], z: r[2], cl: sp.cl, sh, c: [255, 255, 255] });
+      }
+    }
+  }
+  if (layout === 'crown' && !drop) {
+    // the crystal layer hanging under the boulder: a sheet over the underside, dropping into jagged inverted peaks
+    const peaks = [[5.2, 6.0, 4.6, 2.6], [10.8, 5.6, 3.6, 2.2], [9.4, 10.6, 4.8, 2.8], [4.8, 10.6, 3.0, 2.0], [7.6, 8.4, 4.4, 1.8], [11.2, 9.2, 2.6, 1.6]];
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) {
+      const cx = x + 0.5 - 8, cz = z + 0.5 - 8, a = Math.atan2(cz, cx);
+      if (Math.hypot(cx, cz) > geodeSurfaceR(5, a) - 1.6) continue;   // set in from the edge of the underside
+      let depth = 0, cl = 20;
+      peaks.forEach(([px, pz, dep, rad], k) => {
+        const f = 1 - Math.hypot(x + 0.5 - px, z + 0.5 - pz) / rad;
+        const dd = f > 0 ? dep * Math.pow(f, 0.8) : 0;
+        if (dd > depth) { depth = dd; cl = 20 + k; }
+      });
+      if (depth < 0.6 && hash3(x, 3, z) > 0.45) continue;           // the sheet between the points is thin and broken
+      const bottom = Math.max(1, Math.round(5 - Math.max(0.6, depth)));
+      for (let y = bottom; y <= 5; y++) vox.set([x, y, z].join(','), { x, y, z, cl, sh: y === bottom ? 1.12 : 0.92 + hash3(x, y, z) * 0.12, c: [255, 255, 255] });
     }
   }
   return [...vox.values()];
@@ -3346,6 +3380,7 @@ function auroraCrystals(group, L, layout) {
         c = auroraAt(t * 0.07 + v.cl * 0.37 + v.y * 0.03);
         if (L) c = mix(c, P.hi, 0.6);                       // under siege the aurora is swallowed by the state colour
       }
+      c = c.map(ch => Math.min(255, ch * (v.sh || 1)));
       col.setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
       mesh.setColorAt(i, col);
     });
@@ -3755,9 +3790,9 @@ const R17 = GEODE_MATS2.map(m => geodeDesign({ ...m, round: 17 }));
 const R18 = [
   geodeDesign({ ...GEODE_MATS[0], name: 'Weathered', round: 18 }),
   geodeDesign({ ...GEODE_MATS2[GEODE_MATS2.length - 1], name: 'Aurora Clusters', round: 18 }),
-  geodeDesign({ ...GEODE_MATS[0], name: 'Aurora Spears', round: 18, auroraCrystals: 'vertical',
-    line: 'Long, straight aurora crystals driven into the weathered stone: down through the crown from above, and up into the underside from below.',
-    lead: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. Long, straight crystals of aurora are driven into it, rising out of its crown as if they fell into it from the sky and hanging out of its underside as if they grew up from the ground, slightly see-through, their colours drifting slowly from green to teal to violet to pink.',
+  geodeDesign({ ...GEODE_MATS[0], name: 'Aurora Spears', round: 18, auroraCrystals: 'crown',
+    line: 'A few big faceted aurora crystals driven down through the crown, and a hanging layer of aurora crystal under the boulder like an upside-down mountain range.',
+    lead: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. Five big faceted crystals of aurora are driven down through its crown as if they fell into it from the sky, and under it hangs a layer of the same crystal that drops into jagged points like an upside-down mountain range, all slightly see-through, their colours drifting slowly from green to teal to violet to pink.',
     swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#3cffaa', 'Aurora green'], ['#3cc8ff', 'Aurora teal'], ['#aa5aff', 'Aurora violet'], ['#ff6ec8', 'Aurora pink']] }),
   geodeDesign({ ...GEODE_MATS[0], name: 'Aurora Helix', round: 18, auroraCrystals: 'helix',
     line: 'Long, straight aurora crystals set into the weathered stone along a spiral, all leaning the same way, echoing the runes climbing the beam.',
