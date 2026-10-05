@@ -67,6 +67,9 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
     /** Current siege state - synced to client for beam colour. */
     private int siegeState = STATE_NORMAL;
 
+    /** Frozen lightning sets (0..3) while an Anchor Breaker works on the anchor: one per passed quarter, as on the Unmaker. */
+    private int crackSets = 0;
+
     /** Persistent 1-slot inventory for lapis fuel (visible in the GUI). */
     private final SimpleContainer inventory = new SimpleContainer(1) {
         @Override
@@ -110,8 +113,10 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         }
 
         int newState = computeSiegeState(be, serverLevel);
-        if (newState != be.siegeState) {
+        int newCracks = newState == STATE_ANCHOR_LOST ? 0 : computeCrackSets(be, serverLevel);
+        if (newState != be.siegeState || newCracks != be.crackSets) {
             be.siegeState = newState;
+            be.crackSets = newCracks;
             be.setChanged();
             level.sendBlockUpdated(pos, state, state, 3);
         }
@@ -138,6 +143,18 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         double strand = (t / 15) % 2 == 0 ? 0 : Math.PI;
         level.addParticle(com.pocketdimensions.init.ModParticles.RUNE_HELIX.get(),
                 pos.getX() + 0.5, pos.getY() + 30 / 16.0, pos.getZ() + 0.5, strand, 0, HELIX_RGB[siege]);
+    }
+
+    /** Lightning sets for the anchor's breaker: 25 / 50 / 75 % passed (shown while it stays attached, fueled or not). */
+    private static int computeCrackSets(WorldCoreBlockEntity be, ServerLevel serverLevel) {
+        if (be.ownerUUID == null) return 0;
+        var optAnchor = RealmManager.get(serverLevel.getServer()).getAnchorLocation(be.ownerUUID);
+        if (optAnchor.isEmpty()) return 0;
+        ServerLevel anchorLevel = serverLevel.getServer().getLevel(optAnchor.get().getKey());
+        if (anchorLevel == null) return 0;
+        if (!(anchorLevel.getBlockEntity(optAnchor.get().getValue().above(2)) instanceof AnchorBreakerBlockEntity ab)) return 0;
+        int charge = AnchorBreakerBlockEntity.chargeLevel(ab.getProgressTicks(), com.pocketdimensions.PocketDimensionsConfig.BREAKER_DURATION_TICKS.get());
+        return Math.max(0, charge - 1);
     }
 
     private static int computeSiegeState(WorldCoreBlockEntity be, ServerLevel serverLevel) {
@@ -243,6 +260,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         }
         output.putInt("defense_fuel", defenseFuel);
         output.putInt("siege_state", siegeState);
+        output.putInt("crack_sets", crackSets);
         ItemStack slot = inventory.getItem(0);
         output.putInt("slot_lapis_count", slot.isEmpty() ? 0 : slot.getCount());
     }
@@ -255,6 +273,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         ownerUUID = (msb != 0 || lsb != 0) ? new UUID(msb, lsb) : null;
         defenseFuel = input.getIntOr("defense_fuel", 0);
         siegeState = input.getIntOr("siege_state", STATE_NORMAL);
+        crackSets = input.getIntOr("crack_sets", 0);
         int slotCount = input.getIntOr("slot_lapis_count", 0);
         if (slotCount > 0) {
             inventory.setItem(0, new ItemStack(Items.LAPIS_LAZULI, slotCount));
@@ -281,6 +300,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
     public UUID getOwnerUUID() { return ownerUUID; }
     public void setOwnerUUID(UUID uuid) { this.ownerUUID = uuid; setChanged(); }
     public int getSiegeState() { return siegeState; }
+    public int getCrackSets() { return crackSets; }
     public SimpleContainer getInventory() { return inventory; }
 
     // -------------------------------------------------------------------------

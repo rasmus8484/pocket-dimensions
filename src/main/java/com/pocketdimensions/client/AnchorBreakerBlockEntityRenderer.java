@@ -65,10 +65,19 @@ public class AnchorBreakerBlockEntityRenderer implements BlockEntityRenderer<Anc
                 prism(vc, p.pose(), CORE, top, 0.225f, HOT_CORE, 0.9f);
             });
         }
-        if (s.boltSets == 0) return;
+        submitBolts(pose, out, CORE, s.boltSets, s.seed);
+    }
+
+    /**
+     * Frozen lightning bursting out of a black hole at {@code core} (pixels, relative to the pose): {@code sets} sets
+     * (0..3) of four branching bolts reaching 33 / 51 / 69 px, jagged by a hash of {@code seed} so they never flicker.
+     * Shared with the World Core, which shows the same cracks while its anchor is being broken.
+     */
+    public static void submitBolts(PoseStack pose, SubmitNodeCollector out, float[] core, int sets, long seed) {
+        if (sets <= 0) return;
         out.submitCustomGeometry(pose, RenderTypes.lightning(), (p, vc) -> {
             Matrix4f m = p.pose();
-            for (int st = 0; st < s.boltSets; st++) {
+            for (int st = 0; st < sets; st++) {
                 float reach = (11 + st * 6) * 3;   // 33 / 51 / 69 px from the black hole
                 for (int i = 0; i < PER; i++) {
                     int n = st * PER + i;
@@ -76,13 +85,13 @@ public class AnchorBreakerBlockEntityRenderer implements BlockEntityRenderer<Anc
                     float yv = 1 - 2 * ((i + 0.5f) / PER), r = (float) Math.sqrt(1 - yv * yv);
                     double a = i * 2.39996 + st * 1.1;
                     float[] d = {(float) Math.cos(a) * r, yv * 0.8f, (float) Math.sin(a) * r};
-                    bolt(vc, m, CORE, at(CORE, d, reach), s.seed, n * 3);
+                    bolt(vc, m, core, at(core, d, reach), seed, n * 3);
                     // Two side branches at 45 % and 70 % of the way out
                     for (int b = 0; b < 2; b++) {
                         float f = b == 0 ? 0.45f : 0.7f;
-                        float[] from = at(CORE, d, reach * f), dir = new float[3];
-                        for (int c = 0; c < 3; c++) dir[c] = d[c] + (hash(s.seed, n, b, c, 99) - 0.5f) * 0.9f;
-                        bolt(vc, m, from, at(from, dir, reach * 0.3f), s.seed, n * 3 + 1 + b);
+                        float[] from = at(core, d, reach * f), dir = new float[3];
+                        for (int c = 0; c < 3; c++) dir[c] = d[c] + (hash(seed, n, b, c, 99) - 0.5f) * 0.9f;
+                        bolt(vc, m, from, at(from, dir, reach * 0.3f), seed, n * 3 + 1 + b);
                     }
                 }
             }

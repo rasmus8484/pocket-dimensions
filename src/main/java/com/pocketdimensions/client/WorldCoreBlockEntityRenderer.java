@@ -65,6 +65,8 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
         BlockEntityRenderState.extractBase(be, s, crumbling);
         Level level = be.getLevel();
         s.siege = be.getBlockState().getValue(WorldCoreBlock.SIEGE);
+        s.crackSets = be.getCrackSets();
+        s.seed = be.getBlockPos().asLong();
         // Wrap before converting to float: past ~2^24 ticks a float can no longer hold the partial tick
         s.time = level == null ? 0 : (Math.floorMod(level.getGameTime(), 24000L * 20) + partialTick) / 20f;
         s.beamTime = level == null ? 0 : Math.floorMod(level.getGameTime(), 24000L * 20) + partialTick;
@@ -94,6 +96,9 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
                     BEAM[s.siege], 0.07f, 0.16f);   // thin enough to rise up the shaft without touching its walls
             pose.popPose();
         }
+
+        // reality cracking around the realm's own black hole while its anchor is being broken
+        AnchorBreakerBlockEntityRenderer.submitBolts(pose, out, new float[]{8f, CY, 8f}, s.crackSets, s.seed);
 
         float[][] c = SHARD[s.siege];
         float spin = BlackHoleRenderer.SPIN;

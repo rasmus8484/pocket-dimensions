@@ -12,6 +12,10 @@ public class GeodeRenderState extends BlockEntityRenderState {
     public int beamHeight;
     /** False while an old one-block core is still missing its upper half (something is built on top). */
     public boolean upper;
+    /** Frozen lightning sets (0..3) while the anchor is being broken. */
+    public int crackSets;
+    /** Per-position seed so each core's lightning has its own static shape. */
+    public long seed;
     /** Game time + partial tick for the beacon beam's own animation. */
     public float beamTime;
 }

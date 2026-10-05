@@ -114,6 +114,18 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
     // Server tick (called from WorldBreacherBlock.getTicker)
     // -------------------------------------------------------------------------
 
+    /**
+     * Client: while the beam is lit (breach complete and fueled) pink runes climb it in a slow double helix from the
+     * Mandible's eye, like the World Core's, one every 0.75 s alternating between the strands.
+     */
+    public static void clientTick(Level level, BlockPos pos, BlockState state, WorldBreacherBlockEntity be) {
+        long t = level.getGameTime();
+        if (t % 15 != 0 || !state.getValue(com.pocketdimensions.block.WorldBreacherBlock.COMPLETE) || !be.hasFuel()) return;
+        double strand = (t / 15) % 2 == 0 ? 0 : Math.PI;
+        level.addParticle(com.pocketdimensions.init.ModParticles.RUNE_HELIX.get(),
+                pos.getX() + 0.5, pos.getY() + 0.75, pos.getZ() + 0.5, strand, 0, 0xFF5ADC);
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state,
                                   WorldBreacherBlockEntity be) {
         if (!(level instanceof ServerLevel serverLevel)) return;

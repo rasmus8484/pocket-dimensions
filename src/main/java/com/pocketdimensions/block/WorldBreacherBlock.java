@@ -93,9 +93,9 @@ public class WorldBreacherBlock extends BaseEntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                   BlockEntityType<T> type) {
-        if (level.isClientSide()) return null;
-        return createTickerHelper(type, ModBlockEntityTypes.WORLD_BREACHER.get(),
-                WorldBreacherBlockEntity::serverTick);
+        return level.isClientSide()
+                ? createTickerHelper(type, ModBlockEntityTypes.WORLD_BREACHER.get(), WorldBreacherBlockEntity::clientTick)
+                : createTickerHelper(type, ModBlockEntityTypes.WORLD_BREACHER.get(), WorldBreacherBlockEntity::serverTick);
     }
 
     /** Only survives when placed on the UPPER half of a WorldAnchor. */
