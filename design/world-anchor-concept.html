@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">59 · cosmic minerals, rune helix</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">60 · slow helix, runes facing outward</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3183,22 +3183,25 @@ function holeFx(group, ctx, c, ring, deep, spin = 1) {
   };
 }
 
-// Runes climbing the beacon in a slow double helix (in game: client particles with a helical path)
+// Runes climbing the beacon in a slow double helix. They are not camera-facing: each glyph lies flat on an invisible
+// cylinder around the beam, facing outward like script wrapped around it (in game: a client particle whose
+// getFacingCameraMode() returns this rotation instead of facing the camera, drawn from both sides)
 function runeHelix(group, rgb, y0) {
-  const N = 14, col = new THREE.Color().setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace);
+  const N = 24, col = new THREE.Color().setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace);
+  const geo = new THREE.PlaneGeometry(6 * 0.6 * PX, 7 * 0.6 * PX);
   const parts = Array.from({ length: N }, (_, i) => {
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: RUNE_TEX[i % RUNE_TEX.length], color: col, transparent: true, opacity: 0,
-      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
-    sp.scale.set(6 * 0.6 * PX, 7 * 0.6 * PX, 1);
-    group.add(sp);
-    return { sp, off: i / N };
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: RUNE_TEX[i % RUNE_TEX.length], color: col, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+    group.add(m);
+    return { m, off: i / N };
   });
-  const LIFE = 7, RISE = 7, R = 4.5, TURNS = 1.6;   // seconds per rune, px per second, radius px, turns per climb
+  const LIFE = 18, RISE = 2.2, R = 4.5, TURNS = 1.2;   // seconds per rune, px per second, radius px, turns per climb
   return t => parts.forEach((q, i) => {
     const f = (t / LIFE + q.off) % 1, a = f * LIFE;
     const ang = f * TURNS * 2 * Math.PI + (i % 2) * Math.PI;   // two interleaved strands
-    q.sp.position.set((8 + Math.cos(ang) * R) * PX, (y0 + a * RISE) * PX, (8 + Math.sin(ang) * R) * PX);
-    q.sp.material.opacity = Math.min(1, f * 6) * Math.min(1, (1 - f) * 3) * 0.85;
+    q.m.position.set((8 + Math.cos(ang) * R) * PX, (y0 + a * RISE) * PX, (8 + Math.sin(ang) * R) * PX);
+    q.m.rotation.y = Math.PI / 2 - ang;                          // face outward from the beam
+    q.m.material.opacity = Math.min(1, f * 6) * Math.min(1, (1 - f) * 3) * 0.85;
   });
 }
 
@@ -3273,7 +3276,7 @@ function geodeDesign(m) {
     story: '' + m.lead + ' A spinning beam of magic has bored a shaft straight down through it, crown to underside, and the same glowing crystal as the hollow has grown along its walls. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
     change: 'Breaching (a World Breacher on the anchor): the crystal, runes and shards turn pink, the black hole burns ember like the anchor\'s and the beacon turns pink. Breaking (an Anchor Breaker on the anchor): everything runs hot red and ember and the beacon turns red. Anchor lost: the realm\'s link is cut and the core dies. The black hole collapses, the beacon goes out, every glow fades to dull crystal and dark carved runes, and the boulder falls the hand\'s breadth it used to float, landing on the ground among the shards that fell with it. Pick the state with the Siege buttons.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
-    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole', 'Rune helix: rune particles climbing the beacon in a slow double helix, about three blocks above the crown (client particles with a helical path, coloured by siege state, none once inert)'],
+    code: ['Boulder, crystal-lined shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole', 'Rune helix: rune particles climbing the beacon slowly in a double helix, about two and a half blocks above the crown, each glyph lying flat and facing outward from the beam (client particles with a helical path and a fixed rotation instead of camera-facing; coloured by siege state, none once inert)'],
     swatches: m.swatches,
     shape(x, y0, z, L) {
       if (!inBlock(x, z)) return null;
