@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Uprooted Heart</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">48 · melted shaft, shards spilling out</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">50 · fewer leaks</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3274,7 +3274,7 @@ const R15 = [
     story: 'A tall, rough boulder of weathered rock, lichen on its crown, floats above the ground. A spinning beam of magic has melted a shaft straight down through it, crown to underside, leaving the walls glassy and scored with a glowing spiral. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal. Below each opening the rock has flowed smooth into a tablet, and two runes of the anchor\'s script glow on it, the spell\'s own interface grown out of the stone. A vein of light runs from the runes up into the hollow. In the middle of the hollow floats the black hole. Loose crystal shards circle it and spin down the whole shaft, spilling out of the crown and the underside, and the beacon rises up the shaft and out of the crown.',
     change: 'Under siege the runes, the veins, the shards and the crystal lining turn ember and hot red, the black hole burns ember and the beacon turns red.',
     interact: 'The four openings show the black hole at chest height from every side; that is what you touch to leave. The rune tablet right under each opening marks where the core answers you: crouch and use it to open the ward.',
-    code: ['Boulder, melted shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards in the hollow and the shaft, spilling out at both ends: drawn by the renderer, turning with the disk at a third of its speed', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
+    code: ['Boulder, melted shaft, calcite, crystal lining and rune tablets: static two-block model (lower/upper halves)', 'Runes: the anchor\'s glyphs, full-bright; light flowing up the vein into the hollow (animated texture)', 'Crystal shards: drawn by the renderer. Around the black hole they turn at a third of the disk speed, down the shaft at a fifth, and the few that leaked out of the ends bob slowly, each out of step with the others', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole up the shaft and out of the crown', 'Motes: client particles sinking into the black hole'],
     swatches: [['#706c78', 'Weathered rock'], ['#68785a', 'Lichen'], ['#2a2036', 'Melted glass'], ['#807c8a', 'Rune tablet'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#8cebff', 'Runes and bright crystal']],
     shape(x, y, z) {
       if (!inBlock(x, z)) return null;
@@ -3322,23 +3322,42 @@ const R15 = [
       return { c: tone([112, 108, 120], x, y, z, 0.18) };
     },
     extras(L, group) {
-      // Loose crystal shards in the hollow and the shaft, turning with the disk at a third of its speed
+      // Loose crystal shards. Around the black hole they turn with the disk at a third of its speed; down the
+      // shaft at a fifth; the few that leaked out of either end also bob slowly, each on its own rhythm.
       const c = [8, 17.5, 8];
-      const shards = voxPart({
-        bounds: { x0: 0, x1: 16, y0: 0, y1: 36 },
-        shape: (x, y, z) => {
-          const dy = y + 0.5 - c[1], rr = Math.hypot(x + 0.5 - c[0], z + 0.5 - c[2]), r = Math.hypot(rr, dy), h = hash3(x, y, z);
-          if (r >= 5.0 && r < 6.0 && Math.abs(dy) > 1.6 && h > 0.8) return 's';            // circling the black hole
-          if (y >= 4 && y <= 29 && Math.abs(dy) > 4.5 && rr < 1.9 && h > 0.7) return 's';   // spinning down the shaft
-          if (y >= 30 && rr < 1.5 + (y - 30) * 0.7 && h > 0.86) return 's';                // spilling out of the crown
-          if (y <= 3 && rr < 1.5 + (3 - y) * 0.7 && h > 0.86) return 's';                   // and out of the underside
-          return null;
-        },
-        paint: (k, x, y, z) => ({ c: L ? (hash3(x, y, z) > 0.5 ? EMBERC : HOT) : (hash3(x, y, z) > 0.5 ? [205, 250, 255] : [120, 200, 255]), g: true }),
-        pivot: c,
+      const shardCol = (x, y, z) => ({ c: L ? (hash3(x, y, z) > 0.5 ? EMBERC : HOT) : (hash3(x, y, z) > 0.5 ? [205, 250, 255] : [120, 200, 255]), g: true });
+      const at = (x, y, z) => { const dy = y + 0.5 - c[1], rr = Math.hypot(x + 0.5 - c[0], z + 0.5 - c[2]); return { dy, rr, r: Math.hypot(rr, dy), h: hash3(x, y, z) }; };
+      const ring = voxPart({
+        bounds: { x0: 0, x1: 16, y0: 6, y1: 30 },
+        shape: (x, y, z) => { const { dy, r, h } = at(x, y, z); return r >= 5.0 && r < 6.0 && Math.abs(dy) > 1.6 && h > 0.8 ? 's' : null; },
+        paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
       });
-      group.add(shards);
-      return t => { shards.rotation.y = t * 0.6 / 3; };
+      const shaft = voxPart({
+        bounds: { x0: 0, x1: 16, y0: 4, y1: 30 },
+        shape: (x, y, z) => { const { dy, rr, h } = at(x, y, z); return Math.abs(dy) > 4.5 && rr < 1.9 && h > 0.87 ? 's' : null; },
+        paint: (k, x, y, z) => shardCol(x, y, z), pivot: c,
+      });
+      // leaked shards: each its own little group so it can bob independently
+      const spillOuter = new THREE.Group(), spillInner = new THREE.Group();
+      spillOuter.position.set(c[0] * PX, c[1] * PX, c[2] * PX);
+      spillInner.position.set(-c[0] * PX, -c[1] * PX, -c[2] * PX);
+      spillOuter.add(spillInner);
+      const bobbers = [];
+      for (let y = 0; y < 36; y++) for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
+        if (y > 3 && y < 30) continue;
+        const { rr } = at(x, y, z), out = y >= 30 ? y - 30 : 3 - y;
+        if (y > 33 || rr >= 1.3 + out * 0.6 || hash3(x * 3 + 1, y, z * 7) < 0.975) continue;
+        const g = new THREE.Group();
+        g.add(instanced([{ x, y, z, c: shardCol(x, y, z).c }], glowMat));
+        spillInner.add(g);
+        bobbers.push({ g, phase: hash3(x, y, z) * 6.283, speed: 0.35 + hash3(z, x, y) * 0.3, amp: 0.8 + hash3(y, z, x) * 0.8 });
+      }
+      group.add(ring, shaft, spillOuter);
+      return t => {
+        ring.rotation.y = t * 0.6 / 3;
+        shaft.rotation.y = spillOuter.rotation.y = t * 0.6 / 5;
+        for (const b of bobbers) b.g.position.y = Math.sin(t * b.speed + b.phase) * b.amp * PX;
+      };
     },
   }),
   coreDesign({
