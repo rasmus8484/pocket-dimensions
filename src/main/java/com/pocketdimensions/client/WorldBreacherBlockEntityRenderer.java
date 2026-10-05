@@ -1,5 +1,6 @@
 package com.pocketdimensions.client;
 
+import com.pocketdimensions.block.WorldBreacherBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
 import net.minecraft.client.Minecraft;
@@ -37,7 +38,8 @@ public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<Wor
         BlockEntityRenderState.extractBase(be, state, crumbling);
 
         // The beam shows the breach is open: complete AND still fueled (same rule as realm access)
-        if (!be.isBreachComplete() || !be.hasFuel()) {
+        // COMPLETE is a synced block state; isBreachComplete() would use the client's own (unsynced) config value
+        if (!be.getBlockState().getValue(WorldBreacherBlock.COMPLETE) || !be.hasFuel()) {
             state.beamHeight = 0;
             return;
         }
@@ -71,7 +73,7 @@ public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<Wor
                 1.0f,
                 state.animationTime,
                 0,
-                state.beamHeight + 1,
+                state.beamHeight,
                 state.beamColor,
                 BeaconRenderer.SOLID_BEAM_RADIUS,
                 BeaconRenderer.BEAM_GLOW_RADIUS);
