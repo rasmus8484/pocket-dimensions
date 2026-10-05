@@ -3,10 +3,8 @@ package com.pocketdimensions.block;
 import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import com.pocketdimensions.init.ModBlockEntityTypes;
@@ -81,13 +79,8 @@ public class PocketAnchorBlock extends BaseEntityBlock {
 
     @Override
     public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
-        ItemStack tool = player.getMainHandItem();
-        // Allow any pickaxe (vanilla or mod-added) that meets diamond tier
-        if (tool.is(ItemTags.PICKAXES) && tool.isCorrectToolForDrops(state)) {
-            return com.pocketdimensions.SiegeTuning.mineProgressPerTick(
-                    com.pocketdimensions.PocketDimensionsServerConfig.POCKET_ANCHOR_MINE_SECONDS.get());   // a fixed time (server config)
-        }
-        return 0.0f;
+        return DiamondPickaxeMining.progressPerTick(player, state,
+                com.pocketdimensions.PocketDimensionsServerConfig.POCKET_ANCHOR_MINE_SECONDS.get());
     }
 
     @Override

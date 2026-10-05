@@ -1,5 +1,7 @@
 {
   "values": [
-    "pocketdimensions:pocket_anchor"
+    "pocketdimensions:pocket_anchor",
+    "pocketdimensions:world_breacher",
+    "pocketdimensions:anchor_breaker"
   ]
 }

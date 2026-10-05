@@ -118,10 +118,10 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `mining.pocket_anchor_mine_seconds` | 9.4 | Seconds to mine a Pocket Anchor (still needs a diamond-tier pickaxe) |
-| `mining.world_breacher_mine_seconds` | 250 | Seconds to mine a World Breacher (any tool) |
-| `mining.anchor_breaker_mine_seconds` | 250 | Seconds to mine an Anchor Breaker (any tool) |
-| `fuel.world_breacher_max_lapis` | 64 | Lapis a World Breacher can hold (1-64) |
-| `fuel.anchor_breaker_max_lapis` | 64 | Lapis an Anchor Breaker can hold (1-64) |
+| `mining.world_breacher_mine_seconds` | 250 | Seconds to mine a World Breacher (needs a diamond-tier pickaxe) |
+| `mining.anchor_breaker_mine_seconds` | 250 | Seconds to mine an Anchor Breaker (needs a diamond-tier pickaxe) |
+| `fuel.world_breacher_max_lapis` | 5 | Lapis a World Breacher can hold (1-64) |
+| `fuel.anchor_breaker_max_lapis` | 5 | Lapis an Anchor Breaker can hold (1-64) |
 
 Mining times are fixed: enchantments, Haste and mining fatigue don't change them. 0 means the block breaks instantly.
 
