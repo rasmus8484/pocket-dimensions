@@ -1,5 +1,10 @@
 {
-    "variants": {
-        "": { "model": "pocketdimensions:block/world_breacher" }
+  "variants": {
+    "complete=false": {
+      "model": "pocketdimensions:block/world_breacher_breaching"
+    },
+    "complete=true": {
+      "model": "pocketdimensions:block/world_breacher_complete"
     }
+  }
 }

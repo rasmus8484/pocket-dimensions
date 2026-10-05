@@ -2,6 +2,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { shape, paint, GLYPHS, PAL, SC } from './runebound.mjs';
+import { shape as breacherShape, paint as breacherPaint, influenceAmount, MAG, Y0 as B_Y0, Y1 as B_Y1 } from './mandible.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
@@ -30,12 +31,10 @@ function flowStrip(model, voxels) {
 
 let report = [];
 const halves = {};
-for (const [state, L] of [['inert', false], ['linked', true]]) {
-  for (const [half, y0, y1] of [['lower', 0, 16], ['upper', 16, 32]]) {
-    const name = `world_anchor_${state}_${half}`;
-    const voxels = voxelize(shape, paint, L, y0, y1);
-    const other = (x, y, z) => (y < y0 || y >= y1) && shape(x, y, z, L) !== null;
-    const m = buildModel(voxels, y0, 'main', other);
+
+/** Write one block model (+ atlas and optional flow texture) and return it. */
+function emitModel(name, voxels, yShift, other) {
+    const m = buildModel(voxels, yShift, 'main', other);
     if (m.elements.length > 200) throw new Error(`${name}: ${m.elements.length} elements (max 200)`);
     report.push(`${name}: ${m.elements.length} elements, atlas ${m.atlas.size}px`);
     write(`textures/block/${name}.png`, encodePNG(m.atlas.size, m.atlas.size, m.atlas.rgba));
@@ -47,9 +46,48 @@ for (const [state, L] of [['inert', false], ['linked', true]]) {
       textures.flow = `pocketdimensions:block/${name}_flow`;
     }
     write(`models/block/${name}.json`, json({ parent: 'minecraft:block/block', ambientocclusion: false, textures, elements: m.elements }));
-    halves[`${state}_${half}`] = { m, textures };
+    return { m, textures };
+}
+
+// Breacher influence: glowing rune pixels drift from cyan toward magenta (keeping their brightness)
+const mixC = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const influenced = level => (k, x, y, z, L, e) => {
+  const r = paint(k, x, y, z, L, e);
+  const amt = influenceAmount(y, level);
+  if (!(r.g || r.fl) || amt === 0) return r;
+  const lum = Math.max(...r.c) / 255;
+  return { ...r, c: mixC(r.c, MAG.map(v => v * lum), amt) };
+};
+
+const anchorVariants = [['inert', false, 0], ['linked', true, 0], ...[1, 2, 3, 4].map(i => [`linked_i${i}`, true, i])];
+for (const [state, L, level] of anchorVariants) {
+  for (const [half, y0, y1] of [['lower', 0, 16], ['upper', 16, 32]]) {
+    const name = `world_anchor_${state}_${half}`;
+    const voxels = voxelize(shape, level ? influenced(level) : paint, L, y0, y1);
+    const other = (x, y, z) => (y < y0 || y >= y1) && shape(x, y, z, L) !== null;
+    halves[`${state}_${half}`] = emitModel(name, voxels, y0, other);
   }
 }
+
+// Breacher (Mandible): block-local y = world y - 32; faces against the anchor are culled
+const breacher = {};
+for (const [state, complete] of [['breaching', false], ['complete', true]]) {
+  const voxels = voxelize(breacherShape, breacherPaint, complete, B_Y0, B_Y1);
+  const other = (x, y, z) => (y < 32 && shape(x, y, z, true) !== null);
+  breacher[state] = emitModel(`world_breacher_${state}`, voxels, 32, other);
+}
+
+// Blockstates
+const anchorVariantsJson = {};
+for (const half of ['lower', 'upper']) for (let inf = 0; inf <= 4; inf++) for (const linked of [false, true]) {
+  const model = !linked ? `world_anchor_inert_${half}` : inf === 0 ? `world_anchor_linked_${half}` : `world_anchor_linked_i${inf}_${half}`;
+  anchorVariantsJson[`half=${half},influence=${inf},linked=${linked}`] = { model: `pocketdimensions:block/${model}` };
+}
+write('blockstates/world_anchor.json', json({ variants: anchorVariantsJson }));
+write('blockstates/world_breacher.json', json({ variants: {
+  'complete=false': { model: 'pocketdimensions:block/world_breacher_breaching' },
+  'complete=true': { model: 'pocketdimensions:block/world_breacher_complete' },
+} }));
 
 // Item model: the inert monolith, both halves in one model
 const lo = halves.inert_lower, up = halves.inert_upper;
@@ -75,6 +113,23 @@ GLYPHS.forEach((g, i) => {
   g.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') rgba.set([255, 255, 255, 255], ((r + 1) * 8 + c + 2) * 4); }));
   write(`textures/particle/rune_${i}.png`, encodePNG(8, 8, rgba));
 });
-write('particles/rune.json', json({ textures: GLYPHS.map((_, i) => `pocketdimensions:rune_${i}`) }));
+const runeSprites = { textures: GLYPHS.map((_, i) => `pocketdimensions:rune_${i}`) };
+for (const n of ['rune', 'rune_pink', 'rune_gold']) write(`particles/${n}.json`, json(runeSprites));
+write('particles/drain.json', json({ textures: ['minecraft:glow'] }));
+
+// Breacher item model: the breaching state, scaled into the slot
+write('models/item/world_breacher.json', json({
+  parent: 'minecraft:block/block',
+  textures: { main: breacher.breaching.textures.main, particle: breacher.breaching.textures.main, ...(breacher.breaching.textures.flow ? { flow: breacher.breaching.textures.flow } : {}) },
+  elements: breacher.breaching.m.elements,
+  display: {
+    gui: { rotation: [30, 225, 0], translation: [0, 3, 0], scale: [0.5, 0.5, 0.5] },
+    ground: { translation: [0, 3, 0], scale: [0.3, 0.3, 0.3] },
+    fixed: { translation: [0, 2, 0], scale: [0.55, 0.55, 0.55] },
+    thirdperson_righthand: { rotation: [75, 45, 0], translation: [0, 2.5, 0], scale: [0.35, 0.35, 0.35] },
+    firstperson_righthand: { rotation: [0, 45, 0], translation: [0, 2, 0], scale: [0.4, 0.4, 0.4] },
+    firstperson_lefthand: { rotation: [0, 225, 0], translation: [0, 2, 0], scale: [0.4, 0.4, 0.4] },
+  },
+}));
 
 console.log(report.join('\n'));

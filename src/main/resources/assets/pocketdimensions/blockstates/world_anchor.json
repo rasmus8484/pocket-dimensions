@@ -1,8 +1,64 @@
 {
   "variants": {
-    "half=lower,linked=false": { "model": "pocketdimensions:block/world_anchor_inert_lower" },
-    "half=upper,linked=false": { "model": "pocketdimensions:block/world_anchor_inert_upper" },
-    "half=lower,linked=true":  { "model": "pocketdimensions:block/world_anchor_linked_lower" },
-    "half=upper,linked=true":  { "model": "pocketdimensions:block/world_anchor_linked_upper" }
+    "half=lower,influence=0,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_lower"
+    },
+    "half=lower,influence=0,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_lower"
+    },
+    "half=lower,influence=1,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_lower"
+    },
+    "half=lower,influence=1,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i1_lower"
+    },
+    "half=lower,influence=2,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_lower"
+    },
+    "half=lower,influence=2,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i2_lower"
+    },
+    "half=lower,influence=3,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_lower"
+    },
+    "half=lower,influence=3,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i3_lower"
+    },
+    "half=lower,influence=4,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_lower"
+    },
+    "half=lower,influence=4,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i4_lower"
+    },
+    "half=upper,influence=0,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_upper"
+    },
+    "half=upper,influence=0,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_upper"
+    },
+    "half=upper,influence=1,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_upper"
+    },
+    "half=upper,influence=1,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i1_upper"
+    },
+    "half=upper,influence=2,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_upper"
+    },
+    "half=upper,influence=2,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i2_upper"
+    },
+    "half=upper,influence=3,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_upper"
+    },
+    "half=upper,influence=3,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i3_upper"
+    },
+    "half=upper,influence=4,linked=false": {
+      "model": "pocketdimensions:block/world_anchor_inert_upper"
+    },
+    "half=upper,influence=4,linked=true": {
+      "model": "pocketdimensions:block/world_anchor_linked_i4_upper"
+    }
   }
 }
