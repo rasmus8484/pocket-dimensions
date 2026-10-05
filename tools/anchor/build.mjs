@@ -3,6 +3,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { shape, paint, GLYPHS, PAL, SC } from './runebound.mjs';
 import { shape as breacherShape, paint as breacherPaint, influenceAmount, MAG, Y0 as B_Y0, Y1 as B_Y1 } from './mandible.mjs';
+import { shape as breakerShape, paint as breakerPaint, Y0 as K_Y0, Y1 as K_Y1 } from './unmaker.mjs';
+import { damageShape, damagePaint } from './damage.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
@@ -69,6 +71,24 @@ for (const [state, L, level] of anchorVariants) {
   }
 }
 
+// Anchor under an Anchor Breaker: cracks, heated runes and the sigil ring (damage 1..4)
+for (let d = 1; d <= 4; d++) {
+  const dShape = damageShape(d);
+  for (const [half, y0, y1] of [['lower', 0, 16], ['upper', 16, 32]]) {
+    const voxels = voxelize(dShape, damagePaint(d), true, y0, y1);
+    const other = (x, y, z) => (y < y0 || y >= y1) && dShape(x, y, z, true) !== null;
+    halves[`linked_d${d}_${half}`] = emitModel(`world_anchor_linked_d${d}_${half}`, voxels, y0, other);
+  }
+}
+
+// Breaker (Unmaker): block-local y = world y - 32; coils fill with charge 0..4
+const breaker = [];
+for (let c = 0; c <= 4; c++) {
+  const voxels = voxelize(breakerShape, breakerPaint, c, K_Y0, K_Y1);
+  const other = (x, y, z) => (y < 32 && shape(x, y, z, true) !== null);
+  breaker.push(emitModel(`anchor_breaker_c${c}`, voxels, 32, other));
+}
+
 // Breacher (Mandible): block-local y = world y - 32; faces against the anchor are culled
 const breacher = {};
 for (const [state, complete] of [['breaching', false], ['complete', true]]) {
@@ -79,15 +99,19 @@ for (const [state, complete] of [['breaching', false], ['complete', true]]) {
 
 // Blockstates
 const anchorVariantsJson = {};
-for (const half of ['lower', 'upper']) for (let inf = 0; inf <= 4; inf++) for (const linked of [false, true]) {
-  const model = !linked ? `world_anchor_inert_${half}` : inf === 0 ? `world_anchor_linked_${half}` : `world_anchor_linked_i${inf}_${half}`;
-  anchorVariantsJson[`half=${half},influence=${inf},linked=${linked}`] = { model: `pocketdimensions:block/${model}` };
+for (const half of ['lower', 'upper']) for (let dmg = 0; dmg <= 4; dmg++) for (let inf = 0; inf <= 4; inf++) for (const linked of [false, true]) {
+  const model = !linked ? `world_anchor_inert_${half}`
+    : dmg > 0 ? `world_anchor_linked_d${dmg}_${half}`
+    : inf > 0 ? `world_anchor_linked_i${inf}_${half}` : `world_anchor_linked_${half}`;
+  anchorVariantsJson[`damage=${dmg},half=${half},influence=${inf},linked=${linked}`] = { model: `pocketdimensions:block/${model}` };
 }
 write('blockstates/world_anchor.json', json({ variants: anchorVariantsJson }));
 write('blockstates/world_breacher.json', json({ variants: {
   'complete=false': { model: 'pocketdimensions:block/world_breacher_breaching' },
   'complete=true': { model: 'pocketdimensions:block/world_breacher_complete' },
 } }));
+write('blockstates/anchor_breaker.json', json({ variants: Object.fromEntries(
+  [0, 1, 2, 3, 4].map(c => [`charge=${c}`, { model: `pocketdimensions:block/anchor_breaker_c${c}` }])) }));
 
 // Item model: the inert monolith, both halves in one model
 const lo = halves.inert_lower, up = halves.inert_upper;
@@ -114,8 +138,8 @@ GLYPHS.forEach((g, i) => {
   write(`textures/particle/rune_${i}.png`, encodePNG(8, 8, rgba));
 });
 const runeSprites = { textures: GLYPHS.map((_, i) => `pocketdimensions:rune_${i}`) };
-for (const n of ['rune', 'rune_pink', 'rune_gold']) write(`particles/${n}.json`, json(runeSprites));
-write('particles/drain.json', json({ textures: ['minecraft:glow'] }));
+for (const n of ['rune', 'rune_pink', 'rune_gold', 'rune_red']) write(`particles/${n}.json`, json(runeSprites));
+for (const n of ['drain', 'unmake', 'siphon']) write(`particles/${n}.json`, json({ textures: ['minecraft:glow'] }));
 
 // Breacher item model: the breaching state, scaled into the slot
 write('models/item/world_breacher.json', json({
@@ -126,6 +150,22 @@ write('models/item/world_breacher.json', json({
     gui: { rotation: [30, 225, 0], translation: [0, 3, 0], scale: [0.5, 0.5, 0.5] },
     ground: { translation: [0, 3, 0], scale: [0.3, 0.3, 0.3] },
     fixed: { translation: [0, 2, 0], scale: [0.55, 0.55, 0.55] },
+    thirdperson_righthand: { rotation: [75, 45, 0], translation: [0, 2.5, 0], scale: [0.35, 0.35, 0.35] },
+    firstperson_righthand: { rotation: [0, 45, 0], translation: [0, 2, 0], scale: [0.4, 0.4, 0.4] },
+    firstperson_lefthand: { rotation: [0, 225, 0], translation: [0, 2, 0], scale: [0.4, 0.4, 0.4] },
+  },
+}));
+
+// Breaker item model: half-charged, scaled into the slot
+const bi = breaker[2];
+write('models/item/anchor_breaker.json', json({
+  parent: 'minecraft:block/block',
+  textures: { main: bi.textures.main, particle: bi.textures.main, ...(bi.textures.flow ? { flow: bi.textures.flow } : {}) },
+  elements: bi.m.elements,
+  display: {
+    gui: { rotation: [30, 225, 0], translation: [0, 3, 0], scale: [0.45, 0.45, 0.45] },
+    ground: { translation: [0, 3, 0], scale: [0.3, 0.3, 0.3] },
+    fixed: { translation: [0, 2, 0], scale: [0.5, 0.5, 0.5] },
     thirdperson_righthand: { rotation: [75, 45, 0], translation: [0, 2.5, 0], scale: [0.35, 0.35, 0.35] },
     firstperson_righthand: { rotation: [0, 45, 0], translation: [0, 2, 0], scale: [0.4, 0.4, 0.4] },
     firstperson_lefthand: { rotation: [0, 225, 0], translation: [0, 2, 0], scale: [0.4, 0.4, 0.4] },

@@ -1,5 +1,19 @@
 {
-    "variants": {
-        "": { "model": "pocketdimensions:block/anchor_breaker" }
+  "variants": {
+    "charge=0": {
+      "model": "pocketdimensions:block/anchor_breaker_c0"
+    },
+    "charge=1": {
+      "model": "pocketdimensions:block/anchor_breaker_c1"
+    },
+    "charge=2": {
+      "model": "pocketdimensions:block/anchor_breaker_c2"
+    },
+    "charge=3": {
+      "model": "pocketdimensions:block/anchor_breaker_c3"
+    },
+    "charge=4": {
+      "model": "pocketdimensions:block/anchor_breaker_c4"
     }
+  }
 }
