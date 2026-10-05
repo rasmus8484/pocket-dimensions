@@ -38,13 +38,12 @@ test('the corners carry proud gold knobs with their tips bevelled off', () => {
   assert.equal(shape(LO + 1, LO + 1, LO + 1), 'knob');
 });
 
-test('top and bottom each carry a carved rune that glows one pixel down, and different runes', () => {
+test('top and bottom each carry a glowing rune drawn on the plate, and different runes', () => {
   const vox = voxelize(shape, paint, null, 0, 16);
   const glowAt = y => [...vox.values()].filter(v => v.cls === 'glow' && v.y === y).map(v => `${v.x},${v.z}`).sort();
-  const top = glowAt(HI - 2), bottom = glowAt(LO + 2);
+  const top = glowAt(HI - 1), bottom = glowAt(LO + 1);
   assert.ok(top.length >= 8 && bottom.length >= 8, `top ${top.length} bottom ${bottom.length}`);
   assert.notDeepEqual(top, bottom);
-  for (const p of top) { const [x, z] = p.split(',').map(Number); assert.equal(shape(x, HI - 1, z), null, 'carved through the plate'); }
 });
 
 test('each rune has a soft glow sprite: full under the glyph, fading out a pixel or two around it', async () => {
@@ -59,5 +58,14 @@ test('each rune has a soft glow sprite: full under the glyph, fading out a pixel
       if (!inGlyph && at(c, r) > 0) { halo++; assert.ok(at(c, r) < 200, 'the halo is fainter than the glyph'); }
     }
     assert.ok(halo >= 10, `halo pixels ${halo}`);
+  }
+});
+
+test('rune glow only shows on the outside of its plate: stone on every other side', () => {
+  for (const [x, y, z] of ALL) if (shape(x, y, z) === 'glyph') {
+    const out = y > 8 ? 1 : -1;                                   // the plate side, where the carving opens
+    for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, -out, 0]]) {
+      assert.notEqual(shape(x + dx, y + dy, z + dz), null, `glyph ${x},${y},${z} open towards ${dx},${dy},${dz}`);
+    }
   }
 });

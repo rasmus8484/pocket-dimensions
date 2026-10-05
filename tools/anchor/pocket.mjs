@@ -1,7 +1,7 @@
 // Pocket Anchor, the Tumbling Cube: the approved design (see design/world-anchor-concept.html, round 21).
 // A 10 px cube centred in the block (x/y/z LO..HI). The renderer lifts it into the air and turns it, so this is only
 // the cube itself. Depth comes from layers: proud corner knobs, edges set back between them, window frames a pixel
-// deeper still, and a rune carved through the top and bottom plates with its glow at the bottom of the cut.
+// deeper still. A glowing rune is drawn on the top and bottom plates, with stone behind it so it never shows from inside.
 import { hash3, GLYPHS } from './runebound.mjs';
 
 export const LO = 3, HI = 12;
@@ -32,13 +32,13 @@ export function shape(X, Y, Z) {
   if (near(x) && near(y) && near(z)) return ext(x) + ext(y) + ext(z) === 3 ? null : 'knob';   // tip bevelled off
   if (ext(x) || ext(y) || ext(z)) return null;
   if (sh(x) + sh(y) + sh(z) >= 2) return 'edge';
-  if (sh(y)) return glyphAt(x, z, y !== 1) ? null : 'cap';                                    // rune carved through
+  if (sh(y)) return glyphAt(x, z, y !== 1) ? 'glyph' : 'cap';                                 // rune drawn on the plate
   if (sh(x) || sh(z)) return null;                                                             // open windows
-  if (inner(y) && glyphAt(x, z, y !== 2)) return 'glyph';                                      // glow at the bottom of the cut
   if ((inner(x) || inner(z)) && y >= 2 && y <= S - 2) {                                        // window frame, set back
     const u = inner(x) ? z : x;
     if (u >= 2 && u <= S - 2 && (u === 2 || u === S - 2 || y === 2 || y === S - 2)) return 'ring';
   }
+  if (inner(y) && x >= 3 && x <= S - 3 && z >= 3 && z <= S - 3) return 'backing';            // stone behind the rune
   return null;
 }
 
@@ -46,6 +46,7 @@ export function paint(k, x, y, z) {
   if (k === 'knob') return { c: goldTone(x, y, z) };
   if (k === 'edge') return { c: shade(stone(x, y, z), 0.8) };
   if (k === 'glyph') return { c: RUNE, g: true };
+  if (k === 'backing') return { c: shade(stone(x, y, z), 0.6) };
   return { c: stone(x, y, z) };
 }
 
