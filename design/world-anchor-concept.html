@@ -93,7 +93,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
 
 <header class="card">
   <div class="eyebrow">World Anchor · <span id="cIndex"></span></div>
-  <h1 id="cName">Runebound Monolith</h1>
+  <h1 id="cName">Usurper Crown</h1>
   <p id="cLine"></p>
   <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom</div>
 </header>
@@ -101,8 +101,8 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
 <aside class="notes" id="notes">
   <h2>Design notes</h2>
   <dl>
-    <div><dt>Inert</dt><dd id="nStory"></dd></div>
-    <div><dt>When the seed is set</dt><dd id="nChange"></dd></div>
+    <div><dt id="hStory">Inert</dt><dd id="nStory"></dd></div>
+    <div><dt id="hChange">When the seed is set</dt><dd id="nChange"></dd></div>
     <div id="rowInteract"><dt>Where you click</dt><dd id="nInteract"></dd></div>
     <div><dt>Moving parts and effects</dt><dd><ul id="nCode"></ul></dd></div>
     <div><dt>Static model boxes (estimate)</dt><dd id="nBoxes"></dd></div>
@@ -1665,7 +1665,8 @@ const RUNE_TEX = GLYPHS.map(gl => {
 // Glowing runes that peel off the pillar's rune bands and drift away (client-side particles from animateTick in game)
 function runeParticles(group, rgb, perSecond) {
   const N = 24, parts = [];
-  const col = new THREE.Color().setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace).multiplyScalar(1.0);
+  const palette = (Array.isArray(rgb[0]) ? rgb : [rgb]).map(c => new THREE.Color().setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace));
+  const col = palette[0];
   for (let i = 0; i < N; i++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: RUNE_TEX[0], color: col, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     sp.scale.set(6 * 0.6 * PX, 7 * 0.6 * PX, 1);
@@ -1684,6 +1685,7 @@ function runeParticles(group, rgb, perSecond) {
     q.v.set(nx * (0.5 + Math.random() * 0.5) + (Math.random() - 0.5) * 0.4, 1.2 + Math.random() * 0.8, nz * (0.5 + Math.random() * 0.5) + (Math.random() - 0.5) * 0.4);
     q.born = t; q.life = 3 + Math.random() * 1.5;
     q.sp.material.map = RUNE_TEX[Math.floor(Math.random() * RUNE_TEX.length)];
+    q.sp.material.color.copy(palette[Math.floor(Math.random() * palette.length)]);
     q.sp.material.needsUpdate = true;
     q.sp.visible = true;
   };
@@ -1803,7 +1805,7 @@ function monolith(o) {
       const steadyMat = new THREE.MeshBasicMaterial({ toneMapped: false });
       steadyMat.color.setScalar(GLOW_BASE * 0.85);
       [disk, halo].forEach(g => g.traverse(m => { if (m.isInstancedMesh) m.material = steadyMat; }));
-      const runeFx = runeParticles(group, o.rune, 1);
+      const runeFx = runeParticles(group, (ctx && ctx.runeColors) || o.rune, 1);
       const camLocal = new THREE.Vector3();
       const haloMesh = halo.children[0].children[0], haloCol = new THREE.Color();
       const glowLin = new THREE.Color().setRGB(glowC[0] / 255, glowC[1] / 255, glowC[2] / 255, THREE.SRGBColorSpace).toArray();
@@ -1869,9 +1871,887 @@ const R7 = [
 ];
 
 // ---------------------------------------------------------------------------
+// ROUND 8: World Breacher concepts, clamped onto the linked Runebound anchor
+// The anchor keeps y 0..24; its claws (y 25..30) are removed and the breacher takes y 25..47.
+// ---------------------------------------------------------------------------
+const ANCH = monolith({
+  name: '', line: '', story: '', change: '', swatches: [],
+  stone: [66, 70, 88], plinth: [48, 50, 62], rune: [140, 235, 255], carved: [34, 36, 46], waiting: [120, 190, 230],
+  ring: [255, 190, 90], deep: [210, 50, 20],          // EMBER: the anchor's black hole under siege
+  lightHex: 0xffa050, moteHex: 0xbff4ff,
+});
+const MAG = [255, 90, 220], MAG_DIM = [120, 50, 110], LAPIS = [80, 130, 255], PINKBEAM = 0xff66dd;
+const IRON = (x, y, z) => tone([74, 70, 86], x, y, z, 0.16);
+const DARKIRON = (x, y, z) => tone([48, 44, 58], x, y, z, 0.18);
+
+// Beacon beam rising from the emitter (vanilla beacon look: a rotating square core inside a soft square glow)
+function beaconBeam(group, top) {
+  const mk = (w, op) => new THREE.Mesh(new THREE.BoxGeometry(w * PX, 7, w * PX), new THREE.MeshBasicMaterial({
+    color: new THREE.Color(PINKBEAM), transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  const core = mk(2.2, 0.95), glowB = mk(5, 0.28);
+  for (const m of [core, glowB]) { m.position.set(8 * PX, top * PX + 3.5, 8 * PX); group.add(m); }
+  return t => { core.rotation.y = t * 0.8; glowB.rotation.y = -t * 0.4; };
+}
+
+function breacherDesign(d) {
+  return {
+    round: 8, bounds: { x0: -1, x1: 17, y0: 0, y1: 48 }, alwaysLive: true, labels: ['Breaching', 'Breach complete'],
+    camLift: 0.45, labelY: 3.3,
+    name: d.name, line: d.line, story: d.story, change: d.change, swatches: d.swatches,
+    interact: d.interact,
+    code: d.code,
+    rift: VANILLA, light: 0xffa050, bloom: 0.4, glow: 1.0, pulse: 1.1, flowGain: 0.85, core: [8, MONO_SC, 8],
+    trans: d.trans, transOpacity: d.transOpacity,
+    shape(x, y, z, L) {
+      if (y <= 24) return ANCH.shape(x, y, z, true);
+      if (!inBlock(x, z)) return null;
+      const k = d.shape(x, y, z, L);
+      return k ? 'b_' + k : null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k.startsWith('b_')) return d.paint(k.slice(2), x, y, z, L, e);
+      return ANCH.paint(k, x, y, z, true, e);
+    },
+    rifts: ANCH.rifts, seed: ANCH.seed,
+    extras(L, group, ctx) {
+      const a = ANCH.extras(true, group, ctx);
+      const b = d.extras ? d.extras(L, group, ctx) : null;
+      const beam = L ? beaconBeam(group, d.emitTop) : null;
+      return t => { a && a(t); b && b(t); beam && beam(t); };
+    },
+  };
+}
+
+const R8 = [
+  breacherDesign({
+    name: 'Siphon Crown',
+    line: 'An iron crown that clamps the anchor shut and drinks its seed.',
+    story: 'Four iron talons tear the claws away and lock around the anchor\'s gold band. A heavy crown sits above them, a lapis-filled housing with a needle driven straight down into the seed. On its peak, gold prongs hold a prism that waits, dull pink.',
+    change: 'The needle glows as it drains the seed, the lapis tanks burn blue and the anchor\'s black hole turns ember. When the breach completes, the prism ignites and fires a pink beacon beam into the sky.',
+    interact: 'Lapis goes into the glowing tanks on the housing (the existing fuel slot). The prism on top is where the beam comes from, so anyone can see from afar which anchor is breached.',
+    code: ['Talons and needle: static model reaching down into the anchor (the anchor drops its claws while a breacher sits on it)', 'Lapis tanks: glowing model faces, could dim as fuel runs low', 'Prism: dull while breaching, bright when complete', 'Beam: vanilla beacon beam from the prism', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#4a4656', 'Iron'], ['#d6a23c', 'Gold'], ['#ff5adc', 'Siphon glow'], ['#5082ff', 'Lapis tanks'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 47,
+    shape(x, y, z, L) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 34) {
+        const inset = y <= 27 ? 1 : 2;
+        if ((lx === inset || lx === inset + 1) && (lz === inset || lz === inset + 1)) return y <= 25 ? 'talon' : 'leg';
+        if (y >= 30 && ax < 1 && az < 1) return 'needle';
+        if (y >= 33 && oct(cx, cz, 5, 2) && !(ax < 1 && az < 1)) return 'underplate';
+        return null;
+      }
+      if (y <= 40) return oct(cx, cz, 6.5, 2.5) ? 'housing' : null;
+      if (y === 41) return oct(cx, cz, 5.5, 2) ? 'collar' : null;
+      if (y === 42) return oct(cx, cz, 4.5, 2) ? 'plate' : null;
+      if (ax >= 3 && ax < 4 && az >= 3 && az < 4) return 'prong';
+      if (y <= 46 && ax < 2 && az < 2) return 'prism';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z);
+      if (k === 'talon') return { c: goldTone(x, y, z) };
+      if (k === 'leg') return anySide(e) && y % 3 === 0 ? { c: MAG, g: true } : { c: IRON(x, y, z) };
+      if (k === 'needle') return { c: [255, 150, 235], g: true };
+      if (k === 'underplate') return { c: DARKIRON(x, y, z) };
+      if (k === 'housing') {
+        const sf = sideFace(e, x, z);
+        if (sf && sf.u >= 5 && sf.u <= 10 && y >= 36 && y <= 39) return { c: (sf.u + y) % 5 === 0 ? [180, 210, 255] : LAPIS, g: true };
+        if (sf && y === 35) return { c: goldTone(x, y, z) };
+        if (sf && y === 40 && sf.u % 2 === 0) return { c: MAG, g: true };
+        return { c: IRON(x, y, z) };
+      }
+      if (k === 'collar' || k === 'prong') return { c: goldTone(x, y, z) };
+      if (k === 'plate') return { c: DARKIRON(x, y, z) };
+      if (k === 'prism') return L ? { c: hash3(x, y, z) > 0.7 ? [255, 230, 250] : [255, 120, 225], g: true } : { c: MAG_DIM };
+      return { c: IRON(x, y, z) };
+    },
+  }),
+  breacherDesign({
+    name: 'Leech Spire',
+    line: 'Something grew out of the seed and is eating its way up.',
+    story: 'Four hooked iron jaws bite down on the anchor\'s corners and pin the seed in place. From the seed rises a ribbed obsidian spire, split into segments by lapis-filled seams, crawling with magenta veins. At its tip floats a dark crystal.',
+    change: 'Magenta veins pulse up the spire as it feeds and the lapis seams glow. When the breach completes, the tip crystal blazes pink and a beacon beam erupts from it.',
+    interact: 'The lapis seams show how full the breacher is. The crystal at the tip is the emitter, visibly the end of the column that is feeding on the seed.',
+    code: ['Jaws: static model reaching into the anchor top', 'Spire veins: animated texture flowing upward from the seed', 'Lapis seams: glowing faces, fuel indicator', 'Tip crystal: floats and turns slowly; beam source', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#2c2638', 'Obsidian'], ['#30303c', 'Iron jaws'], ['#ff5adc', 'Veins'], ['#5082ff', 'Lapis seams'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 47,
+    shape(x, y, z, L) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      for (const [sx, sz] of CORNERS) {
+        if (polyDist(p, [[8 + sx * 6.2, 25, 8 + sz * 6.2], [8 + sx * 6.0, 29.5, 8 + sz * 6.0], [8 + sx * 3.6, 33, 8 + sz * 3.6]]).d < 1.1) return 'jaw';
+      }
+      if (y >= 32 && y <= 34) return oct(cx, cz, 5, 2) ? 'root' : null;
+      if (y >= 35 && y <= 44) {
+        const h = 4 - (y - 35) * 0.18;
+        if (ax < h && az < h) return (y === 38 || y === 41) ? 'seam' : 'spire';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'jaw') return y >= 32 && hash3(x, y, z) > 0.5 ? { c: MAG, g: true } : { c: DARKIRON(x, y, z) };
+      if (k === 'root') return { c: tone([44, 38, 60], x, y, z, 0.2) };
+      if (k === 'seam') return { c: LAPIS, g: true };
+      const sf = sideFace(e, x, z);
+      if (sf && sf.u % 4 === 1) return { c: MAG, fl: true };
+      return { c: hash3(x, y, z) > 0.93 ? [96, 76, 130] : tone([44, 38, 60], x, y, z, 0.2) };
+    },
+    extras(L, group) {
+      const tip = voxPart({
+        bounds: { x0: -3, x1: 3, y0: -2, y1: 2 },
+        shape: (x, y, z) => (Math.abs(x + 0.5) + Math.abs(z + 0.5) + Math.abs(y + 0.5) * 1.1 < 2.8 ? 't' : null),
+        paint: () => (L ? { c: [255, 140, 230], g: true } : { c: [90, 40, 90] }),
+        pivot: [0, 0, 0],
+      });
+      tip.position.set(8 * PX, 45.5 * PX, 8 * PX);
+      group.add(tip);
+      return t => { tip.rotation.y = t * 0.5; tip.position.y = (45.5 + 0.3 * Math.sin(t * 1.3)) * PX; };
+    },
+  }),
+  breacherDesign({
+    name: 'Breach Engine',
+    line: 'A siege engine that hammers the anchor open and shouts it to the sky.',
+    story: 'A squat iron engine block sits on four heavy pistons driven down onto the anchor\'s band, with the seed trapped between them. Lapis canisters are mounted on every face. On top, a square gold aperture frames a dark lens.',
+    change: 'The pistons glow along their rods, the lapis canisters burn blue and two square frames above the lens begin to turn. When the breach completes, the lens flares pink and the beacon beam fires straight up through the frames.',
+    interact: 'Each face shows a lapis canister, so fuel reads from every side. The aperture on top is the emitter, framed like a gun barrel pointing at the sky.',
+    code: ['Pistons: static model reaching into the anchor top', 'Lapis canisters: glowing faces, fuel indicator', 'Lens: dim while breaching, bright when complete', 'Two square frames above the lens: turning slowly in opposite directions', 'Beam: vanilla beacon beam from the lens', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#4a4656', 'Iron'], ['#d6a23c', 'Gold aperture'], ['#ff5adc', 'Piston glow'], ['#5082ff', 'Lapis canisters'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 44,
+    shape(x, y, z, L) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y <= 26) return lx >= 1 && lx <= 3 && lz >= 1 && lz <= 3 ? 'pistonhead' : null;
+      if (y <= 31) return (lx === 2 || lx === 3) && (lz === 2 || lz === 3) ? 'rod' : null;
+      if (y <= 39) {
+        if (lx < 1 || lz < 1 || lx + lz < 3) return null;
+        if (y === 32 && ax < 3 && az < 3) return null;
+        return 'engine';
+      }
+      if (y <= 41) return lx >= 1 && lz >= 1 && lx + lz >= 3 ? (ax < 3 && az < 3 && y === 41 ? 'lens' : 'deck') : null;
+      if (y <= 43) {
+        if (ax < 2 && az < 2) return 'lens';
+        return lx >= 2 && lz >= 2 && (lx <= 3 || lz <= 3) ? 'aperture' : null;
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z);
+      if (k === 'pistonhead') return { c: y === 25 && e.ny === false && anySide(e) ? goldTone(x, y, z) : DARKIRON(x, y, z) };
+      if (k === 'rod') return anySide(e) && (x + z) % 2 === 0 ? { c: MAG, g: true } : { c: tone([140, 136, 150], x, y, z, 0.1) };
+      if (k === 'engine') {
+        const sf = sideFace(e, x, z);
+        if (sf && sf.u >= 6 && sf.u <= 9 && y >= 33 && y <= 38) return { c: (y + sf.u) % 4 === 0 ? [180, 210, 255] : LAPIS, g: true };
+        if (sf && (y === 33 || y === 38) && (sf.u === 5 || sf.u === 10)) return { c: goldTone(x, y, z) };
+        if (sf && y === 36 && (sf.u <= 3 || sf.u >= 12)) return { c: MAG, g: true };
+        return { c: IRON(x, y, z) };
+      }
+      if (k === 'deck') return { c: e.py ? goldTone(x, y, z) : IRON(x, y, z) };
+      if (k === 'aperture') return { c: goldTone(x, y, z) };
+      if (k === 'lens') return L ? { c: [255, 150, 235], g: true } : { c: MAG_DIM };
+      return { c: IRON(x, y, z) };
+    },
+    extras(L, group) {
+      const frame = (h, Y) => voxPart({
+        bounds: { x0: -8, x1: 8, y0: 0, y1: 1 },
+        shape: (x, y, z) => { const ax = Math.abs(x + 0.5), az = Math.abs(z + 0.5); return ax < h && az < h && (ax >= h - 1 || az >= h - 1) ? 'f' : null; },
+        paint: (k, x) => (L && (x & 1) ? { c: [255, 150, 235], g: true } : { c: goldTone(x, Y, 0) }),
+        pivot: [0, 0.5, 0],
+      });
+      const f1 = frame(4, 45), f2 = frame(3, 47);
+      f1.position.set(8 * PX, 44.5 * PX, 8 * PX); f2.position.set(8 * PX, 46.5 * PX, 8 * PX);
+      group.add(f1, f2);
+      return t => { f1.rotation.y = t * 0.4; f2.rotation.y = -t * 0.55; };
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 9: World Breacher concepts that keep the anchor's claws (y 25..30) and seed.
+// The breacher owns y 31..47 plus whatever it hangs on the claw tips.
+// ---------------------------------------------------------------------------
+const CLAW_TIPS = CORNERS.map(([sx, sz]) => [8 + sx * 3.5, 30.5, 8 + sz * 3.5]);
+
+function breacherDesign2(d) {
+  const base = breacherDesign(d);
+  return {
+    ...base, round: 9,
+    shape(x, y, z, L) {
+      if (y <= 30) {
+        const a = ANCH.shape(x, y, z, true);
+        if (a) return a;
+        if (y < 25 || !inBlock(x, z)) return null;
+      }
+      if (!inBlock(x, z)) return null;
+      const k = d.shape(x, y, z, L);
+      return k ? 'b_' + k : null;
+    },
+    extras(L, group, ctx) {
+      const a = ANCH.extras(true, group, ctx);
+      const b = d.extras ? d.extras(L, group, ctx) : null;
+      const beam = L ? beaconBeam(group, d.emitTop) : null;
+      return t => { a && a(t); b && b(t); beam && beam(t); };
+    },
+  };
+}
+// steady glowing line between two points (energy tether / drain stream)
+function tether(group, a, b, rgb, w = 0.9, op = 0.85) {
+  const m = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({ color: new THREE.Color(...rgb.map(v => v / 255)), transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  orientBox(m.matrix, a, b, w); m.matrixAutoUpdate = false;
+  group.add(m);
+  return m;
+}
+
+const R9 = [
+  breacherDesign2({
+    name: 'Usurper',
+    line: 'A false crown hangs over the seed and pulls the anchor\'s power up into itself.',
+    story: 'A heavy obelisk of black iron hangs upside down above the anchor, its point aimed at the seed. Magenta tethers run from each of the four claw tips into its sides, hijacking them. Lapis bands ring its body. Its broad flat top holds a sunken crystal, dim for now.',
+    change: 'While breaching, a stream of light is drawn from the seed up into the obelisk\'s point, and the veins on its faces flow upward. When the breach completes, the crystal in its top flares pink and the beacon fires straight up from it.',
+    interact: 'The claws still hold the seed, now tethered to the obelisk, so it is clear what is being stolen. The lapis bands are the fuel. The crystal in the flat top is the emitter.',
+    code: ['Obelisk: static model hovering above the claws (no change to the anchor model)', 'Tethers: four glowing lines from the claw tips, drawn by the renderer', 'Drain stream: light rising from the seed into the point', 'Veins: animated texture flowing upward', 'Top crystal: dim while breaching, bright when complete; beam source'],
+    swatches: [['#30303c', 'Black iron'], ['#d6a23c', 'Gold edge'], ['#ff5adc', 'Tethers and veins'], ['#5082ff', 'Lapis bands'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 47,
+    shape(x, y, z) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y < 33) return null;
+      if (y <= 45) {
+        const h = 1.2 + (y - 33) * 0.42;
+        return ax < h && az < h ? ((y === 38 || y === 42) ? 'band' : 'body') : null;
+      }
+      if (y === 46) return ax < 7 && az < 7 ? 'cap' : null;
+      if (y === 47) return ax < 7 && az < 7 && !(ax < 2 && az < 2) ? 'rim' : (ax < 2 && az < 2 ? 'crystal' : null);
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (k === 'band') return { c: LAPIS, g: true };
+      if (k === 'cap') return { c: anySide(e) ? goldTone(x, y, z) : DARKIRON(x, y, z) };
+      if (k === 'rim') return { c: (ax >= 6 || az >= 6) ? goldTone(x, y, z) : (ax < 3 && az < 3 ? MAG_DIM : DARKIRON(x, y, z)) };
+      if (k === 'crystal') return L ? { c: hash3(x, y, z) > 0.6 ? [255, 230, 250] : [255, 120, 225], g: true } : { c: MAG_DIM };
+      const sf = sideFace(e, x, z);
+      if (sf && (sf.u === 7 || sf.u === 8)) return { c: MAG, fl: true };
+      return { c: DARKIRON(x, y, z) };
+    },
+    extras(L, group) {
+      CLAW_TIPS.forEach(([x, y, z]) => tether(group, [x, y, z], [8 + (x - 8) * 0.55, 39, 8 + (z - 8) * 0.55], MAG, 0.7));
+      const drain = tether(group, [8, 31.5, 8], [8, 33.5, 8], [255, 200, 245], 1.2, 0.9);
+      return t => { drain.material.opacity = 0.6 + 0.3 * (0.5 + 0.5 * Math.sin(t * 1.4)); };
+    },
+  }),
+  breacherDesign2({
+    name: 'Brazier',
+    line: 'The anchor\'s own claws are made to hold up the fire that breaks it.',
+    story: 'A wide, heavy iron fire bowl rests on the four claw tips, as if the claws now hold it instead of the seed. Four spikes rise from its gold rim. Inside, a bed of lapis coals glows and a low pink flame flickers above the seed.',
+    change: 'While breaching, the lapis coals burn bright blue and the pink flame licks up from them. When the breach completes, the flame roars up into a column and becomes the beacon beam.',
+    interact: 'The coals are the fuel you can see from above and through the bowl\'s side vents. The flame is the emitter, so the beam reads as fire pouring into the sky.',
+    code: ['Bowl: static model resting on the claw tips', 'Lapis coals: glowing faces, fuel indicator', 'Flame: animated texture (pink fire) in the bowl, taller when complete', 'Beam rises out of the flame', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#4a4656', 'Iron bowl'], ['#d6a23c', 'Gold rim'], ['#5082ff', 'Lapis coals'], ['#ff7adc', 'Pink flame'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 38,
+    shape(x, y, z) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y === 31) return oct(cx, cz, 5, 2) ? 'foot' : null;
+      if (y >= 32 && y <= 37) {
+        const out = 5 + (y - 32) * 0.55;
+        if (!oct(cx, cz, out, 2.5)) return null;
+        if (y >= 33 && oct(cx, cz, out - 1.5, 2.5)) return y === 33 ? 'coals' : null;
+        return y === 37 ? 'rim' : 'bowl';
+      }
+      if (y >= 38 && y <= 41) {
+        const lx = LX(x), lz = LX(z);
+        if (lx >= 2 && lx <= 3 && lz >= 2 && lz <= 3 && y - 38 < 4 - Math.max(lx, lz)) return 'spike';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'foot') return { c: DARKIRON(x, y, z) };
+      if (k === 'coals') return { c: hash3(x, y, z) > 0.5 ? [140, 180, 255] : LAPIS, g: true };
+      if (k === 'rim' || k === 'spike') return { c: goldTone(x, y, z) };
+      const sf = sideFace(e, x, z);
+      if (sf && y === 35 && sf.u % 3 === 1) return { c: LAPIS, g: true };
+      return { c: IRON(x, y, z) };
+    },
+    extras(L, group) {
+      const fl = [];
+      for (let i = 0; i < 14; i++) {
+        const m = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.45, 0.85), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        group.add(m); fl.push({ m, a: i * 2.4, r: 0.8 + (i % 4) * 0.9, h: 2 + (i % 5) });
+      }
+      return t => fl.forEach((f, i) => {
+        const k = Math.floor(t * 5 + i);
+        const hgt = (L ? f.h + 1.5 : f.h * 0.6) * (0.75 + 0.25 * hash3(i, k, 2));
+        f.m.position.set((8 + Math.cos(f.a) * f.r) * PX, (34 + hgt / 2) * PX, (8 + Math.sin(f.a) * f.r) * PX);
+        f.m.scale.set(PX, hgt * PX, PX);
+      });
+    },
+  }),
+  breacherDesign2({
+    name: 'Hanging Lantern',
+    line: 'A captive fire, chained to the anchor\'s claws, burning a hole in its wards.',
+    story: 'A heavy iron lantern hangs at the very top of the block, its base chained to each of the four claw tips. Its walls are magenta glass between thick iron posts, under a stepped roof with an open chimney. Inside, a small fire flickers above a lapis tray.',
+    change: 'While breaching, the fire inside burns pink and the chains glow where they meet the claws. When the breach completes, the fire flares white-pink and the beacon pours out of the chimney.',
+    interact: 'The lantern\'s lapis tray is the fuel and shows through every glass wall. The chimney is the emitter, so the beam visibly comes out of the lantern.',
+    code: ['Lantern: static model, translucent magenta glass walls', 'Chains: static model from the claw tips to the lantern base', 'Fire: animated texture inside the lantern', 'Beam: vanilla beacon beam from the chimney', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#4a4656', 'Iron'], ['#d6a23c', 'Gold roof'], ['#c850b4', 'Magenta glass'], ['#5082ff', 'Lapis tray'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 47,
+    trans: ['glass'], transOpacity: [0.55, 0.55],
+    shape(x, y, z) {
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      if (y >= 37) {
+        if (y === 37) return ax < 5 && az < 5 ? 'base' : null;
+        if (y === 38) return ax < 4 && az < 4 ? 'tray' : null;
+        if (y <= 43) {
+          if (ax >= 3 && ax < 5 && az >= 3 && az < 5) return 'post';
+          if ((ax >= 4 && ax < 5 && az < 3) || (az >= 4 && az < 5 && ax < 3)) return 'glass';
+          return null;
+        }
+        if (y === 44) return ax < 6 && az < 6 ? 'roof' : null;
+        if (y === 45) return ax < 4.5 && az < 4.5 && !(ax < 1.5 && az < 1.5) ? 'roof' : null;
+        if (y <= 47) return ax < 2.5 && az < 2.5 && !(ax < 1.5 && az < 1.5) ? 'chimney' : null;
+        return null;
+      }
+      for (const tip of CLAW_TIPS) {
+        const top = [8 + (tip[0] - 8) * 1.15, 37, 8 + (tip[2] - 8) * 1.15];
+        const pd = polyDist(p, [tip, top]);
+        if (pd.d < 0.75 && y >= 31) return (y % 2 === 0) ? 'chainA' : 'chainB';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'glass') return { t: true, c: [200, 80, 180] };
+      if (k === 'tray') return { c: LAPIS, g: true };
+      if (k === 'roof' || k === 'chimney') return { c: k === 'chimney' && y === 47 && L ? [255, 180, 240] : goldTone(x, y, z), g: k === 'chimney' && y === 47 && L };
+      if (k === 'chainA' || k === 'chainB') return y <= 32 ? { c: MAG, g: true } : { c: k === 'chainA' ? IRON(x, y, z) : DARKIRON(x, y, z) };
+      return { c: IRON(x, y, z) };
+    },
+    extras(L, group) {
+      const fire = [];
+      for (let i = 0; i < 8; i++) {
+        const m = new THREE.Mesh(unitBox, new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.5, 0.85), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        group.add(m); fire.push({ m, a: i * 0.8, r: (i % 3) * 0.8 });
+      }
+      return t => fire.forEach((f, i) => {
+        const k = Math.floor(t * 5 + i);
+        const hgt = (L ? 4.5 : 2.5) * (0.7 + 0.3 * hash3(i, k, 5));
+        f.m.position.set((8 + Math.cos(f.a) * f.r) * PX, (39 + hgt / 2) * PX, (8 + Math.sin(f.a) * f.r) * PX);
+        f.m.scale.set(PX, hgt * PX, PX);
+      });
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 10: breachers that grab the anchor. They may use the free margin around the anchor's body
+// (x/z 0..1 and 14..15) all the way down, and may sink into surface voxels where they bite,
+// but never remove an anchor element (claws, seed, runes).
+// ---------------------------------------------------------------------------
+function breacherDesign3(d) {
+  const base = breacherDesign(d);
+  return {
+    ...base, round: 10,
+    shape(x, y, z, L) {
+      if (!inBlock(x, z) || y < 0) return null;
+      const b = d.shape(x, y, z, L);
+      if (b) return 'b_' + b;
+      return y <= 31 ? ANCH.shape(x, y, z, true) : null;
+    },
+    // The breacher's influence: anchor glow shifts from cyan toward magenta, strongest near the top
+    // where it grips, with some glyphs fully taken over; the base keeps its own cyan.
+    paint(k, x, y, z, L, e) {
+      if (k.startsWith('b_')) return d.paint(k.slice(2), x, y, z, L, e);
+      const r = ANCH.paint(k, x, y, z, true, e);
+      if (!(r.g || r.fl)) return r;
+      const f = Math.min(1, Math.max(0, (y - 4) / 20));
+      const amt = L ? 1 : f * f * (3 - 2 * f);           // breaching: blue at the base to pink at the grip; complete: all pink
+      const lum = Math.max(...r.c) / 255;
+      return { ...r, c: mix(r.c, MAG.map(v => v * lum), amt) };
+    },
+    extras(L, group, ctx) {
+      ctx.runeColors = L ? [MAG, [255, 205, 95]] : [[140, 235, 255], MAG];
+      const a = ANCH.extras(true, group, ctx);
+      const b = d.extras ? d.extras(L, group, ctx) : null;
+      const beam = L ? beaconBeam(group, d.emitTop) : null;
+      return t => { a && a(t); b && b(t); beam && beam(t); };
+    },
+  };
+}
+const isRune = (x, y, z) => { const k = ANCH.shape(x, y, z, true); return k === 'body' && y >= 18 && y <= 22; };
+
+const R10 = [
+  breacherDesign3({
+    name: 'Gauntlet',
+    line: 'An iron hand closes around the anchor and will not let go.',
+    story: 'A heavy iron crown floats above the seed. From its four corners, massive jointed fingers reach out and down the anchor\'s corner edges, past the claws and the rune bands, and their tips bite into the stone just above the windows. Gold knuckle bands mark every joint.',
+    change: 'While breaching, magenta light runs down the fingers into the anchor and the knuckles glow. When the breach completes, the lens in the crown ignites and the beacon fires straight up out of the hand.',
+    interact: 'The hand reads instantly as a grip on the anchor. Lapis goes into the glowing cells on the crown\'s sides. The lens on top is the emitter.',
+    code: ['Fingers: static model in the corner margin, tips sunk into the anchor\'s corner surface (anchor model unchanged apart from those few voxels)', 'Finger veins: animated texture flowing down toward the anchor', 'Lapis cells: glowing faces, fuel indicator', 'Lens: dim while breaching, bright when complete; beam source', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#4a4656', 'Iron'], ['#d6a23c', 'Gold knuckles'], ['#ff5adc', 'Finger veins'], ['#5082ff', 'Lapis cells'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 47,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      // crown above the seed
+      if (y >= 37 && y <= 43) return oct(cx, cz, 5.5, 2) ? (y === 43 ? 'crownTop' : 'crown') : null;
+      if (y >= 44 && y <= 46) {
+        if (ax < 2 && az < 2) return 'lens';
+        return ax < 3.5 && az < 3.5 && y === 44 ? 'lensRim' : null;
+      }
+      // fingers: knuckle arc out of the crown, then straight down the corner edge, tip biting inward
+      for (const [sx, sz] of CORNERS) {
+        if (polyDist(p, [[8 + sx * 4.5, 39.5, 8 + sz * 4.5], [8 + sx * 7, 37.5, 8 + sz * 7], [8 + sx * 7, 33, 8 + sz * 7]]).d < 1.15) return 'finger';
+      }
+      if (y >= 22 && y <= 33 && lx <= 1 && lz <= 1) return (y === 30 || y === 24) ? 'knuckle' : 'finger';
+      if ((y === 20 || y === 21) && lx <= 2 && lz <= 2 && lx + lz <= 3) return 'tip';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'knuckle' || k === 'lensRim') return { c: goldTone(x, y, z) };
+      if (k === 'tip') return { c: [200, 196, 210] };
+      if (k === 'lens') return L ? { c: hash3(x, y, z) > 0.6 ? [255, 230, 250] : [255, 120, 225], g: true } : { c: MAG_DIM };
+      if (k === 'crownTop') return { c: goldTone(x, y, z) };
+      if (k === 'crown') {
+        const sf = sideFace(e, x, z);
+        if (sf && y >= 39 && y <= 41 && (sf.u === 7 || sf.u === 8)) return { c: LAPIS, g: true };
+        return { c: IRON(x, y, z) };
+      }
+      if (anySide(e) && ((lx === 0 && lz === 1) || (lz === 0 && lx === 1))) return { c: MAG, fl: true };
+      return { c: IRON(x, y, z) };
+    },
+  }),
+  breacherDesign3({
+    name: 'Siege Collar',
+    line: 'A manacle locked around the anchor\'s neck, with a tower of iron built on top.',
+    story: 'A thick iron collar is bolted shut around the anchor\'s neck, just above the windows, hugging all four faces. Lapis canisters hang on its sides. From its corners four struts climb past the claws and the seed to carry a stepped emitter tower over the anchor.',
+    change: 'While breaching, the collar\'s canisters burn blue and magenta light climbs the struts. When the breach completes, the crystal at the top of the tower ignites and the beacon fires from it.',
+    interact: 'The collar is unmistakably locked onto the anchor. Fuel shows in the canisters on every face. The crystal on the tower is the emitter.',
+    code: ['Collar and struts: static model in the margin around the anchor body', 'Canisters: glowing faces, fuel indicator', 'Strut veins: animated texture flowing upward', 'Tower crystal: dim while breaching, bright when complete; beam source', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#4a4656', 'Iron'], ['#d6a23c', 'Gold bolts'], ['#ff5adc', 'Strut glow'], ['#5082ff', 'Lapis canisters'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 47,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y >= 16 && y <= 21) {
+        if (lx <= 1 || lz <= 1) {
+          if ((lx === 1 && lz >= 2) || (lz === 1 && lx >= 2) || (lx <= 1 && lz <= 1)) return 'collar';
+          return y >= 17 && y <= 20 && (lx === 0 || lz === 0) && ((lx === 0 ? z : x) >= 6 && (lx === 0 ? z : x) <= 9) ? 'canister' : (y === 16 || y === 21 ? 'collar' : null);
+        }
+        return null;
+      }
+      if (y >= 22 && y <= 39 && lx <= 1 && lz <= 1) return 'strut';
+      if (y === 40 || y === 41) return lx <= 3 || lz <= 3 ? (ax < 8 && az < 8 ? 'deck' : null) : null;
+      if (y >= 42 && y <= 43) return ax < 4 && az < 4 ? 'tier' : null;
+      if (y >= 44 && y <= 45) return ax < 3 && az < 3 ? (ax < 2 && az < 2 ? 'crystal' : 'tier2') : null;
+      if (y >= 46 && y <= 47) return ax < 2 && az < 2 ? 'crystal' : null;
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'collar') {
+        if (lx <= 1 && lz <= 1 && (y === 17 || y === 20)) return { c: goldTone(x, y, z) };
+        return { c: y === 16 || y === 21 ? DARKIRON(x, y, z) : IRON(x, y, z) };
+      }
+      if (k === 'canister') return { c: (y + x + z) % 3 === 0 ? [170, 200, 255] : LAPIS, g: true };
+      if (k === 'strut') return anySide(e) && ((lx === 0 && lz === 1) || (lz === 0 && lx === 1)) ? { c: MAG, fl: true } : { c: IRON(x, y, z) };
+      if (k === 'deck') return { c: e.py || anySide(e) && y === 41 ? goldTone(x, y, z) : DARKIRON(x, y, z) };
+      if (k === 'tier' || k === 'tier2') return { c: y === 43 || y === 45 ? goldTone(x, y, z) : IRON(x, y, z) };
+      if (k === 'crystal') return L ? { c: hash3(x, y, z) > 0.6 ? [255, 230, 250] : [255, 120, 225], g: true } : { c: MAG_DIM };
+      return { c: IRON(x, y, z) };
+    },
+  }),
+  breacherDesign3({
+    name: 'Window Hooks',
+    line: 'A crab of iron and lapis has hooked itself into the anchor\'s windows.',
+    story: 'A squat iron machine crouches over the claws, its back a domed lapis tank. From the middle of each side an arm runs down the anchor\'s face, between the rune glyphs, and hooks over the top of the round window, gripping the stone from inside.',
+    change: 'While breaching, the hooks glow where they grip, light runs down the arms into the windows, and the black hole turns ember. When the breach completes, the lens on the machine\'s back opens to the sky and the beacon fires.',
+    interact: 'The hooks visibly grip each window, so the breacher is locked to the anchor on every side. The lapis tank on its back is the fuel. The lens on top is the emitter.',
+    code: ['Arms and hooks: static model down the middle of each face, hooking a few voxels into the window rims', 'Arm veins: animated texture flowing into the windows', 'Lapis tank: glowing faces, fuel indicator', 'Lens: dim while breaching, bright when complete; beam source', 'Anchor black hole switches to the EMBER palette'],
+    swatches: [['#4a4656', 'Iron'], ['#d6a23c', 'Gold joints'], ['#ff5adc', 'Hook glow'], ['#5082ff', 'Lapis tank'], ['#ff66dd', 'Beacon beam'], ['#ffbe5a', 'Ember rings']],
+    emitTop: 47,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y >= 36 && y <= 41) return oct(cx, cz, 6, 2.5) ? (y === 36 ? 'belly' : 'shell') : null;
+      if (y >= 42 && y <= 44) return oct(cx, cz, 4.5, 2) ? (y === 44 && ax < 2 && az < 2 ? 'lens' : 'tank') : null;
+      if (y >= 45 && y <= 46) return ax < 2 && az < 2 ? 'lens' : (ax < 3 && az < 3 && y === 45 ? 'rim' : null);
+      // arms: down the centre of each face (between the glyph columns), in the outer margin
+      const onZ = (x === 7 || x === 8) && lz <= 1, onX = (z === 7 || z === 8) && lx <= 1;
+      if ((onZ || onX) && y >= 21 && y <= 37) return y === 30 ? 'joint' : 'arm';
+      // shoulders from the shell out to the margin
+      if ((onZ || onX) && y >= 36 && y <= 38) return 'arm';
+      if (((x === 7 || x === 8) && lz >= 2 && lz <= 5) || ((z === 7 || z === 8) && lx >= 2 && lx <= 5)) {
+        if (y === 37 || y === 38) return 'arm';
+      }
+      // hooks curl over the window top and grip it from inside
+      if ((x === 7 || x === 8) && lz === 2 && (y === 19 || y === 20)) return 'hook';
+      if ((z === 7 || z === 8) && lx === 2 && (y === 19 || y === 20)) return 'hook';
+      if ((x === 7 || x === 8) && lz === 3 && y === 19) return 'hook';
+      if ((z === 7 || z === 8) && lx === 3 && y === 19) return 'hook';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'belly') return { c: DARKIRON(x, y, z) };
+      if (k === 'shell') {
+        const sf = sideFace(e, x, z);
+        if (sf && y === 39 && sf.u % 3 === 0) return { c: MAG, g: true };
+        return { c: IRON(x, y, z) };
+      }
+      if (k === 'tank') return { c: (x + y + z) % 4 === 0 ? [170, 200, 255] : LAPIS, g: true };
+      if (k === 'rim' || k === 'joint') return { c: goldTone(x, y, z) };
+      if (k === 'lens') return L ? { c: hash3(x, y, z) > 0.6 ? [255, 230, 250] : [255, 120, 225], g: true } : { c: MAG_DIM };
+      if (k === 'hook') return { c: MAG, g: true };
+      return anySide(e) && (x === 7 || z === 7) ? { c: MAG, fl: true } : { c: IRON(x, y, z) };
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 11: robust breachers. Thick plates and pillars, a solid housing seated directly above the
+// claws (y 32+), grips that wrap whole faces. Claws (lx>=2, y25..30), seed and windows stay intact.
+// ---------------------------------------------------------------------------
+const winD = (x, y, z) => {           // distance from the window centre on whichever face the voxel is near
+  const { cx, cz } = C(x, z);
+  const u = Math.abs(cx) > Math.abs(cz) ? cz : cx;
+  return Math.hypot(u, y + 0.5 - MONO_SC);
+};
+const BOLT = (x, y, z) => [150, 146, 160];
+const emitterPaint = (L, x, y, z) => (L ? { c: hash3(x, y, z) > 0.6 ? [255, 230, 250] : [255, 120, 225], g: true } : { c: MAG_DIM });
+
+const R11 = [
+  ({ ...breacherDesign3({
+    name: 'Vise',
+    line: 'A siege vise clamped on all four faces. It is not letting go.',
+    story: 'Four thick iron jaw plates press flat against the anchor\'s faces, cut round so its windows still show, bolted at every corner. Their tops lock into a heavy square collar around the claws, and on that collar sits a solid iron housing, as wide as the anchor itself, with lapis cells set into every face. On top, a squat square barrel points at the sky.',
+    change: 'While breaching, the jaw plates glow magenta along their inner edges and the influence creeps into the runes. When the breach completes, the crystal in the barrel ignites and the beacon fires straight up.',
+    interact: 'Lapis cells on all four faces of the housing show the fuel from any side. The barrel on top is the emitter.',
+    code: ['Jaws, collar and housing: static model; jaws sit in the 2 px margin and press 1 px into the face', 'Window cut-outs keep the anchor\'s windows fully visible', 'Lapis cells: glowing faces, fuel indicator', 'Barrel crystal: dim while breaching, bright when complete; beam source'],
+    swatches: [['#4a4656', 'Iron'], ['#30303c', 'Dark iron'], ['#d6a23c', 'Gold bolts'], ['#ff5adc', 'Jaw glow'], ['#5082ff', 'Lapis cells'], ['#ff66dd', 'Beacon beam']],
+    emitTop: 47,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      // jaws: face plates 3 px deep (2 margin + 1 into the face), y 12..24, round window cut-out
+      if (y >= 12 && y <= 24 && (lx <= 2 || lz <= 2) && !(lx <= 2 && lz <= 2 && lx + lz >= 3 && y < 25 && false)) {
+        if (winD(x, y, z) < 7.0) return null;
+        if (lx <= 2 && lz <= 2) return 'corner';
+        return 'jaw';
+      }
+      // collar ring around the claws
+      if (y >= 25 && y <= 31) return (lx <= 1 || lz <= 1) ? (y === 25 || y === 31 ? 'band' : 'collar') : null;
+      // housing
+      if (y >= 32 && y <= 41) return 'housing';
+      if (y === 42) return lx >= 1 && lz >= 1 ? 'deck' : null;
+      if (y >= 43 && y <= 45) return ax < 4 && az < 4 ? (ax < 2 && az < 2 ? 'crystal' : 'barrel') : null;
+      if (y >= 46) return ax < 4 && az < 4 ? (ax < 2.5 && az < 2.5 ? (ax < 2 && az < 2 ? 'crystal' : null) : 'muzzle') : null;
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'crystal') return emitterPaint(L, x, y, z);
+      if (k === 'band' || k === 'muzzle') return { c: goldTone(x, y, z) };
+      if (k === 'corner') return { c: (y === 13 || y === 23) ? BOLT() : DARKIRON(x, y, z) };
+      if (k === 'jaw') {
+        if (winD(x, y, z) < 8.0 && anySide(e)) return { c: MAG, g: true };
+        return { c: (y === 12 || y === 24) ? DARKIRON(x, y, z) : IRON(x, y, z) };
+      }
+      if (k === 'collar') return { c: (x + z) % 4 === 0 && y === 28 ? BOLT() : DARKIRON(x, y, z) };
+      if (k === 'deck') return { c: anySide(e) || e.py ? goldTone(x, y, z) : IRON(x, y, z) };
+      if (k === 'barrel') return { c: DARKIRON(x, y, z) };
+      // housing
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 35 && y <= 38 && sf.u >= 5 && sf.u <= 10) return { c: (y + sf.u) % 4 === 0 ? [170, 200, 255] : LAPIS, g: true };
+      if (sf && (y === 33 || y === 40) && sf.u % 3 === 1) return { c: BOLT() };
+      if (lx === 0 && lz === 0) return { c: goldTone(x, y, z) };
+      return { c: IRON(x, y, z) };
+    },
+  }), round: 11 }),
+  ({ ...breacherDesign3({
+    name: 'Bastion Clamp',
+    line: 'A fortress built around the anchor, from the ground up.',
+    story: 'Four massive square iron pillars stand at the anchor\'s corners, rooted in heavy feet that grip its plinth. Two thick bands lock them to the anchor, one above the windows and one around the claws. They carry a broad armoured housing with lapis canisters, crowned by a stepped barrel.',
+    change: 'While breaching, light climbs the pillars from the feet to the housing and the canisters burn blue. When the breach completes, the crystal in the barrel ignites and the beacon fires.',
+    interact: 'The whole thing stands on the ground like a siege tower, so it reads as heavy and permanent. Fuel shows in the canisters on every face; the barrel is the emitter.',
+    code: ['Pillars, bands and housing: static model; pillars use the corner margin and press 1 px into the anchor corners', 'Pillar veins: animated texture flowing upward', 'Canisters: glowing faces, fuel indicator', 'Barrel crystal: dim while breaching, bright when complete; beam source'],
+    swatches: [['#4a4656', 'Iron'], ['#30303c', 'Dark iron'], ['#d6a23c', 'Gold trim'], ['#ff5adc', 'Pillar glow'], ['#5082ff', 'Lapis canisters'], ['#ff66dd', 'Beacon beam']],
+    emitTop: 47,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y >= 2 && y <= 4 && lx <= 3 && lz <= 3 && lx + lz <= 4) return 'foot';
+      if (y >= 5 && y <= 24 && lx <= 2 && lz <= 2) return 'pillar';
+      if (y >= 25 && y <= 31 && lx <= 1 && lz <= 1) return 'pillar';
+      if (y >= 22 && y <= 24 && (lx <= 1 || lz <= 1)) return 'band';
+      if (y >= 29 && y <= 31 && (lx <= 1 || lz <= 1)) return 'band';
+      if (y >= 32 && y <= 39) return 'housing';
+      if (y === 40) return lx >= 1 && lz >= 1 ? 'deck' : null;
+      if (y >= 41 && y <= 42) return ax < 6 && az < 6 ? 'step' : null;
+      if (y >= 43 && y <= 45) return ax < 4 && az < 4 ? (ax < 2 && az < 2 ? 'crystal' : 'barrel') : null;
+      if (y >= 46) return ax < 4 && az < 4 ? (ax < 2 && az < 2 ? 'crystal' : (ax < 2.5 && az < 2.5 ? null : 'muzzle')) : null;
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'crystal') return emitterPaint(L, x, y, z);
+      if (k === 'foot') return { c: e.py ? goldTone(x, y, z) : DARKIRON(x, y, z) };
+      if (k === 'pillar') {
+        if (anySide(e) && ((lx === 0 && lz === 1) || (lz === 0 && lx === 1))) return { c: MAG, fl: true };
+        if (y % 6 === 0) return { c: BOLT() };
+        return { c: IRON(x, y, z) };
+      }
+      if (k === 'band') return { c: (y === 22 || y === 29) ? goldTone(x, y, z) : DARKIRON(x, y, z) };
+      if (k === 'deck' || k === 'muzzle') return { c: goldTone(x, y, z) };
+      if (k === 'step' || k === 'barrel') return { c: DARKIRON(x, y, z) };
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 34 && y <= 37 && ((sf.u >= 3 && sf.u <= 5) || (sf.u >= 10 && sf.u <= 12))) return { c: (y + sf.u) % 3 === 0 ? [170, 200, 255] : LAPIS, g: true };
+      if (lx === 0 && lz === 0) return { c: DARKIRON(x, y, z) };
+      return { c: IRON(x, y, z) };
+    },
+  }), round: 11 }),
+  ({ ...breacherDesign3({
+    name: 'Maw',
+    line: 'Something huge has bitten down on the anchor and is drinking through its teeth.',
+    story: 'A massive iron head sits directly on the anchor, as wide as the block. Heavy armour plates hang from its jaw down all four faces, ending in thick teeth that bite into the anchor just above its windows. A slot in each plate lets you see the seed it is feeding on. A recessed eye on top waits, dark.',
+    change: 'While breaching, the teeth glow magenta where they bite and the influence spreads into the runes. When the breach completes, the eye on top opens and the beacon fires out of it.',
+    interact: 'The teeth make the grip obvious from every side, and the slots show the seed being drained. The eye on top is the emitter; lapis goes into the cells either side of each slot.',
+    code: ['Head and jaw plates: static model; plates sit in the margin, teeth press 1 px into the faces', 'Teeth glow: glowing faces where they bite', 'Lapis cells: glowing faces beside each slot, fuel indicator', 'Eye crystal: dark while breaching, bright when complete; beam source'],
+    swatches: [['#4a4656', 'Iron'], ['#30303c', 'Dark iron'], ['#d6a23c', 'Gold brow'], ['#ff5adc', 'Teeth glow'], ['#5082ff', 'Lapis cells'], ['#ff66dd', 'Beacon beam']],
+    emitTop: 46,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y >= 32 && y <= 42) return lx + lz >= 1 ? 'head' : null;
+      if (y >= 43 && y <= 44) return lx >= 1 && lz >= 1 && lx + lz >= 3 ? (ax < 2.5 && az < 2.5 ? 'eye' : 'brow') : null;
+      if (y >= 45 && y <= 46) return ax < 4 && az < 4 ? (ax < 2.5 && az < 2.5 ? 'eye' : 'brow') : null;
+      // jaw plates down all four faces, 2 px thick, slot over the seed
+      if (y >= 22 && y <= 31 && (lx <= 1 || lz <= 1)) {
+        const u = lz <= 1 ? x : z;
+        if (y >= 25 && y <= 30 && u >= 6 && u <= 9 && !(lx <= 1 && lz <= 1)) return null;
+        return 'plate';
+      }
+      // teeth: thick alternating teeth biting 1 px into the face
+      if (y >= 20 && y <= 21 && (lx <= 2 || lz <= 2)) {
+        const u = lz <= 2 ? x : z;
+        return (Math.floor(u / 2) % 2 === 0) ? 'tooth' : null;
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'eye') return emitterPaint(L, x, y, z);
+      if (k === 'brow') return { c: goldTone(x, y, z) };
+      if (k === 'tooth') return { c: (lx === 2 || lz === 2 || y === 20) ? MAG : [210, 206, 220], g: lx === 2 || lz === 2 || y === 20 };
+      if (k === 'plate') {
+        const u = lz <= 1 ? x : z, sf = sideFace(e, x, z);
+        if (sf && y >= 26 && y <= 29 && (u === 4 || u === 5 || u === 10 || u === 11)) return { c: LAPIS, g: true };
+        if (sf && y === 22) return { c: MAG, g: true };
+        return { c: y % 3 === 0 ? DARKIRON(x, y, z) : IRON(x, y, z) };
+      }
+      const sf = sideFace(e, x, z);
+      if (sf && y === 36 && sf.u % 2 === 0) return { c: MAG, g: true };
+      if (sf && (y === 32 || y === 42)) return { c: goldTone(x, y, z) };
+      return { c: IRON(x, y, z) };
+    },
+  }), round: 11 }),
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 12: breachers in the anchor's own design language (stepped masses, chamfers, course lines,
+// gold trim, glyphs, round window motif), in dark iron + magenta. Claws and seed stay visible.
+// ---------------------------------------------------------------------------
+const ironC = (x, y, z) => { let c = tone([62, 58, 74], x, y, z, 0.14); if (y % 4 === 0) c = shade(c, 0.86); return c; };
+const ironD = (x, y, z) => { let c = tone([42, 38, 52], x, y, z, 0.14); if (y % 4 === 0) c = shade(c, 0.86); return c; };
+const RIVET = [176, 170, 186];
+const crystalPaint = (L, x, y, z) => (L ? { c: hash3(x, y, z) > 0.65 ? [255, 232, 250] : [255, 110, 222], g: true } : { c: [110, 44, 100] });
+const glyphAt = (u, v, set) => {            // 4x5 glyph from the anchor's alphabet; u 0..3, v 0..4 from the bottom
+  if (u < 0 || u > 3 || v < 0 || v > 4) return false;
+  return GLYPHS[set % 6][4 - v][u] === 'X';
+};
+const faceU = (x, z, lx, lz) => (lz <= lx ? x : z);   // coordinate running along the nearer face
+
+const R12 = [
+  ({ ...breacherDesign3({
+    name: 'Usurper Crown',
+    line: 'The breacher answers the anchor\'s claws with claws of its own.',
+    story: 'Four square iron pillars stand in the anchor\'s corners on stepped, gold-capped feet, each banded in gold and carved with magenta glyphs. A clasped belt locks them to the anchor above its windows. From their tops, four thick braces arch inward to carry an octagonal iron crown with a glyph band, and on the crown four small iron claws, a dark mirror of the anchor\'s own, hold a crystal.',
+    change: 'While breaching, the glyphs on the pillars and crown burn magenta, light climbs the pillars and the influence creeps into the anchor\'s runes. When the breach completes, the crystal in the iron claws ignites and the beacon fires.',
+    interact: 'The anchor\'s claws and seed stay visible between the pillars. Lapis goes in through the crown (glowing cells on its faces). The crystal in the iron claws is the emitter, echoing the seed below it.',
+    code: ['Pillars, belt, braces, crown and claws: static model; pillars stand in the 2 px corner margin', 'Glyphs: same 4x5 alphabet as the anchor, magenta, animated flowing light', 'Lapis cells on the crown: glowing faces, fuel indicator', 'Crystal: dim while breaching, bright when complete; beam source'],
+    swatches: [['#3e3a4a', 'Dark iron'], ['#2a2634', 'Deep iron'], ['#d6a23c', 'Gold trim'], ['#ff5adc', 'Magenta glyphs'], ['#5082ff', 'Lapis cells'], ['#ff66dd', 'Beacon beam']],
+    emitTop: 45,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      if (y >= 3 && y <= 4 && lx <= 2 && lz <= 2) return y === 4 ? 'footcap' : 'foot';
+      if (y >= 5 && y <= 31 && lx <= 1 && lz <= 1) return (y === 9 || y === 17 || y === 26) ? 'ring' : 'pillar';
+      if ((y === 9 || y === 17) && lx <= 2 && lz <= 2) return 'ring';
+      if (y >= 21 && y <= 22 && ((lx === 1 && lz >= 2) || (lz === 1 && lx >= 2))) return 'belt';
+      if (y >= 20 && y <= 23 && (lx <= 1 || lz <= 1) && !(lx <= 1 && lz <= 1)) { const u = faceU(x, z, lx, lz); if (u >= 6 && u <= 9) return 'clasp'; }
+      for (const [sx, sz] of CORNERS) if (polyDist(p, [[8 + sx * 7, 31.5, 8 + sz * 7], [8 + sx * 6.2, 34, 8 + sz * 6.2], [8 + sx * 4.6, 35.5, 8 + sz * 4.6]]).d < 1.05) return 'brace';
+      if (y >= 34 && y <= 38 && oct(cx, cz, 5.5, 2.5)) return y === 34 ? 'crownBase' : (y === 38 ? 'crownTop' : 'crown');
+      if (y >= 39 && y <= 40 && ax >= 2 && ax < 4 && az >= 2 && az < 4) return 'claw';
+      if (y >= 41 && y <= 42 && ax >= 1.5 && ax < 3 && az >= 1.5 && az < 3) return y === 42 ? 'clawTip' : 'claw';
+      if (y >= 39 && y <= 43 && ax + az + Math.abs(y + 0.5 - 41) * 0.9 < 2.3) return 'crystal';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'crystal') return crystalPaint(L, x, y, z);
+      if (k === 'footcap' || k === 'ring' || k === 'clawTip' || k === 'crownTop') return { c: goldTone(x, y, z) };
+      if (k === 'foot' || k === 'crownBase') return { c: ironD(x, y, z) };
+      if (k === 'belt') return { c: y === 22 ? goldTone(x, y, z) : ironD(x, y, z) };
+      if (k === 'clasp') {
+        const u = faceU(x, z, lx, lz);
+        if ((y === 20 || y === 23) && (u === 6 || u === 9)) return { c: RIVET };
+        if (anySide(e) && Math.min(lx, lz) === 0 && (u === 7 || u === 8) && (y === 21 || y === 22)) return { c: MAG, g: true };
+        return { c: y === 23 ? goldTone(x, y, z) : ironD(x, y, z) };
+      }
+      if (k === 'brace') return { c: ironC(x, y, z) };
+      if (k === 'claw') return { c: ironD(x, y, z) };
+      if (k === 'pillar') {
+        // glyph column down each pillar's outer faces (1 px wide strokes, flowing light)
+        // dotted glyph strip on the outward corner faces, like the anchor's post strips
+        if (anySide(e) && ((lx === 0 && lz === 1 && e[x < 8 ? 'nx' : 'px']) || (lz === 0 && lx === 1 && e[z < 8 ? 'nz' : 'pz'])) && y >= 11 && y <= 29 && y % 2 === 1 && y !== 17 && y !== 9 && y !== 26) return { c: MAG, fl: true };
+        return { c: ironC(x, y, z) };
+      }
+      // crown: glyph band + lapis cells
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 35 && y <= 37) {
+        if (sf.u >= 6 && sf.u <= 9) return { c: (y + sf.u) % 3 === 0 ? [170, 200, 255] : LAPIS, g: true };
+        if ((sf.u === 4 || sf.u === 11) && y === 36) return { c: MAG, g: true };
+      }
+      return { c: ironC(x, y, z) };
+    },
+  }), round: 12 }),
+
+  ({ ...breacherDesign3({
+    name: 'Keystone Vise',
+    line: 'Four riveted brackets lock the anchor\'s corners and raise a keystone over it.',
+    story: 'Heavy L-shaped iron brackets clamp all four corners of the anchor, their inner edges cut round to follow its windows, riveted in gold and engraved with magenta glyphs. A collar ring ties their tops together around the claws. Four diagonal braces lift a stepped iron keystone above the seed, with a round magenta porthole on every face, an echo of the anchor\'s own windows.',
+    change: 'While breaching, the portholes glow and the glyphs on the brackets light up. When the breach completes, the crystal in the square aperture on top ignites and the beacon fires.',
+    interact: 'The brackets grip every corner, so it reads locked on from any side; the anchor\'s runes and windows stay visible between them. Fuel shows in the portholes; the aperture is the emitter.',
+    code: ['Brackets, collar, braces and keystone: static model; bracket edges press 1 px into the anchor faces', 'Round window cut-outs follow the anchor windows', 'Portholes: glowing faces, fuel indicator', 'Aperture crystal: dim while breaching, bright when complete; beam source'],
+    swatches: [['#3e3a4a', 'Dark iron'], ['#2a2634', 'Deep iron'], ['#d6a23c', 'Gold rivets'], ['#ff5adc', 'Glyphs and portholes'], ['#5082ff', 'Lapis cells'], ['#ff66dd', 'Beacon beam']],
+    emitTop: 43,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      // L brackets: wings 2 px deep along both faces, 5 px long, plus a 1 px bite into the face
+      if (y >= 7 && y <= 25) {
+        const wing = (lx <= 1 && lz <= 5) || (lz <= 1 && lx <= 5);
+        const bite = (lx === 2 && lz <= 4) || (lz === 2 && lx <= 4);
+        const along = Math.max(lx, lz) <= 1 ? 0 : (lz <= 2 ? lx : lz);   // distance from the corner along the face
+        const overWindow = along >= 4 && winD(x, y, z) < 7.6;          // the window only opens between the corner posts
+        if ((wing || bite) && !overWindow) return bite ? 'bite' : 'bracket';
+      }
+      if (y >= 26 && y <= 27 && (lx <= 1 || lz <= 1)) return y === 27 ? 'collarTop' : 'collar';
+      for (const [sx, sz] of CORNERS) if (polyDist(p, [[8 + sx * 7, 27.5, 8 + sz * 7], [8 + sx * 4, 33, 8 + sz * 4]]).d < 1.0) return 'brace';
+      if (y >= 32 && y <= 33) return oct(cx, cz, 4, 1.5) ? 'neck' : null;
+      if (y >= 34 && y <= 39) return oct(cx, cz, 5.5, 2) ? 'keystone' : null;
+      if (y === 40) return oct(cx, cz, 4.5, 1.5) ? 'cap' : null;
+      if (y >= 41 && y <= 43) {
+        if (ax < 1.5 && az < 1.5) return 'crystal';
+        return ax < 3 && az < 3 && !(ax < 2 && az < 2) ? 'aperture' : null;
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z);
+      if (k === 'crystal') return crystalPaint(L, x, y, z);
+      if (k === 'collarTop' || k === 'cap' || k === 'aperture') return { c: goldTone(x, y, z) };
+      if (k === 'collar' || k === 'neck') return { c: ironD(x, y, z) };
+      if (k === 'brace') return { c: ironC(x, y, z) };
+      if (k === 'bite') return { c: winD(x, y, z) < 8.6 ? MAG : ironD(x, y, z), g: winD(x, y, z) < 8.6 };
+      if (k === 'bracket') {
+        const along = lz <= 1 ? lx : lz;               // distance from the corner along the wing
+        if (anySide(e) && along === 4 && y % 4 === 1) return { c: RIVET };
+        if (anySide(e) && along >= 1 && along <= 4 && (lx === 0 || lz === 0)) {
+          if (y >= 18 && y <= 22 && glyphAt(along - 1, y - 18, lx + lz)) return { c: MAG, fl: true };
+        }
+        if (y === 7 || y === 25) return { c: goldTone(x, y, z) };
+        return { c: ironC(x, y, z) };
+      }
+      // keystone with round porthole on each face
+      const sf = sideFace(e, x, z);
+      if (sf) {
+        const d = Math.hypot(sf.u + 0.5 - 8, y + 0.5 - 36.5);
+        if (d < 1.6) return { c: LAPIS, g: true };
+        if (d < 2.6) return { c: MAG, g: true };
+      }
+      if (y === 34 || y === 39) return { c: goldTone(x, y, z) };
+      return { c: ironC(x, y, z) };
+    },
+  }), round: 12 }),
+
+  ({ ...breacherDesign3({
+    name: 'Mandible',
+    line: 'An iron head hooks its mandibles under the anchor\'s gold band and bites.',
+    story: 'A chamfered iron head hangs above the seed, stepped like the anchor\'s plinth, with a glyph band and a gold brow. Four thick mandibles curve out of its corners, run down the anchor\'s corner edges and hook under its gold band. Gold-tipped fangs hang in front of each face, and the claws and seed are visible between them.',
+    change: 'While breaching, the mandible hooks glow where they grip the band and magenta light runs along the glyph band. When the breach completes, the eye on top of the head opens and the beacon fires.',
+    interact: 'The mandibles make the grip obvious from every side. Lapis shows in the cells under the brow; the eye on top is the emitter.',
+    code: ['Head, mandibles and fangs: static model; mandible hooks press into the corners of the anchor\'s gold band', 'Glyph band: magenta, animated flowing light', 'Lapis cells: glowing faces, fuel indicator', 'Eye crystal: dim while breaching, bright when complete; beam source', 'Drain particles: pink motes flow from the hooks over the windows into the black hole (client particles)', 'Anchor runes: blue-to-pink gradient while breaching, all pink when breached; rune particles blue and pink, then pink and gold'],
+    swatches: [['#3e3a4a', 'Dark iron'], ['#2a2634', 'Deep iron'], ['#d6a23c', 'Gold brow and fangs'], ['#ff5adc', 'Glyphs and hooks'], ['#5082ff', 'Lapis cells'], ['#ff66dd', 'Beacon beam']],
+    emitTop: 43,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), p = [x + 0.5, y + 0.5, z + 0.5];
+      for (const [sx, sz] of CORNERS) {
+        const pd = polyDist(p, [[8 + sx * 4.6, 33.5, 8 + sz * 4.6], [8 + sx * 7, 31, 8 + sz * 7], [8 + sx * 7, 25, 8 + sz * 7], [8 + sx * 6, 22.5, 8 + sz * 6]]);
+        if (pd.d < 1.15) return pd.seg === 2 && pd.t > 0.5 ? 'hook' : 'mandible';
+      }
+      if (y >= 31 && y <= 32) return oct(cx, cz, 4.5, 1.5) ? 'jaw' : null;
+      if (y >= 33 && y <= 38) return oct(cx, cz, 5.5, 2.5) ? 'head' : null;
+      if (y === 39) return oct(cx, cz, 5, 2) ? 'brow' : null;
+      if (y === 40) return oct(cx, cz, 4, 1.5) ? 'brow2' : null;
+      if (y >= 41 && y <= 43) {
+        if (ax < 1.5 && az < 1.5) return 'eye';
+        return y === 41 && ax < 2.5 && az < 2.5 ? 'lid' : null;
+      }
+      // fangs hanging in front of each face
+      if (y >= 28 && y <= 30) {
+        const u = faceU(x, z, lx, lz), d = Math.min(lx, lz);
+        if (d === 3 && (u === 6 || u === 9)) return y === 28 ? 'fangTip' : 'fang';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'eye') return crystalPaint(L, x, y, z);
+      if (k === 'brow' || k === 'brow2' || k === 'lid' || k === 'fangTip') return { c: goldTone(x, y, z) };
+      if (k === 'fang') return { c: [210, 204, 220] };
+      if (k === 'hook') return { c: MAG, g: true };
+      if (k === 'jaw') return { c: ironD(x, y, z) };
+      if (k === 'mandible') return { c: anySide(e) && hash3(x, y, z) > 0.8 ? RIVET : ironC(x, y, z) };
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 35 && y <= 37) {
+        if (sf.u >= 6 && sf.u <= 9) return { c: (y + sf.u) % 3 === 0 ? [170, 200, 255] : LAPIS, g: true };
+        if (glyphAt(sf.u - 1, y - 34, sf.f) || glyphAt(sf.u - 11, y - 34, sf.f + 1)) return { c: MAG, fl: true };
+      }
+      if (y === 33) return { c: ironD(x, y, z) };
+      return { c: ironC(x, y, z) };
+    },
+    // Drain: pink motes leave the mandible hooks, curve over each window and fall into the black hole
+    extras(L, group) {
+      const N = 36, pos = new Float32Array(N * 3), geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({ color: 0xff70e0, size: 0.065, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+      group.add(new THREE.Points(geo, mat));
+      const paths = [];
+      for (const [sx, sz] of CORNERS) for (const face of ['x', 'z']) {
+        const p0 = [8 + sx * 6.5, 22.5, 8 + sz * 6.5];
+        const p1 = face === 'x' ? [8 + sx * 7.2, 18.5, 8] : [8, 18.5, 8 + sz * 7.2];
+        paths.push([p0, p1, [8, MONO_SC, 8]]);
+      }
+      const motes = Array.from({ length: N }, (_, i) => ({ path: paths[i % paths.length], off: Math.random(), sp: 0.25 + Math.random() * 0.15 }));
+      const bez = (a, b, c, t) => a.map((v, k) => (1 - t) * (1 - t) * v + 2 * (1 - t) * t * b[k] + t * t * c[k]);
+      return t => {
+        motes.forEach((m, i) => {
+          const f = (m.off + t * m.sp * (L ? 1.4 : 1)) % 1;
+          const q = bez(m.path[0], m.path[1], m.path[2], f);
+          pos[i * 3] = q[0] * PX; pos[i * 3 + 1] = q[1] * PX; pos[i * 3 + 2] = q[2] * PX;
+        });
+        geo.attributes.position.needsUpdate = true;
+      };
+    },
+  }), round: 12 }),
+];
+
+// ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R12,
+  ...R11,
+  ...R10,
+  ...R9,
+  ...R8,
   ...R7,
   ...R6,
   ...R5,
@@ -2527,7 +3407,7 @@ function buildAnchor(D, L, originX) {
   }
   let seed = null;
   const riftList = [];
-  if (L) {
+  if (L || D.alwaysLive) {
     for (const r of D.rifts) { const m = riftMesh(r, D.riftMat, D.riftMatFront); riftList.push(m); group.add(m); }
     if (D.seed) {
       seed = new THREE.Group();
@@ -2582,11 +3462,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign7'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign12'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
-const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === 7);
+const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === 12);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
   const b = document.createElement('button');
@@ -2596,7 +3476,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [6, 5, 4, 3, 2, 1]) {
+for (const n of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -2605,12 +3485,19 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign7', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign12', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
-  $('earlier').value = D.round === 7 ? '' : String(i);
-  $('earlier').classList.toggle('active', D.round !== 7);
+  $('earlier').value = D.round === 12 ? '' : String(i);
+  $('earlier').classList.toggle('active', D.round !== 12);
+  const lb = D.labels || ['Inert', 'Linked'], sub = D.labels ? ['in progress', 'beam lit'] : ['no seed yet', 'seed set, rift open'];
+  $('lblInert').innerHTML = `${lb[0]}<small>${sub[0]}</small>`;
+  $('lblLinked').innerHTML = `${lb[1]}<small>${sub[1]}</small>`;
+  $('vInert').textContent = lb[0]; $('vLinked').textContent = lb[1];
+  $('hStory').textContent = D.labels ? 'The breacher in place' : 'Inert';
+  $('hChange').textContent = D.labels ? 'Breaching and breach complete' : 'When the seed is set';
+  setCam(state.view);
   for (const a of anchors) scene.remove(a.group);
   anchors = [buildAnchor(D, false, -2), buildAnchor(D, true, 1)];
   applyView();
@@ -2647,7 +3534,7 @@ for (const id of Object.keys(views)) {
   $(id).addEventListener('click', () => {
     state.view = id;
     for (const k of Object.keys(views)) press($(k), k === id);
-    controls.target.set(...views[id].target); camera.position.set(...views[id].cam);
+    setCam(id);
     applyView();
   });
 }
@@ -2670,6 +3557,11 @@ $('tNight').addEventListener('click', e => {
 });
 $('notesToggle').addEventListener('click', e => { press(e.currentTarget, $('notes').classList.toggle('open')); });
 
+function setCam(id) {
+  const v = views[id], lift = DESIGNS[state.design].camLift || 0;
+  controls.target.set(v.target[0], v.target[1] + lift, v.target[2]);
+  camera.position.set(v.cam[0] * (1 + lift * 0.4), v.cam[1] + lift * 1.6, v.cam[2] * (1 + lift * 0.4));
+}
 camera.position.set(...views.vBoth.cam);
 controls.target.set(...views.vBoth.target);
 selectDesign(state.design);
@@ -2682,7 +3574,7 @@ const clock = new THREE.Clock();
 let simTime = 0;
 const tmp = new THREE.Vector3();
 function placeLabel(el, x) {
-  tmp.set(x + 0.5, 2.7, 0.5).project(camera);
+  tmp.set(x + 0.5, DESIGNS[state.design].labelY || 2.7, 0.5).project(camera);
   el.style.left = ((tmp.x + 1) / 2 * innerWidth) + 'px';
   el.style.top = ((1 - tmp.y) / 2 * innerHeight) + 'px';
 }
