@@ -37,6 +37,12 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
     private static final float CY = 17.5f;                 // black hole centre height
     private static final int LOST = WorldCoreBlockEntity.STATE_ANCHOR_LOST;
     private static final int[] BEAM = {0xFF4488FF, 0xFFFF44FF, 0xFFFF4444};
+    /**
+     * The aurora crystals are driven into the rock, so their faces share planes with the model's. Growing each crystal
+     * cube a hair resolves every such pair the crystals' way: a crystal face over a rock face now sits just in front of
+     * it, and a crystal face pressed against rock sits just inside it, behind the rock's own face. No flicker either way.
+     */
+    private static final float CRYSTAL_GROW = 0.08f * PX;
 
     /** Crystal colours per living state: deep, bright (matching the model's crystal lining). */
     private static final float[][][] SHARD = {
@@ -139,7 +145,7 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
                     for (int i = 0; i < 3; i++) col[i] += (hi[i] - col[i]) * 0.6f;
                 }
                 float r = col[0] * sh, g = col[1] * sh, b = col[2] * sh, a = 0.78f;
-                cube(vc, p.pose(), v[0], v[1], v[2], v[3], Math.min(1f, r / 255f), Math.min(1f, g / 255f), Math.min(1f, b / 255f), a);
+                cube(vc, p.pose(), v[0], v[1], v[2], v[3], Math.min(1f, r / 255f), Math.min(1f, g / 255f), Math.min(1f, b / 255f), a, CRYSTAL_GROW);
             }
         });
     }
@@ -154,7 +160,13 @@ public class WorldCoreBlockEntityRenderer implements BlockEntityRenderer<WorldCo
 
     /** The exposed faces (mask bits: -z, +z, -x, +x, +y, -y) of one voxel. */
     private static void cube(VertexConsumer vc, Matrix4f m, int x, int y, int z, int mask, float r, float g, float b, float a) {
-        float x0 = x * PX, x1 = (x + 1) * PX, y0 = y * PX, y1 = (y + 1) * PX, z0 = z * PX, z1 = (z + 1) * PX;
+        cube(vc, m, x, y, z, mask, r, g, b, a, 0f);
+    }
+
+    /** A voxel cube, its faces pushed out by grow (blocks) on every side. */
+    private static void cube(VertexConsumer vc, Matrix4f m, int x, int y, int z, int mask, float r, float g, float b, float a, float grow) {
+        float x0 = x * PX - grow, x1 = (x + 1) * PX + grow, y0 = y * PX - grow, y1 = (y + 1) * PX + grow;
+        float z0 = z * PX - grow, z1 = (z + 1) * PX + grow;
         float[][] q = {
             {x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0}, {x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1},
             {x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0}, {x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1},
