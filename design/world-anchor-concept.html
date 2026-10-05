@@ -87,15 +87,16 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   #notesToggle { display: inline-block; }
   .card .scale { display: none; }
 }
+[hidden] { display: none !important; }
 </style>
 
 <div id="stage"></div>
 
 <header class="card">
-  <div class="eyebrow">World Anchor · <span id="cIndex"></span></div>
-  <h1 id="cName">Unmaker</h1>
+  <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
+  <h1 id="cName">Uprooted Heart</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">39 · bolts 3x longer</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">41 · world core round 15</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -3092,9 +3093,294 @@ R14[0].paint = (orig => function (k, x, y, z, L, e) {
 })(R14[0].paint);
 
 // ---------------------------------------------------------------------------
+// ROUND 15: World Core concepts. The core is not built: it is what was left behind when the realm was
+// born. The anchor's black hole (same sphere, disk and camera-facing ring) sits at its heart and the
+// realm's beacon rises out of it. Left: at peace (cyan, blue beacon). Right: the realm under siege
+// (ember black hole, hot glow, red beacon), the same colour language as the anchor.
+// ---------------------------------------------------------------------------
+const CORE_RUNE = [140, 235, 255], CORE_RING = [150, 240, 255], CORE_DEEP = [40, 110, 230];
+const CORE_EMBER_RING = [255, 190, 90], CORE_EMBER_DEEP = [210, 50, 20];
+const coreAcc = (L, x, y, z) => L ? (hash3(x, y, z) > 0.7 ? EMBERC : HOT) : (hash3(x, y, z) > 0.7 ? [200, 250, 255] : CORE_RUNE);
+const C_STONE = (x, y, z) => tone([122, 122, 128], x, y, z, 0.16);
+const C_DEEP = (x, y, z) => { let c = tone([70, 70, 80], x, y, z, 0.16); if (y % 3 === 0) c = shade(c, 0.9); return c; };
+const C_DIRT = (x, y, z) => tone([122, 86, 58], x, y, z, 0.16);
+const C_GRASS = (x, y, z) => tone([98, 156, 62], x, y, z, 0.14);
+const C_OBSID = (x, y, z) => tone([30, 22, 46], x, y, z, 0.2);
+const C_BASALT = (x, y, z) => { let c = tone([66, 64, 74], x, y, z, 0.12); if (x % 2 === 0) c = shade(c, 0.93); return c; };
+
+// The anchor's black hole at centre c (px): disk spinning around the vertical axis, photon ring facing you
+function holeFx(group, ctx, c, ring, deep) {
+  const ang = (x, y) => Math.atan2(y, x);
+  const glowC = mix(ring, [255, 255, 255], 0.45);
+  const disk = voxPart({
+    bounds: { x0: -8, x1: 8, y0: 0, y1: 1 },
+    shape: (x, y, z) => { const r = Math.hypot(x + 0.5, z + 0.5); return r >= 4.2 && r < 6.3 ? 'd' : null; },
+    paint: (k, x, y, z) => {
+      const r = Math.hypot(x + 0.5, z + 0.5), f = Math.min(1, Math.max(0, (r - 4.5) / 1.7));
+      return { c: shade(mix(glowC, deep, f), 0.92 + 0.16 * hash3(x, 7, z)), g: true };
+    },
+    pivot: [0, 0.5, 0],
+  });
+  disk.position.set(c[0] * PX, c[1] * PX, c[2] * PX);
+  group.add(disk);
+  const halo = voxPart({
+    bounds: { x0: -8, x1: 8, y0: -8, y1: 8 },
+    shape: (x, y, z) => {
+      if (z !== 0) return null;
+      const px = x + 0.5, py = y + 0.5, r = Math.hypot(px, py * 1.12);
+      if (r >= 2.8 && r < 4.2) return 'h';
+      if (Math.abs(py) < 1 && Math.abs(px) < 5.0) return Math.abs(px) >= 2.8 ? 'h' : null;
+      return null;
+    },
+    paint: (k, x, y) => ({ c: shade(glowC, 0.72 + 0.28 * (0.5 + 0.5 * Math.sin(ang(x + 0.5, y + 0.5) * 3))), g: true }),
+    pivot: [0, 0, 0.5],
+  });
+  halo.position.set(c[0] * PX, c[1] * PX, c[2] * PX);
+  group.add(halo);
+  const steadyMat = new THREE.MeshBasicMaterial({ toneMapped: false });
+  steadyMat.color.setScalar(GLOW_BASE * 0.85);
+  [disk, halo].forEach(g => g.traverse(m => { if (m.isInstancedMesh) m.material = steadyMat; }));
+  const camLocal = new THREE.Vector3();
+  const haloMesh = halo.children[0].children[0], haloCol = new THREE.Color();
+  const glowLin = new THREE.Color().setRGB(glowC[0] / 255, glowC[1] / 255, glowC[2] / 255, THREE.SRGBColorSpace).toArray();
+  const haloPix = [], hm = new THREE.Matrix4(), hp = new THREE.Vector3(), angs = [];
+  for (let i = 0; i < haloMesh.count; i++) { haloMesh.getMatrixAt(i, hm); hp.setFromMatrixPosition(hm); angs.push(Math.atan2(hp.y, hp.x)); }
+  angs.map((a, i) => i).sort((p, q) => angs[p] - angs[q]).forEach((idx, slot) => { haloPix[idx] = slot; });
+  return t => {
+    disk.rotation.y = t * 0.6;
+    camera.getWorldPosition(camLocal);
+    group.worldToLocal(camLocal);
+    const dir = camLocal.sub(new THREE.Vector3(c[0] * PX, c[1] * PX, c[2] * PX)).normalize();
+    halo.position.set((c[0] + dir.x * 0.6) * PX, (c[1] + dir.y * 0.6) * PX, (c[2] + dir.z * 0.6) * PX);
+    halo.lookAt(camera.getWorldPosition(new THREE.Vector3()));
+    ctx.rifts.forEach(r => r.quaternion.copy(halo.quaternion));
+    const step = Math.floor(t * 0.6 / (2 * Math.PI) * haloPix.length);
+    haloPix.forEach((slot, i) => {
+      const b = 0.92 + 0.16 * hash3((slot - step + 1000 * haloPix.length) % haloPix.length, 3, 11);
+      haloCol.setRGB(glowLin[0] * b, glowLin[1] * b, glowLin[2] * b);
+      haloMesh.setColorAt(i, haloCol);
+    });
+    haloMesh.instanceColor.needsUpdate = true;
+  };
+}
+
+// Vanilla-style beacon beam rising out of the black hole
+function coreBeam(group, y0, hex) {
+  const mk = (w, op) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w * PX, 8, w * PX), new THREE.MeshBasicMaterial({
+      color: new THREE.Color(hex), transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    m.position.set(8 * PX, y0 * PX + 4, 8 * PX);
+    group.add(m);
+    return m;
+  };
+  const core = mk(2.2, 0.95), glowB = mk(5, 0.28);
+  return t => { core.rotation.y = t * 0.8; glowB.rotation.y = -t * 0.4; };
+}
+
+function coreDesign(d) {
+  return {
+    round: 15, bounds: { x0: -1, x1: 17, y0: 0, y1: 32 }, alwaysLive: true,
+    labels: ['At peace', 'Under siege'], sublabels: ['blue beacon', 'anchor attacked: ember hole, red beacon'],
+    rift: VANILLA, light: 0x96f0ff, bloom: 0.4, glow: 1.0, pulse: 1.1, flowGain: 0.85, core: d.c,
+    name: d.name, line: d.line, story: d.story, change: d.change, interact: d.interact, code: d.code, swatches: d.swatches,
+    trans: d.trans, transOpacity: d.transOpacity,
+    shape: d.shape, paint: d.paint,
+    rifts: [{ type: 'vsphere', c: d.c, r: 3.2 }],
+    extras(L, group, ctx) {
+      const hole = holeFx(group, ctx, d.c, L ? CORE_EMBER_RING : CORE_RING, L ? CORE_EMBER_DEEP : CORE_DEEP);
+      const beam = coreBeam(group, d.c[1], L ? 0xff3322 : 0x4488ff);
+      const motes = particles(22, L ? 0xff8050 : 0xbff4ff, { r0: 4, rs: 3, y0: d.c[1] - 6, h: 12, swirl: 0.25, sink: true });
+      group.add(motes.obj);
+      const extra = d.extras ? d.extras(L, group, ctx) : null;
+      return t => { hole(t); beam(t); motes.update(t); extra && extra(t); };
+    },
+  };
+}
+
+// A rough chunk of rock torn out of the ground (The Gathering): drawn by the renderer, tumbling slowly
+function debrisChunk(s, seed, L) {
+  return voxPart({
+    bounds: { x0: 0, x1: s, y0: 0, y1: s },
+    shape: (x, y, z) => {
+      const corner = (x === 0 || x === s - 1) + (y === 0 || y === s - 1) + (z === 0 || z === s - 1);
+      return corner === 3 && hash3(x + seed, y, z) > 0.35 ? null : 'r';
+    },
+    paint: (k, x, y, z, e) => {
+      if (y === s - 1 && e.py && seed % 2 === 0) return { c: C_GRASS(x + seed, y, z) };
+      if (seed % 3 === 0 && e.pz && y === 1 && x >= 1 && x <= s - 2) return { c: coreAcc(L, x, y, z), g: true };   // a scar of light
+      if (hash3(x + seed * 5, y, z) > 0.9) return { c: tone([46, 82, 200], x, y, z, 0.2) };
+      return { c: seed % 2 ? C_DEEP(x + seed, y, z) : C_STONE(x + seed, y, z) };
+    },
+    pivot: [s / 2, s / 2, s / 2],
+  });
+}
+
+const BASALT_COL = x => (x <= 2 ? 0 : x >= 4 && x <= 6 ? 1 : x >= 9 && x <= 11 ? 2 : x >= 13 ? 3 : -1);
+
+const R15 = [
+  coreDesign({
+    name: 'Uprooted Heart', c: [8, 15.5, 8],
+    line: 'When the realm was born, the ground tore loose and never came back down.',
+    story: 'A slab of the realm\'s own earth, grass on top and raw stone and lapis underneath, hangs over a scorched crater with roots trailing from its broken underside. The ground around the crater is thrown back in a ring of upturned rock. Between the floating earth and the crater hangs the black hole that made this world, and a seam of light splits the earth where the beacon climbs up through it.',
+    change: 'When the realm is under siege the black hole turns ember like the anchor\'s, the seam and the sigil burned into the crater run hot red, and the beacon turns red.',
+    interact: 'The black hole hangs at chest height in the open gap between the crater and the floating earth, visible from every side: touch it to leave the realm, crouch to open its ward. The beacon marks it from anywhere in the realm.',
+    code: ['Crater, upturned rock and floating earth: static two-block model (lower/upper halves)', 'Black hole: the anchor\'s renderer code reused (sphere, spinning disk, camera-facing ring)', 'Seam: animated texture, light flowing down into the black hole', 'Beacon: vanilla beacon beam from the black hole upward, coloured by siege state', 'Motes: client particles sinking into the black hole'],
+    swatches: [['#62a03e', 'Realm grass'], ['#7a563a', 'Earth'], ['#7a7a80', 'Stone'], ['#2e82c8', 'Lapis'], ['#1e162e', 'Scorched glass'], ['#8cebff', 'Seam light']],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), rr = Math.hypot(cx, cz);
+      if (y === 0) return oct(cx, cz, 8, 3) ? (rr < 4.6 ? 'scorch' : 'ground') : null;
+      if (y <= 6) {   // the ground thrown back in a ring of upturned rock, leaning outward
+        const sec = Math.floor((Math.atan2(cz, cx) + Math.PI) / (2 * Math.PI) * 8) % 8;
+        const h = 2 + Math.floor(hash3(sec, 1, 7) * 5);
+        return y <= h && rr >= 4.8 + (y - 1) * 0.45 && oct(cx, cz, 8, 3) ? (y === h ? 'shardTop' : 'shard') : null;
+      }
+      for (const [rx, rz] of [[3, 6], [12, 9], [6, 12], [10, 3]]) {   // roots trailing from the underside
+        if (x === rx && z === rz && y <= 26 && y >= 20 + Math.floor(hash3(rx, 2, rz) * 3)) {
+          const r = 1.6 + (y - 22) * 0.72;
+          if (y < 22 || Math.max(ax, az) >= r) return 'root';
+        }
+      }
+      if (y >= 22) {   // the floating earth: an inverted, stepped, craggy mass
+        const r = 1.6 + (y - 22) * 0.72, m = Math.max(ax, az);
+        if (!(m < r && ax + az < 2 * r - Math.max(1, r * 0.4))) return null;
+        if (y < 26 && m > r - 1 && hash3(x, y, z) > 0.55) return null;
+        if (az < 1 && ax < (y - 19) * 0.45) return null;          // the seam the beacon climbs through
+        if (az < 2 && ax < (y - 19) * 0.45 + 1) return 'seam';
+        return y === 31 ? 'grass' : y >= 28 ? 'dirt' : 'rock';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), rr = Math.hypot(cx, cz);
+      if (k === 'scorch') {   // a sigil burned into the crater floor
+        const a = Math.atan2(cz, cx);
+        return rr >= 3.0 && rr < 4.4 && Math.floor((a + Math.PI) * 3) % 3 !== 0 ? { c: coreAcc(L, x, y, z), g: true } : { c: C_OBSID(x, y, z) };
+      }
+      if (k === 'ground') return { c: e.py ? (rr > 6.6 ? C_GRASS(x, y, z) : shade(C_DIRT(x, y, z), 0.6)) : C_DIRT(x, y, z) };
+      if (k === 'shardTop') return { c: e.py ? C_GRASS(x, y, z) : C_DIRT(x, y, z) };
+      if (k === 'shard') return { c: rr > 6.8 ? C_DIRT(x, y, z) : C_STONE(x, y, z) };
+      if (k === 'seam') return { c: coreAcc(L, x, y, z), fl: true };
+      if (k === 'root') return { c: tone([96, 70, 48], x, y, z, 0.2) };
+      if (k === 'grass') return { c: e.py ? C_GRASS(x, y, z) : C_DIRT(x, y, z) };
+      if (k === 'dirt') return { c: y === 30 && (e.nx || e.px || e.nz || e.pz) && hash3(x, y, z) > 0.5 ? C_GRASS(x, y, z) : C_DIRT(x, y, z) };
+      if (hash3(x * 3, y, z * 5) > 0.93) return { c: tone([46, 82, 200], x, y, z, 0.2) };   // lapis
+      return { c: y < 25 ? C_DEEP(x, y, z) : C_STONE(x, y, z) };
+    },
+  }),
+  coreDesign({
+    name: 'Geode Heart', c: [8, 14.5, 8],
+    line: 'Stone grew around the singularity the way a geode grows around a hollow.',
+    story: 'A rough boulder of dark weathered rock, lichen on its shoulders, sits half sunk into the ground. It has split open on all four sides, and the walls of the hollow inside are lined with pale calcite and then glowing blue crystal, with crystal points growing inward. In the middle of the hollow floats the black hole, and the beacon leaves through a vent at the top.',
+    change: 'Under siege the crystal lining and the buds on the outside turn ember and hot red, the black hole burns ember and the beacon turns red.',
+    interact: 'The four openings show the black hole from every side at waist-to-chest height; that is what you touch. The glowing hollow is unmistakable even from a distance.',
+    code: ['Boulder, calcite and crystal lining: static two-block model', 'Crystal: full-bright faces, so the hollow glows at night', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole out of the top vent', 'Motes: client particles sinking into the black hole'],
+    swatches: [['#545260', 'Weathered rock'], ['#606e52', 'Lichen'], ['#dee0e4', 'Calcite'], ['#3c82ff', 'Deep crystal'], ['#96f0ff', 'Bright crystal'], ['#ff5028', 'Under siege']],
+    shape(x, y, z) {
+      if (!inBlock(x, z) || y > 28) return null;
+      const { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz), dy = y + 0.5 - 14.5;
+      const ds = dy < 0 ? dy * 0.6 : dy * 0.92;                   // flattened underneath, sunk into the ground
+      const n = (hash3(x >> 1, y >> 1, z >> 1) - 0.5) * 1.2;
+      const d = 0.25 * Math.max(ax, az, Math.abs(ds)) + 0.75 * Math.hypot(cx, cz, ds);
+      if (d > 8.0 + n * 0.8) return null;
+      const r = Math.hypot(cx, cz, dy);
+      if (r < 6.0) return r >= 5.0 && Math.abs(dy) > 1.6 && hash3(x, y, z) > 0.8 ? 'point' : null;
+      const w = 2.8 + 1.6 * Math.max(0, 1 - Math.abs(dy) / 5.5) + (hash3(Math.round(dy), cx > 0 ? 1 : 2, cz > 0 ? 3 : 4) - 0.5) * 1.2;
+      if (Math.abs(dy) < 5.5 && ((az < w && ax > 2.5) || (ax < w && az > 2.5))) return null;   // split open on four sides
+      if (dy > 3 && Math.hypot(cx, cz) < 1.8) return null;                                     // the vent the beacon leaves through
+      return r < 7.0 ? 'crystal' : r < 7.9 ? 'calcite' : 'rock';
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'point') return { c: L ? EMBERC : [205, 250, 255], g: true };
+      if (k === 'crystal') { const b = hash3(x, y, z); return { c: L ? (b > 0.6 ? EMBERC : HOT) : mix([60, 130, 255], [150, 240, 255], b), g: true }; }
+      if (k === 'calcite') return { c: tone([222, 224, 228], x, y, z, 0.08) };
+      if (y <= 2) return { c: C_DEEP(x, y, z) };
+      if (e.py && y > 17 && hash3(x, y, z) > 0.55) return { c: tone([104, 120, 88], x, y, z, 0.2) };
+      if (hash3(x * 7, y, z * 3) > 0.985) return { c: L ? HOT : CORE_RUNE, g: true };   // crystal buds pushing through
+      return { c: tone([112, 108, 120], x, y, z, 0.18) };
+    },
+  }),
+  coreDesign({
+    name: 'The Gathering', c: [8, 16.5, 8],
+    line: 'Its pull tore the first stones out of the ground, and it never let them go.',
+    story: 'The ground under it has melted into dark glass, cracked by lines of light running outward from a raised boss of scorched stone. Above, heavy chunks of rock, grass, stone and lapis torn from the ground, circle the black hole in two rings turning against each other. A few stones have already fallen out of orbit and lie half sunk in the glass.',
+    change: 'Under siege the cracks in the glass and the scars on the circling stones run hot red, the black hole burns ember and the beacon turns red.',
+    interact: 'The black hole hangs at chest height inside the circling stones and the beam rises straight out of it: there is no doubt where to reach. The stones circle slowly, never fast.',
+    code: ['Glass floor, boss and fallen stones: static model', 'Circling stones: drawn by the block entity renderer, two rings of four turning slowly in opposite directions, each stone tumbling gently', 'Glass cracks: animated texture, light flowing inward', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole'],
+    swatches: [['#1e162e', 'Melted glass'], ['#7a7a80', 'Stone'], ['#46464e', 'Deepslate'], ['#62a03e', 'Grass'], ['#2e52c8', 'Lapis'], ['#8cebff', 'Light']],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      const { cx, cz } = C(x, z);
+      for (const [fx, fz, s] of [[1, 2, 3], [12, 11, 3], [11, 1, 2]]) if (y >= 2 && x >= fx && x < fx + s && z >= fz && z < fz + s && y <= s) return 'fallen';
+      if (y <= 1) return oct(cx, cz, 8, 3) ? 'glass' : null;
+      if (y <= 3) return oct(cx, cz, 5.5, 2) ? (y === 3 ? 'bossTop' : 'boss') : null;
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const { cx, cz } = C(x, z), a = Math.atan2(cz, cx), rr = Math.hypot(cx, cz);
+      if (k === 'glass') {
+        const crack = e.py && rr > 5.2 && Math.abs(Math.sin(a * 3 + (hash3(Math.round(rr), 1, 1) - 0.5) * 0.6)) < 0.14;
+        return crack ? { c: coreAcc(L, x, y, z), fl: true } : { c: C_OBSID(x, y, z) };
+      }
+      if (k === 'bossTop' && e.py) return rr >= 3.2 && rr < 4.6 ? { c: coreAcc(L, x, y, z), g: true } : { c: shade(C_STONE(x, y, z), 0.55) };
+      if (k === 'fallen') return { c: e.py && hash3(x, y, z) > 0.4 ? C_GRASS(x, y, z) : C_STONE(x, y, z) };
+      return { c: shade(C_STONE(x, y, z), 0.65) };
+    },
+    extras(L, group) {
+      const rings = [[21.5, 5.5, 3, 0.15], [11.0, 5.6, 4, -0.12]].map(([y, r, s, w], ri) => {
+        const ring = new THREE.Group();
+        ring.position.set(8 * PX, y * PX, 8 * PX);
+        const stones = [0, 1, 2, 3].map(i => {
+          const st = debrisChunk(s, ri * 4 + i + 1, L);
+          const holder = new THREE.Group();
+          const a = i * Math.PI / 2 + ri * Math.PI / 4;
+          holder.position.set(Math.cos(a) * r * PX - s / 2 * PX, -s / 2 * PX, Math.sin(a) * r * PX - s / 2 * PX);
+          holder.add(st);
+          ring.add(holder);
+          return st;
+        });
+        group.add(ring);
+        return { ring, stones, w };
+      });
+      return t => rings.forEach(({ ring, stones, w }) => {
+        ring.rotation.y = t * w;
+        stones.forEach((st, i) => st.rotation.set(t * 0.13 + i, t * 0.09 * (i % 2 ? 1 : -1), 0));
+      });
+    },
+  }),
+  coreDesign({
+    name: 'Basalt Cradle', c: [8, 21.5, 8],
+    line: 'The rock cooled around it in columns, and the tallest still reach up to hold it.',
+    story: 'A cluster of natural basalt columns, the kind lava leaves when it cools, rises from the ground: short in the middle, taller at the edges and tallest at the four corners, like stone fingers cupped around something precious. Light rises through cracks in the columns. Above the cup, held between the four corner columns, floats the black hole, with open sky above it for the beacon.',
+    change: 'Under siege the light in the columns runs hot red, the black hole burns ember and the beacon turns red.',
+    interact: 'The black hole floats at chest height on top of the cup, the highest and brightest thing there, and the beam rises straight out of it. The corner columns frame it from every side.',
+    code: ['Columns: static two-block model, few boxes (each column is one box)', 'Cracks: animated texture, light rising toward the black hole', 'Black hole: the anchor\'s renderer code reused', 'Beacon: vanilla beacon beam from the black hole, nothing above it'],
+    swatches: [['#42404a', 'Basalt'], ['#62606c', 'Column tops'], ['#8cebff', 'Rising light'], ['#ff5028', 'Under siege']],
+    shape(x, y, z) {
+      if (!inBlock(x, z)) return null;
+      if (y === 0) return 'base';
+      const i = BASALT_COL(x), j = BASALT_COL(z);
+      if (i < 0 || j < 0) return y <= 2 ? 'base' : null;           // seams between the columns
+      const edge = (i === 0 || i === 3) + (j === 0 || j === 3);      // 2 corner, 1 edge, 0 inner
+      const h = (edge === 2 ? 23 : edge === 1 ? 15 : 11) + Math.floor(hash3(i, 5, j) * 5) - 2 + (edge === 2 ? (i + j) % 3 : 0);
+      if (y > h) return null;
+      return y === h ? 'top' : 'col';
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'base') return { c: shade(C_BASALT(x, y, z), 0.75) };
+      if (k === 'top') return e.py ? { c: tone([98, 96, 108], x, y, z, 0.1) } : { c: C_BASALT(x, y, z) };
+      const v0 = 3 + Math.floor(hash3(x, 1, z) * 6), v1 = v0 + 3 + Math.floor(hash3(x, 2, z) * 7);
+      const vein = (e.nx || e.px || e.nz || e.pz) && hash3(x, 0, z) > 0.86 && y >= v0 && y <= v1 && hash3(x, y, z) > 0.15;
+      return vein ? { c: coreAcc(L, x, y, z), fl: true } : { c: C_BASALT(x, y, z) };
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R15,
   ...R14,
   ...R13,
   ...R12,
@@ -3812,11 +4098,12 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign14'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign15'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
-const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === 14);
+const CUR_ROUND = 15;
+const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === CUR_ROUND);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
   const b = document.createElement('button');
@@ -3826,7 +4113,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -3835,24 +4122,25 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign14', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign15', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
-  $('earlier').value = D.round === 14 ? '' : String(i);
-  $('earlier').classList.toggle('active', D.round !== 14);
+  $('earlier').value = D.round === CUR_ROUND ? '' : String(i);
+  $('earlier').classList.toggle('active', D.round !== CUR_ROUND);
   const lb = D.labels || ['Inert', 'Linked'], sub = D.sublabels || (D.labels ? ['in progress', 'beam lit'] : ['no seed yet', 'seed set, rift open']);
   $('lblInert').innerHTML = `${lb[0]}<small>${sub[0]}</small>`;
   $('lblLinked').innerHTML = `${lb[1]}<small>${sub[1]}</small>`;
   $('vInert').textContent = lb[0]; $('vLinked').textContent = lb[1];
-  $('hStory').textContent = D.round >= 13 ? 'The breaker in place' : D.labels ? 'The breacher in place' : 'Inert';
-  $('hChange').textContent = D.round >= 13 ? 'As the anchor breaks' : D.labels ? 'Breaching and breach complete' : 'When the seed is set';
+  $('hStory').textContent = D.round >= 15 ? 'The core at rest' : D.round >= 13 ? 'The breaker in place' : D.labels ? 'The breacher in place' : 'Inert';
+  $('hChange').textContent = D.round >= 15 ? 'When the realm is under siege' : D.round >= 13 ? 'As the anchor breaks' : D.labels ? 'Breaching and breach complete' : 'When the seed is set';
   setCam(state.view);
   for (const a of anchors) scene.remove(a.group);
   anchors = [buildAnchor(D, false, -2), buildAnchor(D, true, 1)];
   applyView();
   $('progressGroup').hidden = !D.progress;
   const pos = byRound(D.round).findIndex(([, j]) => j === i);
+  $('cKind').textContent = D.round >= 15 ? 'World Core' : 'World Anchor';
   $('cIndex').textContent = `round ${D.round} · ${ROMAN[pos]} of ${byRound(D.round).length}`;
   $('cName').textContent = D.name;
   $('cLine').textContent = D.line;
