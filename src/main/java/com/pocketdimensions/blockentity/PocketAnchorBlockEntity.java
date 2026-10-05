@@ -1,6 +1,7 @@
 package com.pocketdimensions.blockentity;
 
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.block.PocketAnchorBlock;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.init.ModItems;
 import com.pocketdimensions.manager.PocketRoomManager;
@@ -43,8 +44,37 @@ public class PocketAnchorBlockEntity extends BlockEntity {
     /** Original owner for logging/reference (not used for access control). */
     private UUID ownerUUID = null;
 
+    /** Client only: the cube's tumble phase in seconds, advancing faster while the room is occupied. */
+    private double phase, prevPhase;
+
     public PocketAnchorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntityTypes.POCKET_ANCHOR.get(), pos, state);
+    }
+
+    // -------------------------------------------------------------------------
+    // Ticking
+    // -------------------------------------------------------------------------
+
+    /** Once a second: mirror whether anyone online is in the room into OCCUPIED (renderer speed and light level). */
+    public static void serverTick(Level level, BlockPos pos, BlockState state, PocketAnchorBlockEntity be) {
+        if ((level.getGameTime() + pos.asLong()) % 20 != 0 || !(level instanceof ServerLevel sl)) return;
+        MinecraftServer server = sl.getServer();
+        boolean occupied = be.pocketId != null && PocketRoomManager.get(server).getOccupants(be.pocketId).stream()
+                .anyMatch(id -> server.getPlayerList().getPlayer(id) != null);
+        if (state.getValue(PocketAnchorBlock.OCCUPIED) != occupied) {
+            level.setBlock(pos, state.setValue(PocketAnchorBlock.OCCUPIED, occupied), 3);
+        }
+    }
+
+    /** The tumble speeds up by half while occupied; accumulating it here keeps the cube from jumping when it does. */
+    public static void clientTick(Level level, BlockPos pos, BlockState state, PocketAnchorBlockEntity be) {
+        be.prevPhase = be.phase;
+        be.phase += (state.getValue(PocketAnchorBlock.OCCUPIED) ? 1.5 : 1.0) / 20.0;
+    }
+
+    /** Tumble phase in seconds, interpolated to the frame. */
+    public float getPhase(float partialTick) {
+        return (float) (prevPhase + (phase - prevPhase) * partialTick);
     }
 
     // -------------------------------------------------------------------------

@@ -25,6 +25,7 @@ public class ModBlocks {
             () -> new PocketAnchorBlock(BlockBehaviour.Properties.of()
                     .setId(BLOCKS.key("pocket_anchor"))
                     .strength(50.0f, 1200.0f)
+                    .lightLevel(state -> state.getValue(PocketAnchorBlock.OCCUPIED) ? 9 : 6)
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops()
                     .noOcclusion()));
