@@ -66,11 +66,14 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half — *
 - If fuel runs out after breach, access reverts to owner-only
 - Destroying the breacher resets all progress
 
-**Anchor Breaker** (`anchor_breaker`, redstone block texture)
+**Anchor Breaker** (`anchor_breaker`, the "Unmaker": clamps with gold turnbuckles grip the anchor's corners, a chamfered iron housing with lapis cells, an inverted funnel over the seed and four red charge coils around a dark spire)
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks while fueled
 - When complete, permanently destroys the World Anchor
+- While attached, it siphons the anchor's own power against it: a red stream rises from the black hole into the funnel and red motes pour out through the windows to the clamp feet (while fueled); the coils fill, the black hole turns ember, the runes heat to red, stone cracks spread and a sigil of red glyphs burns around the base as progress grows
+- At 25 / 50 / 75 % a new set of silent lightning bolts bursts out of the black hole and stays frozen in the air, each with a distant thunder-like "reality crack"; the crack sounds a last time when the anchor is destroyed
+- Removing the breaker closes the cracks and cools the anchor
 - The Anchor Breaker breaks when the anchor disappears
 - Destroying the breaker resets all progress
 

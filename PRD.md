@@ -62,7 +62,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | SG-008 | TODO | Breacher placement gating | Design: World Breacher placement requires realm owner inside realm; not enforced |
 | SG-009 | DONE | One siege block per anchor | Enforced by geometry: siege blocks must sit directly on the anchor's upper half, which has room for one |
 | SG-010 | DONE | Siege boss bars | Progress boss bars within `siege_bossbar_range`; cross-dimension chunk force-loading keeps both sides ticking |
-| SG-011 | PARTIAL | Siege visuals on the World Anchor | While a siege block is active, World Breacher done: anchor `INFLUENCE` 0..4 drives EMBER rings, a top-down pink rune gradient with breach progress, pink/gold rune particles and drain particles. Anchor Breaker visuals still to design |
+| SG-011 | DONE | Siege visuals on the World Anchor | While a siege block is active, World Breacher done: anchor `INFLUENCE` 0..4 drives EMBER rings, a top-down pink rune gradient with breach progress, pink/gold rune particles and drain particles. Anchor Breaker (Unmaker) done: anchor `DAMAGE` 0..4 drives EMBER rings, cracks, heated runes and the sigil; breaker `CHARGE` 0..4 fills the coils and adds frozen lightning sets at 25/50/75 %, with siphon stream, red motes and the `reality_crack` sound |
 
 ---
 
@@ -91,7 +91,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | CP-004 | PARTIAL | Custom textures | World Anchor uses generated Runebound Monolith textures (`tools/anchor/`); all other blocks use vanilla placeholders |
 | CP-005 | PARTIAL | Mining/tool tags | pickaxe.json and needs_diamond_tool.json only list pocket_anchor; siege blocks (hardness 50) mine slowly with any tool |
 | CP-006 | TODO | Anchor break warning FX | Particles and sounds when anchor is being mined/destroyed |
-| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound) and World Breacher (Mandible): generated models (`tools/anchor/`), renderers and particles; other blocks use cube_all |
+| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible) and Anchor Breaker (Unmaker): generated models (`tools/anchor/`), renderers and particles; other blocks use cube_all |
 | CP-008 | TODO | Siege progress visual feedback | Particles, sounds, or block state changes during siege progression |
 | CP-009 | TODO | In-game documentation | Tooltips, guide book, or advancement hints explaining mechanics |
 
