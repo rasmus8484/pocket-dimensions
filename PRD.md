@@ -57,7 +57,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | SG-003 | DONE | Lapis fuel system | Both siege blocks consume lapis; progress pauses when fuel exhausted |
 | SG-004 | DONE | Config-driven durations | breach/breaker duration, core_slow_factor, core_fuel_burn_ticks in config |
 | SG-005 | DONE | WorldCore defensive fuel | Owner inserts lapis into WorldCore; slows attacker progress by core_slow_factor |
-| SG-006 | DONE | Dynamic beacon colour | WorldCore beam: blue=normal, pink=breacher present, red=breaker active+fueled or anchor destroyed |
+| SG-006 | DONE | Dynamic beacon colour | WorldCore beam: blue=normal, pink=breacher present, red=breaker active+fueled; anchor destroyed = core inert (no beam) |
 | SG-007 | DONE | WorldAnchor indestructible | Hardness -1; only removable by AnchorBreaker via level.setBlock() (upper half follows) |
 | SG-008 | TODO | Breacher placement gating | Design: World Breacher placement requires realm owner inside realm; not enforced |
 | SG-009 | DONE | One siege block per anchor | Enforced by geometry: siege blocks must sit directly on the anchor's upper half, which has room for one |
@@ -91,7 +91,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | CP-004 | PARTIAL | Custom textures | World Anchor uses generated Runebound Monolith textures (`tools/anchor/`); all other blocks use vanilla placeholders |
 | CP-005 | PARTIAL | Mining/tool tags | pickaxe.json and needs_diamond_tool.json only list pocket_anchor; siege blocks (hardness 50) mine slowly with any tool |
 | CP-006 | TODO | Anchor break warning FX | Particles and sounds when anchor is being mined/destroyed |
-| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible) and Anchor Breaker (Unmaker): generated models (`tools/anchor/`), renderers and particles; other blocks use cube_all |
+| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker) and World Core (Geode Heart, two blocks, model per siege state): generated models (`tools/anchor/`), renderers and particles; other blocks use cube_all |
 | CP-008 | TODO | Siege progress visual feedback | Particles, sounds, or block state changes during siege progression |
 | CP-009 | TODO | In-game documentation | Tooltips, guide book, or advancement hints explaining mechanics |
 

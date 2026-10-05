@@ -47,7 +47,7 @@ Each player can own one realm — a region of overworld-like terrain (no structu
 
 **Access list:** In the World Core GUI the owner can type a player name and click **Add** to let them through the anchor, or click **x** next to a name to remove them. The list size is capped by `access.max_allowed_players` (0 = unlimited).
 
-The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core's beacon turns red and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
+The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
@@ -79,10 +79,13 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half — *
 
 **Defense:** The realm owner can insert lapis into the World Core to slow siege progress by 3x (`core_slow_factor`). While a siege block is progressing, one attacker lapis and one defender lapis are consumed every `core_fuel_burn_ticks`, creating a resource war. Defender lapis is only used while a siege is actually running.
 
-**Beacon indicator:** The World Core emits a beacon beam visible from the realm:
+**The World Core (the Geode Heart):** a two-block boulder of weathered stone floating at the realm's centre, split open on four sides around a crystal-lined hollow that holds the realm's black hole (the same one as the anchor's). A shaft is bored straight down through it; the beacon rises from the black hole up the shaft, runes climb the beam in a slow double helix, crystal shards circle the black hole and drift down the shaft, faceted aurora crystals are driven through its crown and a layer of aurora crystal hangs beneath it, slowly shifting colour. A rune tablet below each opening marks where it answers you.
+
+**Beacon indicator:** the core's colours show the realm's state from anywhere inside it:
 - **Blue** — no active siege
-- **Pink** — World Breacher is present on the anchor
-- **Red** — Anchor Breaker is active and fueled, or the anchor has been destroyed
+- **Pink** — World Breacher is present on the anchor (the crystal, runes and beam turn pink, the black hole burns ember)
+- **Red** — Anchor Breaker is active and fueled (everything runs hot red, the black hole burns ember)
+- **Dark** — the anchor has been destroyed: the black hole collapses, the beam goes out, nothing glows or moves, and the boulder falls to the ground
 
 Both siege blocks require placement directly on top of a World Anchor and break if the anchor is removed. There are no loot tables yet, so siege blocks drop nothing when broken or mined.
 
