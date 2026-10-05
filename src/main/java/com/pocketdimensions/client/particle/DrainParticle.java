@@ -10,26 +10,34 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
 
 /**
- * A pink mote drained from a World Breacher's mandible into the anchor's black hole.
- * Spawned at a hook; (xd, yd, zd) is the offset to the target (the core). It follows a quadratic
- * curve whose control point sits over the window on one of the two faces next to the hook.
+ * A mote travelling between an anchor's black hole and a siege block along a quadratic curve.
+ * Spawned at the start; (xd, yd, zd) is the offset to the target.
+ * DRAIN (World Breacher, pink): hook to core, control point over a window next to the hook.
+ * OUT (Anchor Breaker, red): core to clamp foot, leaving sideways through a window at core height.
+ * STRAIGHT (Anchor Breaker siphon, red): a straight line up into the funnel.
  */
 public class DrainParticle extends SingleQuadParticle {
 
+    public enum Path { DRAIN, OUT, STRAIGHT }
+    public static final int PINK = 0xFF70E0, RED = 0xFF4A2A;
+
     private final double sx, sy, sz, cx, cy, cz, tx, ty, tz;
 
-    DrainParticle(ClientLevel level, double x, double y, double z, double dx, double dy, double dz, TextureAtlasSprite sprite) {
+    DrainParticle(ClientLevel level, double x, double y, double z, double dx, double dy, double dz,
+                  TextureAtlasSprite sprite, int rgb, Path path) {
         super(level, x, y, z, sprite);
         this.sx = x; this.sy = y; this.sz = z;
         this.tx = x + dx; this.ty = y + dy; this.tz = z + dz;
         boolean alongX = this.random.nextBoolean();
-        this.cx = alongX ? x : tx;
-        this.cy = ty + 5 / 16.0;
-        this.cz = alongX ? tz : z;
+        switch (path) {
+            case DRAIN -> { cx = alongX ? x : tx; cy = ty + 5 / 16.0; cz = alongX ? tz : z; }
+            case OUT -> { cx = alongX ? x : tx; cy = y; cz = alongX ? tz : z; }
+            default -> { cx = (x + tx) / 2; cy = (y + ty) / 2; cz = (z + tz) / 2; }
+        }
         this.hasPhysics = false;
-        this.lifetime = 60 + this.random.nextInt(21);
+        this.lifetime = (path == Path.STRAIGHT ? 30 : 60) + this.random.nextInt(21);
         this.quadSize = 0.05f;
-        this.rCol = 1f; this.gCol = 112 / 255f; this.bCol = 224 / 255f;
+        this.rCol = (rgb >> 16 & 0xFF) / 255f; this.gCol = (rgb >> 8 & 0xFF) / 255f; this.bCol = (rgb & 0xFF) / 255f;
         this.setAlpha(0f);
     }
 
@@ -52,12 +60,14 @@ public class DrainParticle extends SingleQuadParticle {
 
     public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprites;
-        public Provider(SpriteSet sprites) { this.sprites = sprites; }
+        private final int rgb;
+        private final Path path;
+        public Provider(SpriteSet sprites, int rgb, Path path) { this.sprites = sprites; this.rgb = rgb; this.path = path; }
 
         @Override
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z,
                                        double dx, double dy, double dz, RandomSource random) {
-            return new DrainParticle(level, x, y, z, dx, dy, dz, sprites.get(random));
+            return new DrainParticle(level, x, y, z, dx, dy, dz, sprites.get(random), rgb, path);
         }
     }
 }

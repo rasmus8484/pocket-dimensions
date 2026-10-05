@@ -13,7 +13,7 @@ import net.minecraft.util.RandomSource;
 public class RuneParticle extends SingleQuadParticle {
 
     /** Rune colours: the anchor's own cyan, and the breacher's pink and gold. */
-    public static final int CYAN = 0x8CEBFF, PINK = 0xFF5ADC, GOLD = 0xFFCD5F;
+    public static final int CYAN = 0x8CEBFF, PINK = 0xFF5ADC, GOLD = 0xFFCD5F, RED = 0xFF5028;
 
     RuneParticle(ClientLevel level, double x, double y, double z, double xd, double yd, double zd, TextureAtlasSprite sprite, int rgb) {
         super(level, x, y, z, sprite);

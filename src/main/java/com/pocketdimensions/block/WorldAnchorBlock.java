@@ -43,13 +43,15 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     public static final BooleanProperty LINKED = BooleanProperty.create("linked");
     /** Siege influence from a World Breacher on top: 0 none, 1..3 breaching (spreads with progress), 4 breach complete. */
     public static final IntegerProperty INFLUENCE = IntegerProperty.create("influence", 0, 4);
+    /** Damage from an Anchor Breaker on top: 0 none, 1..4 = breaking progress quarters (cracks, heated runes, sigil). */
+    public static final IntegerProperty DAMAGE = IntegerProperty.create("damage", 0, 4);
     private static final VoxelShape LOWER_SHAPE = Shapes.or(Block.box(0, 0, 0, 16, 5, 16), Block.box(2, 5, 2, 14, 16, 14));
     private static final VoxelShape UPPER_SHAPE = Block.box(2, 0, 2, 14, 15, 14);
     public static final MapCodec<WorldAnchorBlock> CODEC = simpleCodec(WorldAnchorBlock::new);
 
     public WorldAnchorBlock(BlockBehaviour.Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER).setValue(LINKED, false).setValue(INFLUENCE, 0));
+        registerDefaultState(stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER).setValue(LINKED, false).setValue(INFLUENCE, 0).setValue(DAMAGE, 0));
     }
 
     @Override
@@ -78,9 +80,11 @@ public class WorldAnchorBlock extends BaseEntityBlock {
             double z = pos.getZ() + 0.5 + nz * 6.8 / 16.0 + (nx != 0 ? along : 0);
             double out = (0.5 + random.nextDouble() * 0.5) / 16.0 / 20.0;       // 0.5–1 px per second
             double up = (1.2 + random.nextDouble() * 0.8) / 16.0 / 20.0;        // 1.2–2 px per second
-            // Breacher influence tints the runes that drift off: cyan, cyan/pink while breaching, pink/gold once breached
-            int influence = state.getValue(INFLUENCE);
-            var type = influence == 0 ? ModParticles.RUNE.get()
+            // Breacher influence tints the runes that drift off: cyan, cyan/pink while breaching, pink/gold once breached.
+            // A breaker heats them instead: red, with gold sparks joining past the halfway mark.
+            int influence = state.getValue(INFLUENCE), damage = state.getValue(DAMAGE);
+            var type = damage > 0 ? (damage > 2 && random.nextInt(3) == 0 ? ModParticles.RUNE_GOLD.get() : ModParticles.RUNE_RED.get())
+                    : influence == 0 ? ModParticles.RUNE.get()
                     : influence < 4 ? (random.nextBoolean() ? ModParticles.RUNE.get() : ModParticles.RUNE_PINK.get())
                     : (random.nextBoolean() ? ModParticles.RUNE_PINK.get() : ModParticles.RUNE_GOLD.get());
             level.addParticle(type, x, pos.getY() + y, z, nx * out, up, nz * out);
@@ -97,6 +101,16 @@ public class WorldAnchorBlock extends BaseEntityBlock {
         }
     }
 
+    /** Sets DAMAGE on both halves of the anchor whose lower half is at lowerPos. */
+    public static void setDamage(Level level, BlockPos lowerPos, int damage) {
+        for (BlockPos p : new BlockPos[]{lowerPos, lowerPos.above()}) {
+            BlockState s = level.getBlockState(p);
+            if (s.getBlock() instanceof WorldAnchorBlock && s.getValue(DAMAGE) != damage) {
+                level.setBlock(p, s.setValue(DAMAGE, damage), 3);
+            }
+        }
+    }
+
     /** Sets LINKED on both halves of the anchor whose lower half is at lowerPos. */
     public static void setLinked(Level level, BlockPos lowerPos, boolean linked) {
         for (BlockPos p : new BlockPos[]{lowerPos, lowerPos.above()}) {
@@ -109,7 +123,7 @@ public class WorldAnchorBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(HALF, LINKED, INFLUENCE);
+        builder.add(HALF, LINKED, INFLUENCE, DAMAGE);
     }
 
     // -------------------------------------------------------------------------
@@ -164,6 +178,10 @@ public class WorldAnchorBlock extends BaseEntityBlock {
             // The breacher on top is gone: the anchor shakes off its influence
             if (state.getValue(INFLUENCE) > 0 && !(level.getBlockState(pos.above()).getBlock() instanceof WorldBreacherBlock)) {
                 setInfluence(level, pos.below(), 0);
+            }
+            // The breaker on top is gone: the cracks close and the runes cool
+            if (state.getValue(DAMAGE) > 0 && !(level.getBlockState(pos.above()).getBlock() instanceof AnchorBreakerBlock)) {
+                setDamage(level, pos.below(), 0);
             }
         }
     }

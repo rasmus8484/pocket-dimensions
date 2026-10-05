@@ -11,6 +11,7 @@ import com.pocketdimensions.init.ModCreativeTabs;
 import com.pocketdimensions.init.ModItems;
 import com.pocketdimensions.init.ModMenuTypes;
 import com.pocketdimensions.init.ModParticles;
+import com.pocketdimensions.init.ModSounds;
 import com.pocketdimensions.network.ModNetworking;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -50,6 +51,7 @@ public class PocketDimensionsMod {
         ModChunkGenerators.CHUNK_GENERATORS.register(modBusGroup);
         ModMenuTypes.MENU_TYPES.register(modBusGroup);
         ModParticles.PARTICLE_TYPES.register(modBusGroup);
+        ModSounds.SOUND_EVENTS.register(modBusGroup);
 
         ModNetworking.register();
 

@@ -76,7 +76,8 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         BlockEntityRenderState.extractBase(be, s, crumbling);
         s.linked = be.getBlockState().getValue(WorldAnchorBlock.LINKED);
         // Under siege (a breacher is attached): the accretion glow turns ember
-        s.palette = be.getBlockState().getValue(WorldAnchorBlock.INFLUENCE) > 0 ? RingPalette.EMBER : RingPalette.GLOW;
+        var st = be.getBlockState();
+        s.palette = st.getValue(WorldAnchorBlock.INFLUENCE) > 0 || st.getValue(WorldAnchorBlock.DAMAGE) > 0 ? RingPalette.EMBER : RingPalette.GLOW;
         // Wrap before converting to float: past ~2^24 ticks a float can no longer hold the partial tick and animation stutters.
         s.time = be.getLevel() == null ? 0 : (Math.floorMod(be.getLevel().getGameTime(), 24000L * 20) + partialTick) / 20f;
     }

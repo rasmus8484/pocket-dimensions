@@ -21,7 +21,19 @@ public class ModParticles {
     public static final RegistryObject<SimpleParticleType> RUNE_GOLD =
             PARTICLE_TYPES.register("rune_gold", () -> new SimpleParticleType(false));
 
+    /** Rune glyphs heated red by an Anchor Breaker. */
+    public static final RegistryObject<SimpleParticleType> RUNE_RED =
+            PARTICLE_TYPES.register("rune_red", () -> new SimpleParticleType(false));
+
     /** Pink mote drained from a World Breacher's mandibles into the anchor's black hole. */
     public static final RegistryObject<SimpleParticleType> DRAIN =
             PARTICLE_TYPES.register("drain", () -> new SimpleParticleType(false));
+
+    /** Red mote thrown from the black hole through a window to an Anchor Breaker's clamp foot. */
+    public static final RegistryObject<SimpleParticleType> UNMAKE =
+            PARTICLE_TYPES.register("unmake", () -> new SimpleParticleType(false));
+
+    /** Red mote siphoned straight up from the black hole into an Anchor Breaker's funnel. */
+    public static final RegistryObject<SimpleParticleType> SIPHON =
+            PARTICLE_TYPES.register("siphon", () -> new SimpleParticleType(false));
 }
