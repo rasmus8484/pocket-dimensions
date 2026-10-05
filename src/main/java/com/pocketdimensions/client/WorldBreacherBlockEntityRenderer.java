@@ -15,7 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Renders a pink beacon beam rising from a WorldBreacher when the breach is complete.
+ * Renders a pink beacon beam rising out of the WorldBreacher's eye while the breach is complete and fueled.
  * Reuses WorldCoreRenderState (beamHeight, animationTime, beamColor).
  */
 public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<WorldBreacherBlockEntity, WorldCoreRenderState> {
@@ -36,7 +36,8 @@ public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<Wor
                                    ModelFeatureRenderer.CrumblingOverlay crumbling) {
         BlockEntityRenderState.extractBase(be, state, crumbling);
 
-        if (!be.isBreachComplete()) {
+        // The beam shows the breach is open: complete AND still fueled (same rule as realm access)
+        if (!be.isBreachComplete() || !be.hasFuel()) {
             state.beamHeight = 0;
             return;
         }
@@ -62,6 +63,8 @@ public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<Wor
     public void submit(WorldCoreRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState camera) {
         if (state.beamHeight == 0) return;
+        poseStack.pushPose();
+        poseStack.translate(0f, 0.75f, 0f);   // rise out of the Mandible's eye
         BeaconRenderer.submitBeaconBeam(
                 poseStack, collector,
                 BeaconRenderer.BEAM_LOCATION,
@@ -72,6 +75,7 @@ public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<Wor
                 state.beamColor,
                 BeaconRenderer.SOLID_BEAM_RADIUS,
                 BeaconRenderer.BEAM_GLOW_RADIUS);
+        poseStack.popPose();
     }
 
     @Override

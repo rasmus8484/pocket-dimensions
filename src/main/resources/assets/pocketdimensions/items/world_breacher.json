@@ -1,6 +1,6 @@
 {
     "model": {
         "type": "minecraft:model",
-        "model": "pocketdimensions:block/world_breacher"
+        "model": "pocketdimensions:item/world_breacher"
     }
 }

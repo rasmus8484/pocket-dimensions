@@ -1,5 +1,7 @@
 package com.pocketdimensions.blockentity;
 
+import com.pocketdimensions.block.WorldBreacherBlock;
+import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.PocketDimensionsConfig;
 import com.pocketdimensions.init.ModBlockEntityTypes;
@@ -148,6 +150,18 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
                 }
             }
         }
+
+        // Siege visuals: tint the anchor's runes with breach progress and light the eye when complete
+        if (level.getGameTime() % 20 == 0 || be.isBreachComplete() != state.getValue(WorldBreacherBlock.COMPLETE)) {
+            int duration = PocketDimensionsConfig.BREACH_DURATION_TICKS.get();
+            int influence = be.isBreachComplete() ? 4 : 1 + Math.min(2, (int) (3L * be.progressTicks / duration));
+            if (hasAnchor) WorldAnchorBlock.setInfluence(level, anchorPos, influence);
+            if (state.getValue(WorldBreacherBlock.COMPLETE) != be.isBreachComplete()) {
+                level.setBlock(pos, state.setValue(WorldBreacherBlock.COMPLETE, be.isBreachComplete()), 3);
+            }
+        }
+        // Keep clients' copy of fuel/progress fresh (the beam only shows while fueled)
+        if (level.getGameTime() % 40 == 0) level.sendBlockUpdated(pos, state, state, 3);
 
         // Force-load the WorldCore chunk in realm so it can tick (beacon color, defense fuel)
         if (level.getGameTime() % 200 == 0 && (be.hasFuel() || be.progressTicks > 0)

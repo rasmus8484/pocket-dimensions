@@ -4,6 +4,13 @@ import com.mojang.serialization.MapCodec;
 import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.init.ModBlocks;
+import com.pocketdimensions.init.ModParticles;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,9 +41,41 @@ import org.jetbrains.annotations.Nullable;
 public class WorldBreacherBlock extends BaseEntityBlock {
 
     public static final MapCodec<WorldBreacherBlock> CODEC = simpleCodec(WorldBreacherBlock::new);
+    /** True once the breach is complete: the eye on top lights up. */
+    public static final BooleanProperty COMPLETE = BooleanProperty.create("complete");
+    /** The Mandible's head in its own block; the mandibles reaching into the anchor are visual only. */
+    private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 12, 14);
 
     public WorldBreacherBlock(BlockBehaviour.Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(COMPLETE, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(COMPLETE);
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return SHAPE;
+    }
+
+    /**
+     * Client-only: pink motes leave the four mandible hooks and curve over the windows into the
+     * anchor's black hole. Only on a linked anchor (there is no black hole otherwise).
+     */
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        BlockState below = level.getBlockState(pos.below());
+        if (!below.is(ModBlocks.WORLD_ANCHOR.get()) || !below.getValue(WorldAnchorBlock.LINKED)) return;
+        double coreY = (13.5 - 32) / 16.0, hookY = (22.5 - 32) / 16.0;
+        for (int n = 0; n < 3; n++) {
+            double sx = random.nextBoolean() ? 1 : -1, sz = random.nextBoolean() ? 1 : -1;
+            double hx = 0.5 + sx * 6 / 16.0, hz = 0.5 + sz * 6 / 16.0;
+            level.addParticle(ModParticles.DRAIN.get(), pos.getX() + hx, pos.getY() + hookY, pos.getZ() + hz,
+                    0.5 - hx, coreY - hookY, 0.5 - hz);
+        }
     }
 
     @Override
