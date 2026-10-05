@@ -62,6 +62,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | SG-008 | TODO | Breacher placement gating | Design: World Breacher placement requires realm owner inside realm; not enforced |
 | SG-009 | DONE | One siege block per anchor | Enforced by geometry: siege blocks must sit directly on the anchor's upper half, which has room for one |
 | SG-010 | DONE | Siege boss bars | Progress boss bars within `siege_bossbar_range`; cross-dimension chunk force-loading keeps both sides ticking |
+| SG-011 | TODO | Siege visuals on the World Anchor | While a siege block is active, switch the anchor's black-hole rings to the EMBER palette (`WorldAnchorRenderState.palette = RingPalette.EMBER` in `WorldAnchorBlockEntityRenderer.extractRenderState`), plus further siege visual changes still to be designed |
 
 ---
 

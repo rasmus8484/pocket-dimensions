@@ -31,20 +31,31 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
      * GLOW  - clamped: the cool blue glow of the approved concept (default).
      * EMBER - wrapped like an unclamped byte cast: channels pushed past 255 roll over to near zero,
      *         turning the rings a flickering red-yellow, like a real black hole's accretion glow.
-     *         Found by accident in the first build and kept on purpose.
+     *         Found by accident in the first build and kept on purpose for the siege look.
+     * Chosen per anchor through WorldAnchorRenderState.palette.
      */
-    private enum RingPalette { GLOW, EMBER }
-    private static final RingPalette PALETTE = RingPalette.GLOW;
+    public enum RingPalette {
+        GLOW(new float[]{110 / 255f, 210 / 255f, 1f}, 0.78f, 0.22f),
+        EMBER(new float[]{215 / 255f, 248 / 255f, 1f}, 0.92f * 1.06f, 0.16f * 1.06f);
 
-    /** Inner ring colour. GLOW keeps every channel below full so per-pixel variation stays visible after clamping. */
-    private static final float[] GLOW = PALETTE == RingPalette.EMBER
-            ? new float[]{215 / 255f, 248 / 255f, 1f}
-            : new float[]{110 / 255f, 210 / 255f, 1f};
+        /** Inner ring colour; the disk fades from it to DEEP. */
+        final float[] glow;
+        final float base, spread;
 
-    /** Per-pixel brightness from a 0..1 hash. EMBER keeps the original over-bright range that makes channels wrap. */
-    private static float shimmer(float h) {
-        return PALETTE == RingPalette.EMBER ? (0.92f + 0.16f * h) * 1.06f : 0.78f + 0.22f * h;
+        RingPalette(float[] glow, float base, float spread) { this.glow = glow; this.base = base; this.spread = spread; }
+
+        /** Per-pixel brightness from a 0..1 hash. */
+        float shimmer(float h) { return base + spread * h; }
+
+        /** One colour channel (0..1, may exceed 1) to a byte value; EMBER deliberately wraps instead of clamping. */
+        int channel(float v) {
+            int i = (int) (v * 255f);
+            return this == EMBER ? i & 0xFF : Math.max(0, Math.min(255, i));
+        }
     }
+
+    /** Beam colour (always the calm cyan). */
+    private static final float[] GLOW = RingPalette.GLOW.glow;
 
     /** Face order shared by SEED_DIRS and cubeFace: -z, +z, -x, +x, +y, -y. */
     private static final int[][] SEED_DIRS = {{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
@@ -72,6 +83,8 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
     public void submit(WorldAnchorRenderState s, PoseStack pose, SubmitNodeCollector out, CameraRenderState camera) {
         if (!s.linked) return;
         float t = s.time;
+        RingPalette pal = s.palette;
+        float[] glow = pal.glow;
 
         // Rift sphere, turned to face the camera like the ring so their pixel edges line up
         pose.pushPose();
@@ -90,8 +103,8 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         out.submitCustomGeometry(pose, RenderTypes.lightning(), (p, vc) -> {
             for (int[] px : RING) {
                 int slot = Math.floorMod(px[2] - step, RING.size());
-                float b = shimmer(hash(slot, 3, 11));
-                quadXY(vc, p.pose(), px[0], px[1], GLOW[0] * b, GLOW[1] * b, GLOW[2] * b, 1f);
+                float b = pal.shimmer(hash(slot, 3, 11));
+                quadXY(vc, p.pose(), pal, px[0], px[1], glow[0] * b, glow[1] * b, glow[2] * b, 1f);
             }
         });
         pose.popPose();
@@ -104,9 +117,9 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
             for (int[] px : DISK) {
                 float r = (float) Math.hypot(px[0] + 0.5, px[1] + 0.5);
                 float f = Math.min(1f, Math.max(0f, (r - 4.5f) / 1.7f));
-                float b = shimmer(hash(px[0], 7, px[1]));
-                float cr = (GLOW[0] + (DEEP[0] - GLOW[0]) * f) * b, cg = (GLOW[1] + (DEEP[1] - GLOW[1]) * f) * b, cb = (GLOW[2] + (DEEP[2] - GLOW[2]) * f) * b;
-                quadXZ(vc, p.pose(), px[0], px[1], cr, cg, cb);
+                float b = pal.shimmer(hash(px[0], 7, px[1]));
+                float cr = (glow[0] + (DEEP[0] - glow[0]) * f) * b, cg = (glow[1] + (DEEP[1] - glow[1]) * f) * b, cb = (glow[2] + (DEEP[2] - glow[2]) * f) * b;
+                quadXZ(vc, p.pose(), pal, px[0], px[1], cr, cg, cb);
             }
         });
         pose.popPose();
@@ -134,19 +147,19 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
 
     // ---- geometry helpers -------------------------------------------------------------------
 
-    private static void quadXY(VertexConsumer vc, Matrix4f m, int x, int y, float r, float g, float b, float a) {
-        vc.addVertex(m, x * PX, y * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
-        vc.addVertex(m, (x + 1) * PX, y * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
-        vc.addVertex(m, (x + 1) * PX, (y + 1) * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
-        vc.addVertex(m, x * PX, (y + 1) * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
+    private static void quadXY(VertexConsumer vc, Matrix4f m, RingPalette pal, int x, int y, float r, float g, float b, float a) {
+        vc.addVertex(m, x * PX, y * PX, 0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), pal.channel(a));
+        vc.addVertex(m, (x + 1) * PX, y * PX, 0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), pal.channel(a));
+        vc.addVertex(m, (x + 1) * PX, (y + 1) * PX, 0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), pal.channel(a));
+        vc.addVertex(m, x * PX, (y + 1) * PX, 0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), pal.channel(a));
     }
 
-    private static void quadXZ(VertexConsumer vc, Matrix4f m, int x, int z, float r, float g, float b) {
+    private static void quadXZ(VertexConsumer vc, Matrix4f m, RingPalette pal, int x, int z, float r, float g, float b) {
         float x0 = x * PX, x1 = (x + 1) * PX, z0 = z * PX, z1 = (z + 1) * PX;
-        vc.addVertex(m, x0, 0, z0).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x0, 0, z1).setColor(ring(r), ring(g), ring(b), 255);
-        vc.addVertex(m, x1, 0, z1).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x1, 0, z0).setColor(ring(r), ring(g), ring(b), 255);
-        vc.addVertex(m, x0, 0, z0).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x1, 0, z0).setColor(ring(r), ring(g), ring(b), 255);
-        vc.addVertex(m, x1, 0, z1).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x0, 0, z1).setColor(ring(r), ring(g), ring(b), 255);
+        vc.addVertex(m, x0, 0, z0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255); vc.addVertex(m, x0, 0, z1).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255);
+        vc.addVertex(m, x1, 0, z1).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255); vc.addVertex(m, x1, 0, z0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255);
+        vc.addVertex(m, x0, 0, z0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255); vc.addVertex(m, x1, 0, z0).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255);
+        vc.addVertex(m, x1, 0, z1).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255); vc.addVertex(m, x0, 0, z1).setColor(pal.channel(r), pal.channel(g), pal.channel(b), 255);
     }
 
     /** Axis-aligned box centred on x/z, bottom at y=0. */
@@ -168,12 +181,6 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
             {x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0}, {x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1}};
         float[] f = q[face];
         for (int i = 0; i < 4; i++) vc.addVertex(m, f[i * 3], f[i * 3 + 1], f[i * 3 + 2]).setColor(c[0], c[1], c[2], 1f);
-    }
-
-    /** One colour channel (0..1, may exceed 1) to a byte value according to PALETTE. */
-    private static int ring(float v) {
-        int i = (int) (v * 255f);
-        return PALETTE == RingPalette.EMBER ? i & 0xFF : Math.max(0, Math.min(255, i));
     }
 
     private static float hash(int x, int y, int z) {
