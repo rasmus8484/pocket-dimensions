@@ -37,6 +37,9 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
     private static final int BAND_GLYPHS = 13;
     private static final float GLYPH = 8 * 0.42f * PX;     // the 8x8 rune sprite at 0.42 px per texel
     private static final int[] RUNE = {140, 235, 255};
+    /** The unlit rune and its glow sit this far off the depth-claiming cutout, toward the side they are seen from
+     *  (each winding is only visible from its own side), so they never z-fight with it. */
+    private static final float LIFT = 0.1f * PX;
     private static final Identifier[] RUNE_TEX = new Identifier[6], GLOW_TEX = new Identifier[6];
     static {
         for (int i = 0; i < 6; i++) {
@@ -134,7 +137,7 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
         for (int side = 0; side < (bothSides ? 2 : 1); side++) {   // the unlit type culls back faces: give it both windings
             for (int n = 0; n < 4; n++) {
                 float[] v = quad[side == 0 ? n : 3 - n];
-                vc.addVertex(m, v[0], v[1], 0f).setColor(r, g, b, a).setUv(v[2], v[3])
+                vc.addVertex(m, v[0], v[1], bothSides ? (side == 0 ? LIFT : -LIFT) : 0f).setColor(r, g, b, a).setUv(v[2], v[3])
                         .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(0f, 1f, 0f);
             }
         }
