@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">69 · pocket anchor concepts</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">70 · head-sized pocket anchors</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -4090,9 +4090,197 @@ const R19 = [
 ];
 
 // ---------------------------------------------------------------------------
+// ROUND 20: head-sized Pocket Anchors (8 x 8 x 8 px, like a player head), something you carry and set down.
+// The pocket room shows as end portal material: in game RenderTypes.endPortal() on a small cube in the renderer.
+// ---------------------------------------------------------------------------
+const HD = (x, y, z) => {                  // local coords inside the 8 px head at x/z 4..11, or null outside
+  if (x < 4 || x > 11 || z < 4 || z > 11 || y < 0 || y > 7) return null;
+  const i = x - 4, k = z - 4;
+  return { i, k, li: Math.min(i, 7 - i), lk: Math.min(k, 7 - k), ly: Math.min(y, 7 - y) };
+};
+const hdFace = (h, e) => h.li === 0 && (e.nx || e.px) ? h.k : h.lk === 0 && (e.nz || e.pz) ? h.i : -1;   // u 0..7 across the face
+const hdGlyph = (u, y, f) => u >= 2 && u <= 5 && y >= 1 && y <= 5 && GLYPHS[f % 6][5 - y][u - 2] === 'X';
+const hdStone = (x, y, z) => tone(PK_STONE, x, y, z, 0.14);
+const PORTAL_SW = [['#424658', 'Basalt'], ['#d6a23c', 'Gold'], ['#8cebff', 'Rune light'], ['#0b1a22', 'End portal']];
+
+function headDesign(d) {
+  return {
+    round: 20, kind: 'Pocket Anchor', bounds: { x0: -1, x1: 17, y0: 0, y1: 16 }, alwaysLive: true,
+    labels: ['Room empty', 'Someone inside'], sublabels: ['the anchor waits', 'its pocket room is occupied'],
+    hStory: 'The anchor at rest', hChange: 'While someone is inside',
+    rift: VANILLA, light: 0x96f0ff, bloom: 0.4, glow: 1.0, pulse: 1.1, flowGain: 0.85, core: [8, 4, 8],
+    camLift: -0.85, labelY: d.labelY || 0.75,
+    name: d.name, line: d.line, story: d.story, change: d.change, swatches: PORTAL_SW,
+    interact: 'The whole anchor is the click point: about the size of a player head, with a head-sized hitbox. Right-click to enter its room, crouch and right-click to pick it up. Rings, circles and runes are light only, with no collision.',
+    code: ['Block: one small static model (half a block wide); runes full-bright with light flowing toward the centre (animated texture)', 'End portal: a small cube drawn by the renderer with the vanilla end portal render type, the same shifting starfield as the End portal', ...d.code],
+    shape: (x, y, z) => { const h = HD(x, y, z); return h ? d.shape(h, y) : null; },
+    paint: (k, x, y, z, L, e) => d.paint(k, x, y, z, HD(x, y, z), e),
+    rifts: d.rifts,
+    extras(L, group, ctx) { return d.fx(L, group, ctx); },
+  };
+}
+
+const R20 = [
+  headDesign({
+    name: 'Rune Cube',
+    line: 'A basalt cube the size of a head, with a window into somewhere else.',
+    story: 'A little basalt cube with gold corner edges on a dark foot. A square window in every face looks into a hollow filled with end portal light, a rune dot glowing in the lower corners of each frame, and a rune glows in the middle of the lid. A small ring of runes circles it slowly, each glyph facing outward.',
+    change: 'A second ring of runes appears higher up, turning the other way.',
+    code: ['Rune ring: 6 small rune particles circling the cube, fixed rotation facing outward', 'Occupied: a second, higher ring turning the other way'],
+    shape(h, y) {
+      if (y === 0) return 'foot';
+      if (h.li >= 1 && h.lk >= 1 && y <= 6) return null;                                       // hollow
+      if (y <= 6 && (h.li === 0) !== (h.lk === 0)) {                                           // wall, not a corner
+        const u = h.li === 0 ? h.k : h.i;
+        if (u >= 2 && u <= 5 && y >= 2 && y <= 5) return null;                                 // window
+      }
+      return y === 7 ? 'lid' : 'wall';
+    },
+    paint(k, x, y, z, h, e) {
+      if (k === 'foot') return { c: tone(PK_PLINTH, x, y, z, 0.16) };
+      if (h.li === 0 && h.lk === 0) return { c: goldTone(x, y, z) };
+      if (k === 'lid') return h.li === 0 || h.lk === 0 ? { c: goldTone(x, y, z) } : h.li >= 3 && h.lk >= 3 ? { c: PK_RUNE, g: true } : { c: hdStone(x, y, z) };
+      const u = hdFace(h, e);
+      if ((u === 1 || u === 6) && y === 1) return { c: PK_RUNE, fl: true };   // a rune dot in each lower corner of the frame
+      return { c: hdStone(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [5.1, 1.1, 5.1], t: [10.9, 6.9, 10.9] }],
+    fx(L, group) {
+      const a = runeRing(group, { c: [8, 4, 8], r: 7, n: 6, w: 0.3, bright: L ? 0.95 : 0.7, size: 0.4 });
+      const b = L ? runeRing(group, { c: [8, 9, 8], r: 5.5, n: 5, w: -0.25, bright: 0.8, size: 0.4, seed: 2 }) : null;
+      return t => { a(t); b && b(t); };
+    },
+  }),
+  headDesign({
+    name: 'Reliquary',
+    line: 'A little gold-and-basalt frame holding a cube of the End.',
+    story: 'An open frame the size of a head: basalt corner posts with rune dots, gold edges top and bottom, on a solid foot. Inside, a small cube of end portal light floats and tumbles slowly, and a tilted ring of runes orbits the frame like a gyroscope.',
+    change: 'A second ring of runes appears, tilted the other way, and the cube tumbles a little faster.',
+    code: ['Floating cube: end portal render type, tumbling slowly on a tilted axis (renderer)', 'Rune orbit: 6 small rune particles on a tilted ring, facing outward', 'Occupied: a second ring tilted the other way'],
+    shape(h, y) {
+      if (y === 0) return 'foot';
+      const edges = (h.li === 0) + (h.lk === 0) + (y === 7);
+      return edges >= 2 ? (h.li === 0 && h.lk === 0 ? 'post' : 'edge') : null;
+    },
+    paint(k, x, y, z, h, e) {
+      if (k === 'foot') { if (h.li === 0 || h.lk === 0) return { c: goldTone(x, y, z) }; return Math.min(h.li, h.lk) === 2 ? { c: PK_RUNE, g: true } : { c: tone(PK_PLINTH, x, y, z, 0.16) }; }
+      if (k === 'post') return y === 2 || y === 5 ? { c: PK_RUNE, fl: true } : { c: hdStone(x, y, z) };
+      return { c: goldTone(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [6.2, 2.4, 6.2], t: [9.8, 6.0, 9.8] }],
+    fx(L, group, ctx) {
+      const a = runeRing(group, { c: [8, 4.5, 8], r: 6.5, n: 6, w: 0.32, tiltX: 0.4, bright: L ? 0.95 : 0.75, size: 0.4 });
+      const b = L ? runeRing(group, { c: [8, 4.5, 8], r: 6.5, n: 6, w: -0.28, tiltZ: -0.4, bright: 0.85, size: 0.4, seed: 3 }) : null;
+      const cube = ctx.rifts[0];
+      return t => {
+        if (cube) { cube.rotation.set(0.5 * Math.sin(t * 0.25), t * (L ? 0.45 : 0.25), 0.5 * Math.cos(t * 0.25)); cube.position.y = (4.2 + 0.4 * Math.sin(t * 0.9)) * PX; }
+        a(t); b && b(t);
+      };
+    },
+  }),
+  headDesign({
+    name: 'Sigil Lid', labelY: 0.85,
+    line: 'A closed stone with the End showing through its lid, and a magic circle hovering over it.',
+    story: 'A closed basalt cube on a dark foot with a gold band round its shoulders and one glowing rune carved into each side. Its lid is a sunken square of end portal light, and a hand\'s width above it hovers a flat magic circle a block wide, its glyph ring and star turning slowly in opposite directions.',
+    change: 'The circle brightens and a few runes spiral down out of it into the portal in the lid.',
+    code: ['Magic circle: two flat particles 16 px wide, fixed horizontal rotation, turning in opposite directions', 'Lid: end portal render type on a sunken square', 'Occupied: rune particles spiralling down into the lid'],
+    shape(h, y) {
+      if (y === 0) return 'foot';
+      if (y === 7 && h.li >= 1 && h.lk >= 1) return null;           // sunken lid
+      if (y === 6) return 'band';
+      return 'wall';
+    },
+    paint(k, x, y, z, h, e) {
+      if (k === 'foot') return { c: tone(PK_PLINTH, x, y, z, 0.16) };
+      if (k === 'band') return h.li === 0 || h.lk === 0 ? { c: goldTone(x, y, z) } : { c: hdStone(x, y, z) };
+      const u = hdFace(h, e);
+      if (u >= 0 && hdGlyph(u, y, e.nz ? 0 : e.pz ? 1 : e.nx ? 2 : 3)) return { c: PK_RUNE, fl: true };
+      return { c: hdStone(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [5.1, 5.6, 5.1], t: [10.9, 7.0, 10.9] }],
+    fx(L, group) {
+      const circ = sigil(group, { c: [8, 11, 8], N: 32, up: true, w: 0.2, bright: L ? 1.2 : 0.85, star: [6, 2] });
+      const fall = L ? runeStream(group, 4, 4, 0.85, (f, i) => {
+        const a = i / 4 * 2 * Math.PI + f * 2.2, r = 6 * (1 - f) + 0.5;
+        return [8 + Math.cos(a) * r, 11 - f * 4, 8 + Math.sin(a) * r];
+      }) : null;
+      return t => { circ(t); fall && fall(t); };
+    },
+  }),
+  headDesign({
+    name: 'Ward Stone',
+    line: 'A small stone at the heart of a circle, drinking in runes.',
+    story: 'The closed basalt cube with a rune on every side and a lid of end portal light, set down in the middle of a magic circle on the ground a block and a half across. The circle turns slowly, and every so often a rune lifts off its rim and drifts into one of the stone\'s glowing glyphs.',
+    change: 'The circle burns brighter and the runes come twice as often.',
+    code: ['Ground circle: two flat particles 24 px wide, a fraction of a pixel above the ground (bumpy ground or tall grass cuts through it)', 'Feeding runes: rune particles drifting from the circle into the glyph on each side, facing outward', 'Occupied: twice as many runes, brighter circle'],
+    shape(h, y) {
+      if (y === 0) return 'foot';
+      if (y === 7 && h.li >= 1 && h.lk >= 1) return null;
+      if (y === 6) return 'band';
+      return 'wall';
+    },
+    paint(k, x, y, z, h, e) {
+      if (k === 'foot') return { c: tone(PK_PLINTH, x, y, z, 0.16) };
+      if (k === 'band') return h.li === 0 || h.lk === 0 ? { c: goldTone(x, y, z) } : { c: hdStone(x, y, z) };
+      const u = hdFace(h, e);
+      if (u >= 0 && hdGlyph(u, y, e.nz ? 0 : e.pz ? 1 : e.nx ? 2 : 3)) return { c: PK_RUNE, fl: true };
+      return { c: hdStone(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [5.1, 5.6, 5.1], t: [10.9, 7.0, 10.9] }],
+    fx(L, group) {
+      const circ = sigil(group, { c: [8, 0.15, 8], N: 48, up: true, w: 0.12, bright: L ? 1.15 : 0.8, star: [8, 3], seed: 1 });
+      const n = L ? 8 : 4;
+      const feed = runeStream(group, n, 5, L ? 0.9 : 0.75, (f, i) => {
+        const a = (i % 4) * Math.PI / 2, r = 11 * (1 - f) + 4.6;
+        return [8 + Math.cos(a) * r, 0.8 + 2.6 * Math.sin(f * Math.PI / 2), 8 + Math.sin(a) * r];
+      });
+      return t => { circ(t); feed(t); };
+    },
+  }),
+  headDesign({
+    name: 'Gimbal',
+    line: 'A spark of the End held in two turning gold rings.',
+    story: 'A small basalt stand, gold-edged, with a rune ring set into its top. Above it hangs a tiny cube of end portal light, held in two thin gold rings, one inside the other, each turning slowly on its own axis like a gimbal or an astrolabe.',
+    change: 'The rings turn faster and a ring of small runes circles outside them.',
+    code: ['Rings: two thin gold rings drawn by the renderer, the outer turning about the vertical axis and the inner about a horizontal one inside it', 'Cube: end portal render type, 3 px, still at the centre', 'Occupied: faster rings and a ring of 6 rune particles'],
+    shape(h, y) {
+      if (y === 0) return h.li >= 1 && h.lk >= 1 ? 'stand' : null;
+      if (y === 1) return h.li >= 1 && h.lk >= 1 ? 'top' : null;
+      return null;
+    },
+    paint(k, x, y, z, h, e) {
+      if (k === 'stand') return { c: tone(PK_PLINTH, x, y, z, 0.16) };
+      if (h.li === 1 || h.lk === 1) return { c: goldTone(x, y, z) };
+      return h.li === 2 || h.lk === 2 ? { c: PK_RUNE, fl: true } : { c: hdStone(x, y, z) };
+    },
+    rifts: [{ type: 'box', f: [6.5, 4.5, 6.5], t: [9.5, 7.5, 9.5] }],
+    fx(L, group) {
+      const ring = (R) => voxPart({
+        bounds: { x0: -6, x1: 6, y0: -6, y1: 6 },
+        shape: (x, y, z) => { if (z !== 0) return null; const r = Math.hypot(x + 0.5, y + 0.5); return r >= R - 0.5 && r < R + 0.5 ? 'r' : null; },
+        paint: (k, x, y, z) => ({ c: goldTone(x, y, z) }),
+        pivot: [0, 0, 0],
+      });
+      const outer = ring(3.6), inner = ring(2.6);
+      const holder = new THREE.Group(); holder.position.set(8 * PX, 6 * PX, 8 * PX);
+      holder.add(outer); outer.add(inner);
+      group.add(holder);
+      const runes = L ? runeRing(group, { c: [8, 6, 8], r: 6.5, n: 6, w: 0.3, bright: 0.85, size: 0.4 }) : null;
+      const k = L ? 1.6 : 1;
+      return t => {
+        outer.rotation.y = t * 0.35 * k;
+        inner.rotation.x = t * 0.5 * k;
+        runes && runes(t);
+      };
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R20,
   ...R19,
   ...R18,
   ...R17,
@@ -4815,11 +5003,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign19'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign20'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-const CUR_ROUND = 19;
+const CUR_ROUND = 20;
 const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === CUR_ROUND);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
@@ -4830,7 +5018,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -4839,7 +5027,7 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign19', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign20', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
