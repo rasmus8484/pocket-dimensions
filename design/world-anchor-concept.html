@@ -93,9 +93,9 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
 
 <header class="card">
   <div class="eyebrow">World Anchor · <span id="cIndex"></span></div>
-  <h1 id="cName">Usurper Crown</h1>
+  <h1 id="cName">Unmaker</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom</div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">39 · bolts 3x longer</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -130,6 +130,10 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
       <button id="tSpin" aria-pressed="true">Spin</button>
       <button id="tNight" aria-pressed="false">Night</button>
       <button id="notesToggle" aria-pressed="false">Notes</button>
+    </div>
+    <div class="group" role="group" aria-label="Progress" id="progressGroup" hidden>
+      <label for="progress" style="padding:0 8px;color:var(--muted);font-size:.85rem">Progress <span id="progressVal" class="num">60 %</span></label>
+      <input id="progress" type="range" min="0" max="100" value="60" style="width:150px;accent-color:var(--gold)">
     </div>
   </div>
 </div>
@@ -2744,9 +2748,355 @@ const R12 = [
 ];
 
 // ---------------------------------------------------------------------------
+// ROUND 13: Anchor Breaker concepts, in the anchor's design language, red-hot.
+// L=false: early in the breaking; L=true: almost broken. No beam. Cracks spread over the anchor.
+// ---------------------------------------------------------------------------
+const HOT = [255, 80, 40], HOT_DIM = [120, 40, 30], EMBERC = [255, 170, 60];
+// Seeded crack walks on each face, starting where the breaker bites (top corners and face centres)
+function makeBreakCracks(steps) {
+  const set = new Set();
+  let seed = 23;
+  const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let f = 0; f < 4; f++) for (const u0 of [2, 13, 7]) {
+    let u = u0, y = 22;
+    for (let i = 0; i < steps; i++) {
+      set.add(f + '|' + u + '|' + y);
+      const r = rnd();
+      if (r < 0.55) y--; else if (r < 0.78) u += (u0 === 13 ? -1 : 1); else u += (u0 === 13 ? 1 : -1);
+      u = Math.max(2, Math.min(13, u));
+      if (rnd() < 0.18) set.add(f + '|' + (u + 1) + '|' + y);
+    }
+  }
+  return set;
+}
+const BREAK_CRACKS = [makeBreakCracks(7), makeBreakCracks(20)];
+
+function breakerDesign(d) {
+  return {
+    ...breacherDesign({ ...d, emitTop: 0 }),
+    round: 13, labels: ['Breaking', 'Almost broken'], sublabels: ['early', 'nearly destroyed'],
+    shape(x, y, z, L) {
+      if (!inBlock(x, z) || y < 0) return null;
+      const b = d.shape(x, y, z, L);
+      if (b) return 'b_' + b;
+      return y <= 31 ? ANCH.shape(x, y, z, true) : null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k.startsWith('b_')) return d.paint(k.slice(2), x, y, z, L, e);
+      const r = ANCH.paint(k, x, y, z, true, e);
+      if (r.g || r.fl) {                                   // runes heat from pink toward red
+        const lum = Math.max(...r.c) / 255;
+        return { ...r, c: mix(r.c, (L ? HOT : MAG).map(v => v * lum), L ? 1 : 0.85) };
+      }
+      const sf = sideFace(e, x, z);
+      if (k === 'body' && sf && BREAK_CRACKS[L ? 1 : 0].has(sf.f + '|' + (sf.f < 2 ? x : z) + '|' + y)) return { c: L ? EMBERC : HOT, g: true };
+      return r;
+    },
+    extras(L, group, ctx) {
+      ctx.runeColors = L ? [HOT, EMBERC] : [MAG, HOT];
+      const a = ANCH.extras(true, group, ctx);
+      const b = d.extras ? d.extras(L, group, ctx) : null;
+      const sp = particles(L ? 30 : 16, 0xff8040, { r0: 1, rs: 4, y0: d.sparkY || 30, h: 6, swirl: 1.8 });
+      group.add(sp.obj);
+      return t => { a && a(t); b && b(t); sp.update(t); };
+    },
+  };
+}
+
+const R13 = [
+  breakerDesign({
+    name: 'Crusher Press',
+    line: 'A hydraulic press built around the anchor, slowly crushing its seed.',
+    story: 'Four square iron columns stand in the anchor\'s corners on gold-capped feet, tied together above the windows by riveted bands. They carry a heavy crosshead, and from it a thick piston drives a red-hot ram down onto the seed in the anchor\'s claws.',
+    change: 'Red light pulses down the hydraulic lines in the columns. Cracks spread across the anchor\'s stone from its corners and the runes run hot. Near the end the ram face glows white-orange and the cracks reach the plinth.',
+    interact: 'The press frame reads as heavy machinery locked to the anchor; lapis feeds the crosshead\'s cells. Progress is visible on the anchor itself: the further the cracks, the closer it is to breaking.',
+    code: ['Columns, bands and crosshead: static model in the corner margin', 'Ram: moving part, lowers onto the seed as breaking progresses', 'Cracks: anchor texture variants by progress (like the breacher influence levels)', 'Sparks: particles at the ram', 'Anchor black hole: EMBER palette'],
+    swatches: [['#3e3a4a', 'Dark iron'], ['#d6a23c', 'Gold caps'], ['#ff5028', 'Red-hot'], ['#ffaa3c', 'Ember cracks'], ['#5082ff', 'Lapis cells'], ['#ffbe5a', 'Ember rings']],
+    sparkY: 31,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y >= 3 && y <= 4 && lx <= 2 && lz <= 2) return y === 4 ? 'cap' : 'foot';
+      if (y >= 5 && y <= 36 && lx <= 1 && lz <= 1) return 'column';
+      if (y >= 21 && y <= 22 && ((lx === 1 && lz >= 2) || (lz === 1 && lx >= 2))) return 'band';
+      if (y >= 37 && y <= 40) return (lx <= 2 || lz <= 2 || (ax < 3.5 && az < 3.5)) && oct(cx, cz, 8, 2) ? (y === 40 ? 'crownTop' : 'crosshead') : null;
+      if (y >= 34 && y <= 36 && ax < 1.5 && az < 1.5) return 'rod';
+      if (y >= 32 && y <= 33 && ax < 3 && az < 3) return 'ram';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'cap' || k === 'crownTop') return { c: goldTone(x, y, z) };
+      if (k === 'foot') return { c: ironD(x, y, z) };
+      if (k === 'band') return { c: (x + z) % 4 === 0 ? RIVET : ironD(x, y, z) };
+      if (k === 'rod') return { c: tone([170, 168, 180], x, y, z, 0.1) };
+      if (k === 'ram') return e.ny || anySide(e) && y === 32 ? { c: L ? [255, 210, 150] : HOT, g: true } : { c: ironD(x, y, z) };
+      if (k === 'column') {
+        if (anySide(e) && ((lx === 0 && lz === 1 && e[x < 8 ? 'nx' : 'px']) || (lz === 0 && lx === 1 && e[z < 8 ? 'nz' : 'pz'])) && y >= 7 && y <= 34 && y % 4 === 1) return { c: HOT, fl: true };
+        if (y % 8 === 0) return { c: RIVET };
+        return { c: ironC(x, y, z) };
+      }
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 38 && y <= 39 && (sf.u === 7 || sf.u === 8)) return { c: LAPIS, g: true };
+      return { c: ironC(x, y, z) };
+    },
+  }),
+  breakerDesign({
+    name: 'Splitter',
+    line: 'Four iron wedges are being hammered into the anchor\'s faces.',
+    story: 'A square iron yoke sits on four corner posts above the claws, bolted and gold-trimmed. From the middle of each side a thick wedge hangs down the anchor\'s face and is driven in just above the window, its tip glowing red-hot. A heavy weight sits on the yoke, carved with red glyphs, pressing the wedges deeper.',
+    change: 'The wedge tips glow and cracks split outward from where they bite. As the breaking advances, the cracks reach across every face, the runes turn red and the weight\'s glyphs blaze.',
+    interact: 'Four wedges, one per face, make it clear the anchor is being split from every side. Lapis goes into the weight\'s cells.',
+    code: ['Yoke, posts, wedges and weight: static model in the margin and above the claws', 'Wedge tips: glowing faces, cracks start there', 'Cracks: anchor texture variants by progress', 'Sparks: particles at the wedge tips', 'Anchor black hole: EMBER palette'],
+    swatches: [['#3e3a4a', 'Dark iron'], ['#d6a23c', 'Gold trim'], ['#ff5028', 'Red-hot tips'], ['#ffaa3c', 'Ember cracks'], ['#5082ff', 'Lapis cells'], ['#ffbe5a', 'Ember rings']],
+    sparkY: 22,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y >= 23 && y <= 30 && lx <= 1 && lz <= 1) return 'post';
+      if (y >= 31 && y <= 33) return (lx <= 2 || lz <= 2) ? (y === 33 ? 'yokeTop' : 'yoke') : null;
+      // wedges: down the middle of each face in the margin, tapering toward the tip
+      if (y >= 17 && y <= 30 && (lx <= 1 || lz <= 1) && !(lx <= 1 && lz <= 1)) {
+        const u = faceU(x, z, lx, lz), half = y >= 27 ? 3 : y >= 22 ? 2.5 : 1.6;
+        if (Math.abs(u + 0.5 - 8) < half) return y <= 19 ? 'tip' : 'wedge';
+      }
+      if (y >= 34 && y <= 39 && oct(cx, cz, 4.5, 1.5)) return y === 39 ? 'weightTop' : 'weight';
+      if (y >= 40 && y <= 41 && ax < 2 && az < 2) return 'ring';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'yokeTop' || k === 'weightTop' || k === 'ring') return { c: goldTone(x, y, z) };
+      if (k === 'tip') return { c: L ? [255, 210, 150] : HOT, g: true };
+      if (k === 'wedge') {
+        if (y === 26 || y === 21) return { c: goldTone(x, y, z) };
+        if (y >= 27 && (x + z) % 3 === 0) return { c: RIVET };
+        return { c: tone([118, 114, 128], x, y, z, 0.14) };   // bright steel so the wedge reads against the stone
+      }
+      if (k === 'post' || k === 'yoke') return { c: ironD(x, y, z) };
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 35 && y <= 38) {
+        if (sf.u === 7 || sf.u === 8) return { c: LAPIS, g: true };
+        if (glyphAt(sf.u - 2, y - 34, sf.f) || glyphAt(sf.u - 10, y - 34, sf.f + 3)) return { c: HOT, fl: true };
+      }
+      return { c: ironC(x, y, z) };
+    },
+  }),
+  breakerDesign({
+    name: 'Drill Crown',
+    line: 'A drill housing clamped onto the anchor, boring into its seed.',
+    story: 'Four straight iron clamps run down the anchor\'s corner edges with gold turnbuckles, gripping it below its gold band. They hold a chamfered drill housing with red vents and a gold rim, topped by a ringed motor stack. Beneath it a square-cut drill bit turns, its red-hot tip pressed into the seed.',
+    change: 'The bit spins faster as the breaking advances, sparks fly off the seed, the vents glow brighter and cracks run down from the clamps. Near the end the whole anchor is laced with ember cracks.',
+    interact: 'The clamps show the grip, the drill shows the purpose. Lapis goes into the cells on the housing.',
+    code: ['Clamps, housing and motor stack: static model', 'Drill bit: moving part, spins (faster when nearly broken)', 'Vents: glowing faces', 'Cracks: anchor texture variants by progress', 'Sparks: particles at the bit', 'Anchor black hole: EMBER palette'],
+    swatches: [['#3e3a4a', 'Dark iron'], ['#d6a23c', 'Gold rim'], ['#ff5028', 'Red-hot bit'], ['#ffaa3c', 'Ember cracks'], ['#5082ff', 'Lapis cells'], ['#ffbe5a', 'Ember rings']],
+    sparkY: 31,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y >= 19 && y <= 33 && lx <= 1 && lz <= 1) return (y === 26 || y === 27) ? 'buckle' : 'clamp';
+      // heavy shoulders tie each clamp into the housing
+      if (y >= 32 && y <= 35 && ((lx <= 2 && lz <= 4) || (lz <= 2 && lx <= 4))) return y === 32 ? 'shoulderBase' : 'shoulder';
+      if (y >= 34 && y <= 39 && oct(cx, cz, 7, 3)) return y === 39 ? 'rim' : 'housing';
+      if (y >= 40 && y <= 46 && ax < 2.5 && az < 2.5) return (y === 42 || y === 45) ? 'motorRing' : 'motor';
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      const lx = LX(x), lz = LX(z);
+      if (k === 'rim' || k === 'motorRing' || k === 'buckle') return { c: goldTone(x, y, z) };
+      if (k === 'motor' || k === 'shoulderBase') return { c: ironD(x, y, z) };
+      if (k === 'shoulder') return { c: anySide(e) && y === 34 && (x + z) % 3 === 0 ? RIVET : ironC(x, y, z) };
+      if (k === 'clamp') {
+        if (y <= 20 && anySide(e)) return { c: HOT, g: true };
+        return { c: y % 4 === 1 ? RIVET : ironC(x, y, z) };
+      }
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 35 && y <= 37) {
+        if (sf.u === 7 || sf.u === 8) return { c: LAPIS, g: true };
+        if (sf.u % 2 === 0 && sf.u >= 3 && sf.u <= 12) return { c: L ? [255, 140, 70] : HOT, g: true };
+      }
+      if (y === 34) return { c: ironD(x, y, z) };
+      return { c: ironC(x, y, z) };
+    },
+    extras(L, group) {
+      const bit = voxPart({
+        bounds: { x0: -3, x1: 3, y0: 0, y1: 4 },
+        shape: (x, y, z) => { const h = 2.6 - (3 - y) * 0.55; return Math.abs(x + 0.5) < h && Math.abs(z + 0.5) < h ? 'b' : null; },
+        paint: (k, x, y, z) => (y === 0 ? { c: L ? [255, 210, 150] : HOT, g: true } : ((x + y + z) & 1 ? { c: [150, 146, 160] } : { c: [90, 86, 100] })),
+        pivot: [0, 0, 0],
+      });
+      bit.position.set(8 * PX, 30 * PX, 8 * PX);
+      group.add(bit);
+      return t => { bit.rotation.y = t * (L ? 5 : 2.5); };
+    },
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// ROUND 14: the Unmaker. Siphons power out of the anchor's black hole and turns it on the anchor:
+// an unmaking sigil, cracks from every direction, and silent lightning at progress thresholds.
+// ---------------------------------------------------------------------------
+// Cracks seeded all over each face (corners, edges, window rim, base), walking in any direction
+function makeRadialCracks(steps) {
+  const set = new Set();
+  let seed = 91;
+  const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const starts = [[2, 21], [13, 21], [2, 6], [13, 6], [7, 22], [8, 5], [3, 13], [12, 14], [5, 19], [10, 8]];
+  const D = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (let f = 0; f < 4; f++) for (const [u0, y0] of starts) {
+    let u = u0, y = y0, dir = Math.floor(rnd() * 4);
+    for (let i = 0; i < steps; i++) {
+      set.add(f + '|' + u + '|' + y);
+      if (rnd() < 0.35) dir = Math.floor(rnd() * 4);        // wander, but keep some persistence
+      u = Math.max(2, Math.min(13, u + D[dir][0]));
+      y = Math.max(5, Math.min(22, y + D[dir][1]));
+      if (rnd() < 0.2) set.add(f + '|' + Math.min(13, u + 1) + '|' + y);
+    }
+  }
+  return set;
+}
+// Crack voxels keyed f|u|y -> the breaking progress (0..1) at which that piece of crack appears.
+// Each seed starts at its own moment and then grows step by step, so cracks spread as progress rises.
+const UNMAKE_CRACK_BIRTH = (() => {
+  const map = new Map();
+  let seed = 91;
+  const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const starts = [[2, 21], [13, 21], [2, 6], [13, 6], [7, 22], [8, 5], [3, 13], [12, 14], [5, 19], [10, 8]];
+  const D = [[1, 0], [-1, 0], [0, 1], [0, -1]], STEPS = 9;
+  for (let f = 0; f < 4; f++) starts.forEach(([u0, y0], si) => {
+    const start = 0.05 + ((si * 7 + f * 3) % 10) / 10 * 0.45;     // seeds appear between 5 % and 50 %
+    let u = u0, y = y0, dir = Math.floor(rnd() * 4);
+    for (let i = 0; i < STEPS; i++) {
+      const birth = start + (i / STEPS) * (0.95 - start);
+      const put = k => { if (!map.has(k) || map.get(k) > birth) map.set(k, birth); };
+      put(f + '|' + u + '|' + y);
+      if (rnd() < 0.35) dir = Math.floor(rnd() * 4);
+      u = Math.max(2, Math.min(13, u + D[dir][0]));
+      y = Math.max(5, Math.min(22, y + D[dir][1]));
+      if (rnd() < 0.2) put(f + '|' + Math.min(13, u + 1) + '|' + y);
+    }
+  });
+  return map;
+})();
+let UNMAKE_P = 0.6;   // progress shown on the right-hand anchor (slider)
+const unmakeP = L => (L ? UNMAKE_P : 0);
+const UNMAKE_BOLT = [215, 225, 255];   // vanilla lightning's blue-white
+
+const R14 = [{
+  ...breakerDesign({
+    name: 'Unmaker',
+    line: 'It drinks the anchor\'s own black hole and turns that power against it.',
+    story: 'Clamps with gold turnbuckles grip the anchor\'s corners and are tied by heavy shoulders into a chamfered iron housing. Under the housing, an inverted funnel hangs over the seed. On top, four red-glass charge coils stand around a dark spire, and a band of red glyphs, the unmaking sigil, is laid around the anchor\'s base.',
+    change: 'A stream of red light is pulled up out of the black hole, past the seed and into the funnel. The anchor starts whole; as the breaking advances the charge coils fill, the sigil burns, and cracks open one by one from every direction and spread across the stone. At each quarter of the way, a new set of silent lightning bolts bursts out of the black hole in every direction, reaching further each time, and stays frozen in the air as cracks in reality for as long as the breaker is attached. Red motes pour out through the windows to the feet of the clamps.',
+    interact: 'The stream makes it obvious where the power comes from; the sigil and lightning show what it is used for. Lapis goes into the cells on the housing. The coils show how charged it is.',
+    code: ['Clamps, housing, funnel, coils and sigil: static model', 'Siphon stream: drawn by the renderer from the black hole up into the funnel, with rising particles', 'Charge coils and sigil: brighter as breaking progresses (block state levels)', 'Cracks: from every direction, anchor texture variants by progress', 'Lightning: vanilla-style branching bolts drawn by the renderer from the black hole outward along sphere radii (no lightning entity, so no thunder); a new set appears at 25 / 50 / 75 % and stays, static, while the breaker is attached', 'Red motes: client particles from the black hole through the windows to the clamp feet', 'Anchor black hole: EMBER palette'],
+    swatches: [['#3e3a4a', 'Dark iron'], ['#d6a23c', 'Gold'], ['#ff5028', 'Siphon red'], ['#ffaa3c', 'Ember cracks'], ['#ffe1f0', 'Lightning'], ['#5082ff', 'Lapis cells']],
+    sparkY: 31,
+    shape(x, y, z) {
+      const lx = LX(x), lz = LX(z), { cx, cz } = C(x, z), ax = Math.abs(cx), az = Math.abs(cz);
+      if (y === 4 && (lx === 0 || lz === 0)) return 'sigil';
+      if (y >= 19 && y <= 33 && lx <= 1 && lz <= 1) return (y === 26 || y === 27) ? 'buckle' : 'clamp';
+      if (y >= 32 && y <= 35 && ((lx <= 2 && lz <= 4) || (lz <= 2 && lx <= 4))) return y === 32 ? 'shoulderBase' : 'shoulder';
+      if (y >= 32 && y <= 33 && ax < 3 && az < 3 && (ax >= 1 || az >= 1)) return 'funnel';
+      if (y >= 34 && y <= 39 && oct(cx, cz, 7, 3)) return y === 39 ? 'rim' : 'housing';
+      if (y >= 40 && y <= 46) {
+        if (ax < 1.5 && az < 1.5) return y === 46 ? 'spireTip' : 'spire';
+        if (ax >= 3 && ax < 5 && az >= 3 && az < 5 && y <= 45) return (y === 40 || y === 45) ? 'coilCap' : 'coil';
+      }
+      return null;
+    },
+    paint(k, x, y, z, L, e) {
+      if (k === 'rim' || k === 'buckle' || k === 'coilCap' || k === 'spireTip') return { c: goldTone(x, y, z) };
+      if (k === 'shoulderBase' || k === 'spire') return { c: ironD(x, y, z) };
+      if (k === 'shoulder') return { c: anySide(e) && y === 34 && (x + z) % 3 === 0 ? RIVET : ironC(x, y, z) };
+      if (k === 'funnel') return e.ny ? { c: HOT, g: true } : { c: ironD(x, y, z) };
+      if (k === 'clamp') return y <= 20 && anySide(e) ? { c: HOT, g: true } : { c: y % 4 === 1 ? RIVET : ironC(x, y, z) };
+      if (k === 'coil') {
+        const charged = (y - 41) < unmakeP(L) * 4.2;      // coils fill up as it charges
+        return charged ? { c: hash3(x, y, z) > 0.6 ? [255, 150, 110] : HOT, g: true } : { c: HOT_DIM };
+      }
+      if (k === 'sigil') {
+        const u = faceU(x, z, LX(x), LX(z));
+        const lit = glyphAt(u % 5, 1, Math.floor(u / 5)) || (u % 5 === 4);
+        return lit ? (unmakeP(L) > 0 ? { c: unmakeP(L) > 0.6 ? [255, 150, 90] : HOT, g: true } : { c: HOT_DIM }) : { c: ironD(x, y, z) };
+      }
+      const sf = sideFace(e, x, z);
+      if (sf && y >= 35 && y <= 37) {
+        if (sf.u === 7 || sf.u === 8) return { c: LAPIS, g: true };
+        if (sf.u % 2 === 0 && sf.u >= 3 && sf.u <= 12) return { c: HOT, g: true };
+      }
+      if (y === 34) return { c: ironD(x, y, z) };
+      return { c: ironC(x, y, z) };
+    },
+    extras(L, group) {
+      // Siphon stream: from the black hole up through the cavity roof, past the seed, into the funnel
+      const stream = tether(group, [8, MONO_SC, 8], [8, 32, 8], HOT, 1.1, 0.85);
+      const streamCore = tether(group, [8, MONO_SC, 8], [8, 32, 8], [255, 200, 170], 0.45, 0.9);
+      const rise = particles(8 + Math.round(unmakeP(L) * 20), 0xff6040, { r0: 0, rs: 1.4, y0: MONO_SC, h: 32 - MONO_SC, swirl: 2.5 });
+      group.add(rise.obj);
+      // Silent lightning, vanilla style. Each time the breaking passes 25 / 50 / 75 % a new set of
+      // branching bolts bursts out of the black hole along the radii of a growing sphere, and stays:
+      // frozen cracks in reality that remain as long as the breaker is attached. No flicker.
+      const core = [8, MONO_SC, 8];
+      const stages = Math.min(3, Math.floor(unmakeP(L) * 4 + 1e-6)), PER = 4;   // a new set at 25, 50 and 75 %
+      const boltDefs = [];
+      for (let st = 0; st < stages; st++) {
+        const R = (11 + st * 6) * 3;   // bolts reach 2 to 4 blocks out
+        for (let i = 0; i < PER; i++) {
+          const n = st * PER + i, yv = 1 - 2 * ((i + 0.5) / PER), r = Math.sqrt(1 - yv * yv), a = i * 2.39996 + st * 1.1;
+          const d = [Math.cos(a) * r, yv * 0.8, Math.sin(a) * r];
+          const at = f => core.map((v, c) => v + d[c] * R * f);
+          boltDefs.push({ a: core, b: at(1) });
+          for (const f of [0.45, 0.7]) {
+            const off = [0, 1, 2].map(c => (hash3(n, f * 10, c) - 0.5) * 0.9);
+            const from = at(f);
+            boltDefs.push({ a: from, b: from.map((v, c) => v + (d[c] + off[c]) * R * 0.3) });
+          }
+        }
+      }
+      const bolts = arcs(boltDefs.length, UNMAKE_BOLT.map(v => v / 255 * 2.0), i => boltDefs[i], { segs: 7, amp: 1.2, width: 0.3 });
+      const glow = arcs(boltDefs.length, [0.45, 0.55, 1.6], i => boltDefs[i], { segs: 7, amp: 1.2, width: 1.6 });
+      Object.assign(glow.obj.material, { transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
+      bolts.obj.material.color.setRGB(2.4, 2.5, 2.8);   // white-hot core, the halo carries the blue
+      group.add(bolts.obj, glow.obj);   // drawn once; the same jag every frame
+      // Red motes pour out of the black hole through the windows to the feet of the clamps
+      const M = 32, mpos = new Float32Array(M * 3), mgeo = new THREE.BufferGeometry();
+      mgeo.setAttribute('position', new THREE.BufferAttribute(mpos, 3));
+      group.add(new THREE.Points(mgeo, new THREE.PointsMaterial({ color: 0xff3a20, size: 0.06, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })));
+      const paths = [];
+      for (const [sx, sz] of CORNERS) for (const face of ['x', 'z']) {
+        const foot = [8 + sx * 7, 19.5, 8 + sz * 7];
+        const win = face === 'x' ? [8 + sx * 7.5, MONO_SC + 1, 8] : [8, MONO_SC + 1, 8 + sz * 7.5];
+        paths.push([core, win, foot]);
+      }
+      const motes = Array.from({ length: M }, (_, i) => ({ p: paths[i % paths.length], off: Math.random(), sp: 0.28 + Math.random() * 0.12 }));
+      const bez = (a, b, c, u) => a.map((v, k) => (1 - u) * (1 - u) * v + 2 * (1 - u) * u * b[k] + u * u * c[k]);
+      return t => {
+        stream.material.opacity = 0.55 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.0));
+        rise.update(t);
+        motes.forEach((m, i) => { const q = bez(m.p[0], m.p[1], m.p[2], (m.off + t * m.sp) % 1); mpos.set([q[0] * PX, q[1] * PX, q[2] * PX], i * 3); });
+        mgeo.attributes.position.needsUpdate = true;
+      };
+    },
+  }),
+  round: 14,
+  labels: ['Just attached', 'Breaking'], sublabels: ['0 %', 'use the progress slider'], progress: true,
+}];
+// breakerDesign paints its own cracks; the Unmaker uses cracks from every direction instead
+R14[0].paint = (orig => function (k, x, y, z, L, e) {
+  if (!k.startsWith('b_') && k === 'body') {
+    const sf = sideFace(e, x, z);
+    const p = unmakeP(L), birth = sf && UNMAKE_CRACK_BIRTH.get(sf.f + '|' + (sf.f < 2 ? x : z) + '|' + y);
+    if (birth !== undefined && birth !== null && birth <= p) return { c: p > 0.6 && hash3(x, y, z) > 0.6 ? EMBERC : HOT, g: true };
+    const r = ANCH.paint(k, x, y, z, true, e);
+    if (r.g || r.fl) { const lum = Math.max(...r.c) / 255; return { ...r, c: mix(r.c, HOT.map(v => v * lum), p) }; }
+    return r;
+  }
+  return orig.call(this, k, x, y, z, L, e);
+})(R14[0].paint);
+
+// ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R14,
+  ...R13,
   ...R12,
   ...R11,
   ...R10,
@@ -3462,11 +3812,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign12'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign14'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
-const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === 12);
+const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === 14);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
   const b = document.createElement('button');
@@ -3476,7 +3826,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -3485,22 +3835,23 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign12', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign14', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
-  $('earlier').value = D.round === 12 ? '' : String(i);
-  $('earlier').classList.toggle('active', D.round !== 12);
-  const lb = D.labels || ['Inert', 'Linked'], sub = D.labels ? ['in progress', 'beam lit'] : ['no seed yet', 'seed set, rift open'];
+  $('earlier').value = D.round === 14 ? '' : String(i);
+  $('earlier').classList.toggle('active', D.round !== 14);
+  const lb = D.labels || ['Inert', 'Linked'], sub = D.sublabels || (D.labels ? ['in progress', 'beam lit'] : ['no seed yet', 'seed set, rift open']);
   $('lblInert').innerHTML = `${lb[0]}<small>${sub[0]}</small>`;
   $('lblLinked').innerHTML = `${lb[1]}<small>${sub[1]}</small>`;
   $('vInert').textContent = lb[0]; $('vLinked').textContent = lb[1];
-  $('hStory').textContent = D.labels ? 'The breacher in place' : 'Inert';
-  $('hChange').textContent = D.labels ? 'Breaching and breach complete' : 'When the seed is set';
+  $('hStory').textContent = D.round >= 13 ? 'The breaker in place' : D.labels ? 'The breacher in place' : 'Inert';
+  $('hChange').textContent = D.round >= 13 ? 'As the anchor breaks' : D.labels ? 'Breaching and breach complete' : 'When the seed is set';
   setCam(state.view);
   for (const a of anchors) scene.remove(a.group);
   anchors = [buildAnchor(D, false, -2), buildAnchor(D, true, 1)];
   applyView();
+  $('progressGroup').hidden = !D.progress;
   const pos = byRound(D.round).findIndex(([, j]) => j === i);
   $('cIndex').textContent = `round ${D.round} · ${ROMAN[pos]} of ${byRound(D.round).length}`;
   $('cName').textContent = D.name;
@@ -3554,6 +3905,18 @@ $('tNight').addEventListener('click', e => {
   const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; press(e.currentTarget, on);
   hemi.intensity = on ? 0.25 : 1.1; sun.intensity = on ? 0.15 : 1.6; fill.intensity = on ? 0.2 : 0.35;
   const bg = on ? 0x05060c : 0x0b0d17; scene.background.setHex(bg); scene.fog.color.setHex(bg);
+});
+let progressTimer = null;
+$('progress').addEventListener('input', e => {
+  UNMAKE_P = +e.target.value / 100;
+  $('progressVal').textContent = e.target.value + ' %';
+  clearTimeout(progressTimer);
+  progressTimer = setTimeout(() => {          // rebuild only the right-hand anchor, keep the camera
+    const D = DESIGNS[state.design];
+    scene.remove(anchors[1].group);
+    anchors[1] = buildAnchor(D, true, 1);
+    applyView();
+  }, 60);
 });
 $('notesToggle').addEventListener('click', e => { press(e.currentTarget, $('notes').classList.toggle('open')); });
 
