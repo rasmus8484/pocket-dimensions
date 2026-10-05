@@ -1,5 +1,28 @@
 {
-    "variants": {
-        "": { "model": "pocketdimensions:block/world_core" }
+  "variants": {
+    "half=lower,siege=0": {
+      "model": "pocketdimensions:block/world_core_normal_lower"
+    },
+    "half=lower,siege=1": {
+      "model": "pocketdimensions:block/world_core_breaching_lower"
+    },
+    "half=lower,siege=2": {
+      "model": "pocketdimensions:block/world_core_breaking_lower"
+    },
+    "half=lower,siege=3": {
+      "model": "pocketdimensions:block/world_core_lost_lower"
+    },
+    "half=upper,siege=0": {
+      "model": "pocketdimensions:block/world_core_normal_upper"
+    },
+    "half=upper,siege=1": {
+      "model": "pocketdimensions:block/world_core_breaching_upper"
+    },
+    "half=upper,siege=2": {
+      "model": "pocketdimensions:block/world_core_breaking_upper"
+    },
+    "half=upper,siege=3": {
+      "model": "pocketdimensions:block/world_core_lost_upper"
     }
+  }
 }
