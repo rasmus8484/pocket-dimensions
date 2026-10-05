@@ -1826,7 +1826,7 @@ function monolith(o) {
         halo.lookAt(camera.getWorldPosition(new THREE.Vector3()));
         ctx.rifts.forEach(r => r.quaternion.copy(halo.quaternion));
         // Fake spin: bright bands travel around the ring, pixel by pixel (an animated texture in game)
-        const step = Math.floor(t * 6);
+        const step = Math.floor(t * 0.6 / (2 * Math.PI) * haloPix.length);   // one lap per disk turn
         haloPix.forEach((slot, i) => {
           const b = 0.92 + 0.16 * hash3((slot - step + 1000 * haloPix.length) % haloPix.length, 3, 11);
           haloCol.setRGB(glowLin[0] * b, glowLin[1] * b, glowLin[2] * b);

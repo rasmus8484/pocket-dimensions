@@ -25,6 +25,18 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
     private static final float[] GLOW = {215 / 255f, 248 / 255f, 255 / 255f};   // ring colour mixed 45% toward white
     private static final float[] DEEP = {40 / 255f, 110 / 255f, 230 / 255f};
     private static final float STEADY = 1.06f;                                 // midpoint of the old pulse
+    /** Disk spin in radians per second; the ring shimmer completes one lap in the same time. */
+    private static final float SPIN = 0.6f;
+
+    /**
+     * How over-bright ring colours become bytes.
+     * GLOW  - clamped: the cool blue glow of the approved concept (default).
+     * EMBER - wrapped like an unclamped byte cast: channels pushed past 255 roll over to near zero,
+     *         turning the rings a flickering red-yellow, like a real black hole's accretion glow.
+     *         Found by accident in the first build and kept on purpose.
+     */
+    private enum RingPalette { GLOW, EMBER }
+    private static final RingPalette PALETTE = RingPalette.GLOW;
 
     /** Face order shared by SEED_DIRS and cubeFace: -z, +z, -x, +x, +y, -y. */
     private static final int[][] SEED_DIRS = {{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, -1, 0}};
@@ -65,7 +77,8 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         });
         // Photon ring: camera-facing, 0.6 px toward the viewer, shimmer shifts one pixel 6x a second
         pose.translate(0f, 0f, 0.6f * PX);
-        int step = (int) Math.floor(t * 6);
+        // Shimmer travels one full lap per disk revolution, so both rings turn at the same rate
+        int step = (int) Math.floor(t * SPIN / (2 * Math.PI) * RING.size());
         out.submitCustomGeometry(pose, RenderTypes.lightning(), (p, vc) -> {
             for (int[] px : RING) {
                 int slot = Math.floorMod(px[2] - step, RING.size());
@@ -78,7 +91,7 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
         // Accretion disk: flat ring spinning about Y, drawn from both sides
         pose.pushPose();
         pose.translate(0.5f, SC * PX, 0.5f);
-        pose.mulPose(com.mojang.math.Axis.YP.rotation(t * 0.6f));
+        pose.mulPose(com.mojang.math.Axis.YP.rotation(t * SPIN));
         out.submitCustomGeometry(pose, RenderTypes.lightning(), (p, vc) -> {
             for (int[] px : DISK) {
                 float r = (float) Math.hypot(px[0] + 0.5, px[1] + 0.5);
@@ -114,18 +127,18 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
     // ---- geometry helpers -------------------------------------------------------------------
 
     private static void quadXY(VertexConsumer vc, Matrix4f m, int x, int y, float r, float g, float b, float a) {
-        vc.addVertex(m, x * PX, y * PX, 0).setColor(r, g, b, a);
-        vc.addVertex(m, (x + 1) * PX, y * PX, 0).setColor(r, g, b, a);
-        vc.addVertex(m, (x + 1) * PX, (y + 1) * PX, 0).setColor(r, g, b, a);
-        vc.addVertex(m, x * PX, (y + 1) * PX, 0).setColor(r, g, b, a);
+        vc.addVertex(m, x * PX, y * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
+        vc.addVertex(m, (x + 1) * PX, y * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
+        vc.addVertex(m, (x + 1) * PX, (y + 1) * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
+        vc.addVertex(m, x * PX, (y + 1) * PX, 0).setColor(ring(r), ring(g), ring(b), ring(a));
     }
 
     private static void quadXZ(VertexConsumer vc, Matrix4f m, int x, int z, float r, float g, float b) {
         float x0 = x * PX, x1 = (x + 1) * PX, z0 = z * PX, z1 = (z + 1) * PX;
-        vc.addVertex(m, x0, 0, z0).setColor(r, g, b, 1f); vc.addVertex(m, x0, 0, z1).setColor(r, g, b, 1f);
-        vc.addVertex(m, x1, 0, z1).setColor(r, g, b, 1f); vc.addVertex(m, x1, 0, z0).setColor(r, g, b, 1f);
-        vc.addVertex(m, x0, 0, z0).setColor(r, g, b, 1f); vc.addVertex(m, x1, 0, z0).setColor(r, g, b, 1f);
-        vc.addVertex(m, x1, 0, z1).setColor(r, g, b, 1f); vc.addVertex(m, x0, 0, z1).setColor(r, g, b, 1f);
+        vc.addVertex(m, x0, 0, z0).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x0, 0, z1).setColor(ring(r), ring(g), ring(b), 255);
+        vc.addVertex(m, x1, 0, z1).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x1, 0, z0).setColor(ring(r), ring(g), ring(b), 255);
+        vc.addVertex(m, x0, 0, z0).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x1, 0, z0).setColor(ring(r), ring(g), ring(b), 255);
+        vc.addVertex(m, x1, 0, z1).setColor(ring(r), ring(g), ring(b), 255); vc.addVertex(m, x0, 0, z1).setColor(ring(r), ring(g), ring(b), 255);
     }
 
     /** Axis-aligned box centred on x/z, bottom at y=0. */
@@ -147,6 +160,12 @@ public class WorldAnchorBlockEntityRenderer implements BlockEntityRenderer<World
             {x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0}, {x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1}};
         float[] f = q[face];
         for (int i = 0; i < 4; i++) vc.addVertex(m, f[i * 3], f[i * 3 + 1], f[i * 3 + 2]).setColor(c[0], c[1], c[2], 1f);
+    }
+
+    /** One colour channel (0..1, may exceed 1) to a byte value according to PALETTE. */
+    private static int ring(float v) {
+        int i = (int) (v * 255f);
+        return PALETTE == RingPalette.EMBER ? i & 0xFF : Math.max(0, Math.min(255, i));
     }
 
     private static float hash(int x, int y, int z) {
