@@ -6,7 +6,9 @@ import com.mojang.math.Axis;
 import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.block.PocketAnchorBlock;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
@@ -14,6 +16,7 @@ import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
@@ -34,9 +37,12 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
     private static final int BAND_GLYPHS = 13;
     private static final float GLYPH = 8 * 0.42f * PX;     // the 8x8 rune sprite at 0.42 px per texel
     private static final int[] RUNE = {140, 235, 255};
-    private static final Identifier[] RUNE_TEX = new Identifier[6];
+    private static final Identifier[] RUNE_TEX = new Identifier[6], GLOW_TEX = new Identifier[6];
     static {
-        for (int i = 0; i < 6; i++) RUNE_TEX[i] = Identifier.fromNamespaceAndPath(PocketDimensionsMod.MODID, "textures/particle/rune_" + i + ".png");
+        for (int i = 0; i < 6; i++) {
+            RUNE_TEX[i] = Identifier.fromNamespaceAndPath(PocketDimensionsMod.MODID, "textures/particle/rune_" + i + ".png");
+            GLOW_TEX[i] = Identifier.fromNamespaceAndPath(PocketDimensionsMod.MODID, "textures/particle/rune_glow_" + i + ".png");
+        }
     }
 
     public PocketAnchorRenderer(BlockEntityRendererProvider.Context ctx) {}
@@ -55,9 +61,16 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
         // Wrap before converting to float: past ~2^24 ticks a float can no longer hold the partial tick
         s.time = level == null ? 0 : (Math.floorMod(level.getGameTime(), 24000L * 20) + partialTick) / 20f + offset;
         s.phase = be.getPhase(partialTick) + offset;
-        s.cube = be.getBlockState().setValue(PocketAnchorBlock.CUBE, true).setValue(PocketAnchorBlock.OCCUPIED, false);
+        s.cube = Minecraft.getInstance().getBlockRenderer().getBlockModel(
+                be.getBlockState().setValue(PocketAnchorBlock.CUBE, true).setValue(PocketAnchorBlock.OCCUPIED, false));
     }
 
+    /*
+     * Draw order. Translucent runes write no depth, and a model sent through submitBlock lands in a fixed buffer that is
+     * only drawn at the end of the frame, so the cube painted over every rune in front of it. Instead the cube, its
+     * portal and the runes all write depth (so their order no longer matters), and the soft glow is submitted in a
+     * later order, drawn after them and tested against their depth.
+     */
     @Override
     public void submit(PocketAnchorRenderState s, PoseStack pose, SubmitNodeCollector out, CameraRenderState camera) {
         float t = s.time, p = s.phase;
@@ -71,7 +84,9 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
                 (float) Math.sin(t * 0.11f + 2f) * 1.4f));
         out.submitCustomGeometry(pose, RenderTypes.endPortal(), (pp, vc) -> portal(vc, pp.pose(), 2.2f * PX, 2f * PX));
         pose.translate(-0.5f, -0.5f, -0.5f);                 // the cube model is centred on the block
-        out.submitBlock(pose, s.cube, s.lightCoords, OverlayTexture.NO_OVERLAY, 0);
+        int light = s.lightCoords;
+        out.submitCustomGeometry(pose, RenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS), (pp, vc) ->
+                ModelBlockRenderer.renderModel(pp, vc, s.cube, 1f, 1f, 1f, light, OverlayTexture.NO_OVERLAY));   // keeps the runes' emission
         pose.popPose();
 
         // Three rune bands: each turns about its own axis while that axis swings round and nods
@@ -83,34 +98,41 @@ public class PocketAnchorRenderer implements BlockEntityRenderer<PocketAnchorBlo
             pose.mulPose(Axis.XP.rotation(1.0f + 0.3f * (float) Math.sin(t * 0.17f + i * 2.1f)));
             pose.mulPose(Axis.YP.rotation(p * (i % 2 == 1 ? -0.42f : 0.36f)));
             for (int tex = 0; tex < RUNE_TEX.length; tex++) {
-                final int band = i, texture = tex;
-                out.submitCustomGeometry(pose, RenderTypes.entityTranslucentEmissive(RUNE_TEX[tex]), (pp, vc) -> {
-                    for (int j = 0; j < BAND_GLYPHS; j++) {
-                        if ((j * 5 + band * 2) % RUNE_TEX.length != texture) continue;
-                        float a = j / (float) BAND_GLYPHS * 2f * (float) Math.PI;
-                        float k = bright * (0.75f + 0.25f * (float) Math.sin(t * 1.2f + j * 1.9f + band));
-                        Matrix4f m = new Matrix4f(pp.pose())
-                                .translate((float) Math.cos(a) * BAND_R * PX, 0f, (float) Math.sin(a) * BAND_R * PX)
-                                .rotateY((float) Math.PI / 2f - a);            // face outward from the cube
-                        glyph(vc, pp, m, k);
-                    }
-                });
+                out.submitCustomGeometry(pose, RenderTypes.entityCutoutNoCull(RUNE_TEX[tex]), runes(i, tex, bright, t, false));
+                out.order(1).submitCustomGeometry(pose, RenderTypes.eyes(GLOW_TEX[tex]), runes(i, tex, bright, t, true));
             }
             pose.popPose();
         }
     }
 
-    /** A rune sprite quad in its local XY plane, drawn from both sides, full-bright. It writes depth (transparent texels are
-     *  discarded), so a glyph in front of the cube stays visible whichever is drawn first. */
-    private static void glyph(VertexConsumer vc, PoseStack.Pose pp, Matrix4f m, float k) {
-        int r = (int) (RUNE[0] * k), g = (int) (RUNE[1] * k), b = (int) (RUNE[2] * k);
+    /** The quads of one band that use one rune texture: the runes themselves, or their glow. */
+    private static SubmitNodeCollector.CustomGeometryRenderer runes(int band, int texture, float bright, float t, boolean glow) {
+        return (pp, vc) -> {
+            for (int j = 0; j < BAND_GLYPHS; j++) {
+                if ((j * 5 + band * 2) % RUNE_TEX.length != texture) continue;
+                float a = j / (float) BAND_GLYPHS * 2f * (float) Math.PI;
+                float k = bright * (0.75f + 0.25f * (float) Math.sin(t * 1.2f + j * 1.9f + band));
+                Matrix4f m = new Matrix4f(pp.pose())
+                        .translate((float) Math.cos(a) * BAND_R * PX, 0f, (float) Math.sin(a) * BAND_R * PX)
+                        .rotateY((float) Math.PI / 2f - a);            // face outward from the cube
+                glyph(vc, m, k, glow);
+            }
+        };
+    }
+
+    /**
+     * A rune sprite quad in its local XY plane. The rune is a depth-writing cutout, full-bright and seen from both sides;
+     * its glow is the soft halo sprite blended over and around it at about half strength.
+     */
+    private static void glyph(VertexConsumer vc, Matrix4f m, float k, boolean glow) {
+        int r = (int) (RUNE[0] * k), g = (int) (RUNE[1] * k), b = (int) (RUNE[2] * k), alpha = glow ? (int) (140 * k) : 255;
         float h = GLYPH / 2f;
-        float[][] front = {{-h, -h, 0, 1}, {h, -h, 1, 1}, {h, h, 1, 0}, {-h, h, 0, 0}};
-        for (int side = 0; side < 2; side++) {
+        float[][] quad = {{-h, -h, 0, 1}, {h, -h, 1, 1}, {h, h, 1, 0}, {-h, h, 0, 0}};
+        for (int side = 0; side < (glow ? 2 : 1); side++) {   // the glow type culls back faces: give it both windings
             for (int n = 0; n < 4; n++) {
-                float[] v = front[side == 0 ? n : 3 - n];
-                vc.addVertex(m, v[0], v[1], 0f).setColor(r, g, b, 255).setUv(v[2], v[3])
-                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(pp, 0f, 0f, side == 0 ? 1f : -1f);
+                float[] v = quad[side == 0 ? n : 3 - n];
+                vc.addVertex(m, v[0], v[1], 0f).setColor(r, g, b, alpha).setUv(v[2], v[3])
+                        .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(0f, 1f, 0f);   // lit from above: even brightness
             }
         }
     }

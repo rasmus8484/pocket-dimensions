@@ -48,3 +48,20 @@ export function paint(k, x, y, z) {
   if (k === 'glyph') return { c: RUNE, g: true };
   return { c: stone(x, y, z) };
 }
+
+/**
+ * Soft glow behind a rune, as an 8x8 white sprite (glyph at column 2, row 1, like the rune particles): full under the
+ * glyph, fading over a pixel or two around it. Drawn additively after everything else, so the runes glow a little.
+ */
+export function glowSprite(g) {
+  const on = [];
+  g.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') on.push([c + 2, r + 1]); }));
+  const rgba = new Uint8Array(8 * 8 * 4);
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    let a;
+    if (on.some(([x, y]) => x === c && y === r)) a = 230;
+    else a = Math.min(170, Math.round(255 * 0.45 * on.reduce((s, [x, y]) => s + Math.exp(-((x - c) ** 2 + (y - r) ** 2) / 1.1), 0)));
+    if (a >= 8) rgba.set([255, 255, 255, a], (r * 8 + c) * 4);
+  }
+  return rgba;
+}

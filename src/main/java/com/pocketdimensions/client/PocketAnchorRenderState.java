@@ -1,7 +1,7 @@
 package com.pocketdimensions.client;
 
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
 
 /** Extracted on the game thread for PocketAnchorRenderer (the Tumbling Cube). */
 public class PocketAnchorRenderState extends BlockEntityRenderState {
@@ -11,6 +11,6 @@ public class PocketAnchorRenderState extends BlockEntityRenderState {
     public float time;
     /** Tumble phase in seconds; runs half again as fast while occupied (accumulated, so it never jumps). */
     public float phase;
-    /** The never-placed cube=true state whose model is the cube. */
-    public BlockState cube;
+    /** The model of the never-placed cube=true state: the cube. */
+    public BlockStateModel cube;
 }

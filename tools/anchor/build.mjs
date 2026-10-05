@@ -6,7 +6,7 @@ import { shape as breacherShape, paint as breacherPaint, influenceAmount, MAG, Y
 import { shape as breakerShape, paint as breakerPaint, Y0 as K_Y0, Y1 as K_Y1 } from './unmaker.mjs';
 import { damageShape, damagePaint } from './damage.mjs';
 import { shape as coreShape, paint as corePaint, STATES as CORE_STATES, CORE as CORE_C } from './geode.mjs';
-import { shape as pocketShape, paint as pocketPaint } from './pocket.mjs';
+import { shape as pocketShape, paint as pocketPaint, glowSprite } from './pocket.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
@@ -159,6 +159,8 @@ GLYPHS.forEach((g, i) => {
   g.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') rgba.set([255, 255, 255, 255], ((r + 1) * 8 + c + 2) * 4); }));
   write(`textures/particle/rune_${i}.png`, encodePNG(8, 8, rgba));
 });
+// Soft glow behind each rune (Pocket Anchor rune bands draw it additively over the glyph)
+GLYPHS.forEach((g, i) => write(`textures/particle/rune_glow_${i}.png`, encodePNG(8, 8, glowSprite(g))));
 const runeSprites = { textures: GLYPHS.map((_, i) => `pocketdimensions:rune_${i}`) };
 for (const n of ['rune', 'rune_pink', 'rune_gold', 'rune_red', 'rune_helix']) write(`particles/${n}.json`, json(runeSprites));
 for (const n of ['drain', 'unmake', 'siphon']) write(`particles/${n}.json`, json({ textures: ['minecraft:glow'] }));

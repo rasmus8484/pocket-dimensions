@@ -46,3 +46,18 @@ test('top and bottom each carry a carved rune that glows one pixel down, and dif
   assert.notDeepEqual(top, bottom);
   for (const p of top) { const [x, z] = p.split(',').map(Number); assert.equal(shape(x, HI - 1, z), null, 'carved through the plate'); }
 });
+
+test('each rune has a soft glow sprite: full under the glyph, fading out a pixel or two around it', async () => {
+  const { glowSprite } = await import('../pocket.mjs');
+  const { GLYPHS } = await import('../runebound.mjs');
+  for (const g of GLYPHS) {
+    const a = glowSprite(g), at = (c, r) => a[(r * 8 + c) * 4 + 3];
+    g.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') assert.ok(at(c + 2, r + 1) >= 200, 'bright under the glyph'); }));
+    let halo = 0;
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      const inGlyph = r >= 1 && r <= 5 && c >= 2 && c <= 5 && g[r - 1][c - 2] === 'X';
+      if (!inGlyph && at(c, r) > 0) { halo++; assert.ok(at(c, r) < 200, 'the halo is fainter than the glyph'); }
+    }
+    assert.ok(halo >= 10, `halo pixels ${halo}`);
+  }
+});
