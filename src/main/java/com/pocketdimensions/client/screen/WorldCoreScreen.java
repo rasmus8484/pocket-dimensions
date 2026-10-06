@@ -150,6 +150,15 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         g.pose().popMatrix();
     }
 
+    /** The background pass runs before render() and draws the slab itself (renderBg), so it needs the same scale. */
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        g.pose().pushMatrix();
+        g.pose().scale(fit, fit);
+        super.renderBackground(g, Math.round(mouseX / fit), Math.round(mouseY / fit), partialTick);
+        g.pose().popMatrix();
+    }
+
     private MouseButtonEvent scaled(MouseButtonEvent e) { return new MouseButtonEvent(e.x() / fit, e.y() / fit, e.buttonInfo()); }
 
     @Override
