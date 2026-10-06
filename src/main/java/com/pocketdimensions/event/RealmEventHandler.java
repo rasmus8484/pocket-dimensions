@@ -147,7 +147,7 @@ public class RealmEventHandler {
             if (server != null) {
                 ServerLevel realmLevel = server.getLevel(PocketDimensionsMod.REALM_DIM);
                 if (realmLevel != null) {
-                    BlockPos spawnPos = RealmManager.get(server).getSpawnPos(pendingOwner);
+                    BlockPos spawnPos = RealmManager.get(server).findSafeSpawn(pendingOwner, realmLevel);
                     Vec3 dest = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
                     serverPlayer.teleport(new TeleportTransition(realmLevel, dest, Vec3.ZERO, 0f, 0f, TeleportTransition.DO_NOTHING));
                     // Init runtime state for the spawn position

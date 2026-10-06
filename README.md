@@ -49,6 +49,8 @@ Each player can own one realm — a region of overworld-like terrain (no structu
 4. **Right-click** the **World Core** (indestructible block at your realm's center) to exit back to where you entered
 5. As the owner, **crouch + right-click** the World Core to open its GUI — shows realm info (owner, age, siege status), a lapis fuel slot for defense, an Exit Realm button, and the **realm access list**
 
+**Safe arrival:** you arrive next to the World Core, or if a slope or something built there is in the way, at the nearest spot around the core with room to stand (never on the core itself, never outside the realm).
+
 **Access list:** In the World Core GUI the owner can type a player name and click **Add** to let them through the anchor, or click **x** next to a name to remove them. The list size is capped by `access.max_allowed_players` (0 = unlimited).
 
 The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.

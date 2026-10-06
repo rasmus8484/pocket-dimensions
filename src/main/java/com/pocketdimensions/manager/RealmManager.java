@@ -335,6 +335,24 @@ public class RealmManager extends SavedData {
         return new BlockPos(centerX + 1, REALM_BASE_Y, centerZ);
     }
 
+    /**
+     * Where to put someone entering the realm: next to the World Core (one block east of it) if that spot is free,
+     * otherwise the nearest spot around the core with room for feet and head and ground underneath, so a slope or
+     * something built there can't trap anyone. Never on the core itself, never outside the realm. If nothing near the
+     * core is free, the usual spot is broken open (the blocks drop as items).
+     */
+    public BlockPos findSafeSpawn(UUID ownerUUID, ServerLevel level) {
+        BlockPos spawn = getSpawnPos(ownerUUID);
+        RealmData data = realms.get(ownerUUID);
+        if (data == null || data.worldCorePos == null) return spawn;
+        BlockPos core = data.worldCorePos;
+        int[] b = getRealmBounds(ownerUUID);   // [minX, minZ, maxX, maxZ), max exclusive
+        BlockPos min = new BlockPos(Math.max(b[0], core.getX() - 6), core.getY() - 4, Math.max(b[1], core.getZ() - 6));
+        BlockPos max = new BlockPos(Math.min(b[2] - 1, core.getX() + 6), core.getY() + 6, Math.min(b[3] - 1, core.getZ() + 6));
+        BlockPos found = SafeSpot.nearest(level, spawn, min, max, p -> p.getX() == core.getX() && p.getZ() == core.getZ());
+        return found != null ? found : SafeSpot.breakOpen(level, spawn);
+    }
+
     // -------------------------------------------------------------------------
     // Realm generation
     // -------------------------------------------------------------------------
