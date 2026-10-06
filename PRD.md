@@ -19,7 +19,6 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | PR-008 | DONE | Disconnect handling | Player logs off holding stolen item while others inside: anchor auto-placed at feet |
 | PR-009 | DONE | Multi-player occupancy | Multiple players can be in the same room simultaneously |
 | PR-010 | DONE | Exit to thief location | Exiting player appears next to the online player carrying the anchor; falls back to entry location / spawn |
-| PR-011 | TODO | BoundaryBlock right-click exit | Design doc specifies right-click boundary wall as exit trigger; not implemented |
 | PR-012 | PARTIAL | Anchor break warning | Miner gets an action-bar warning when breaking an occupied anchor; no particles/sounds, occupants not warned |
 | PR-013 | DONE | Chorus fruit blocking | Chorus fruit teleport cancelled inside pocket rooms |
 | PR-014 | DONE | Safe arrival | Entering a room searches for the nearest free spot (SpawnSearch/SafeSpot) so blocks built over the spawn never trap you |
@@ -79,10 +78,10 @@ Status: `DONE` | `PARTIAL` | `TODO`
 |----|--------|---------|-------|
 | AE-001 | DONE | Piston protection | Handled by vanilla: pistons never move hardness -1 blocks or blocks with block entities (covers every mod block) |
 | AE-002 | PARTIAL | Explosion protection | Blast resistance ≥1200 stops TNT/creepers; the Wither can still break Pocket Anchors and siege blocks (not in `wither_immune`) |
-| AE-003 | TODO | Ender pearl blocking | Block ender pearl teleportation across realm boundaries |
-| AE-004 | PARTIAL | Chorus fruit blocking | Blocked in pocket rooms (PR-013); not yet in realm dimension |
-| AE-005 | TODO | Command teleport restriction | Block /tp and similar for non-admins in realm dimension |
-| AE-006 | TODO | Teleport bypass prevention | Catch modded teleports, /back, /home, etc. in realm |
+| AE-003 | DONE | Ender pearl blocking | Covered by border enforcement (RL-007): landing outside your realm's bounds pulls you back in |
+| AE-004 | DONE | Chorus fruit blocking | Cancelled in pocket rooms (PR-013); in realms, border enforcement pulls you back |
+| AE-005 | PARTIAL | Command teleport restriction | Out of the realm: cross-dimension teleports are cancelled (only the World Core and Pocket Anchors let you leave). Into it: no entry record means you are ejected. Gap: the entry record is never cleared on exit, so a later /tp or /home into the realm dimension pulls you into the last realm you visited, even if your access was revoked, at whatever height you arrive |
+| AE-006 | PARTIAL | Teleport bypass prevention | Same coverage and the same gap as AE-005 for /back, /home and modded teleports that go through vanilla teleport |
 | AE-007 | TODO | Chunk unload duplication | Prevent item/block duplication via chunk boundary exploits |
 | AE-008 | TODO | Hopper/dispenser anchor interaction | Prevent automation from extracting/placing anchors |
 
@@ -127,7 +126,6 @@ These are features described in design docs that differ from current implementat
 | PRD ID | Mismatch |
 |--------|----------|
 | PR-007 | pocket-rooms.md says netherite-tier tool; code requires diamond-tier pickaxe |
-| PR-011 | Docs describe BoundaryBlock right-click exit; not implemented |
 | PR-012 | Docs say miner and occupants are warned with particles/sounds; code only sends the miner an action-bar message |
 | PR-008 | Docs fall back to nearest valid / last known position; code tries feet + 8 neighbours and places no anchor if all are blocked |
 | — | pocket-rooms.md says boundary blocks emit light 15; code sets no light level |
