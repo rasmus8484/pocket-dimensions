@@ -6,6 +6,7 @@ import com.pocketdimensions.init.ModItems;
 import com.pocketdimensions.init.ModParticles;
 import net.minecraft.util.RandomSource;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -135,10 +136,17 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
         BlockPos pos = ctx.getClickedPos();
         Level level = ctx.getLevel();
-        if (pos.getY() < level.getMaxY() && level.getBlockState(pos.above()).canBeReplaced(ctx)) {
-            return defaultBlockState().setValue(HALF, DoubleBlockHalf.LOWER);
+        if (pos.getY() >= level.getMaxY() || !level.getBlockState(pos.above()).canBeReplaced(ctx)) {
+            return null; // no room for the upper half
         }
-        return null; // cancel placement if no room for upper half
+        BlockPos siege = pos.above(2);
+        if (!com.pocketdimensions.manager.RealmRules.roomForSiege(siege.getY(), level.getMaxY(),
+                level.getBlockState(siege).getDestroySpeed(level, siege))) {
+            if (!level.isClientSide() && ctx.getPlayer() != null) ctx.getPlayer().displayClientMessage(Component.literal(
+                    "The anchor will not settle here. Whatever sits above it could never be broken, and no anchor may stand beyond the reach of a siege."), true);
+            return null;
+        }
+        return defaultBlockState().setValue(HALF, DoubleBlockHalf.LOWER);
     }
 
     @Override

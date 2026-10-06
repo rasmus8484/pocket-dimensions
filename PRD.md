@@ -78,13 +78,14 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
 | AE-001 | DONE | Piston protection | Handled by vanilla: pistons never move hardness -1 blocks or blocks with block entities (covers every mod block) |
-| AE-002 | PARTIAL | Explosion protection | Blast resistance ≥1200 stops TNT/creepers; the Wither can still break Pocket Anchors and siege blocks (not in `wither_immune`) |
+| AE-002 | DONE | Explosion protection | Blast resistance ≥1200 stops TNT/creepers. The unbreakable blocks (boundary, World Anchor, World Core) are in `wither_immune` and `dragon_immune`. The siege blocks are `wither_immune` too, so a Wither can't clear a siege in seconds. The Pocket Anchor stays breakable by the Wither (it is meant to be destroyable) |
 | AE-003 | DONE | Ender pearl blocking | Covered by border enforcement (RL-007): landing outside your realm's bounds pulls you back in |
 | AE-004 | DONE | Chorus fruit blocking | Cancelled in pocket rooms (PR-013); in realms, border enforcement pulls you back |
 | AE-005 | DONE | Command teleport restriction | Out of the realm: cross-dimension teleports are cancelled (only the World Core and Pocket Anchors let you leave). Into it, by any other route: you need a record of entering through an anchor and must still be allowed in (owner, access list or an open breach), or you are sent back out. Leaving clears the record. Pocket rooms are the deliberate exception (RL-020) |
 | AE-006 | DONE | Teleport bypass prevention | Same arrival check as AE-005 for /back, /home and modded teleports; the border's pull-back lands you on a free spot |
 | AE-007 | TODO | Chunk unload duplication | Prevent item/block duplication via chunk boundary exploits |
 | AE-008 | TODO | Hopper/dispenser anchor interaction | Prevent automation from extracting/placing anchors |
+| AE-009 | DONE | Unbesiegeable anchor placement | A World Anchor can't be placed where the siege spot above it (two above its foot) is unbreakable (hardness below zero: the Nether's bedrock ceiling, modded walls) or outside the world |
 
 ---
 

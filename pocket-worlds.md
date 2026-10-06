@@ -75,6 +75,7 @@ Server enforces hard region boundaries (implementation choice), but the rule is 
 - No linking structures
 - The anchor itself is the realm entry point
 - Two blocks tall (lower + upper half); needs one free block above to place
+- The block above that (where a siege block would go) must be breakable and inside the world, so no anchor can hide under the Nether's bedrock ceiling or an unbreakable modded block
 - It refuses to open from inside a pocket room or from inside the realm dimension
 
 ## 5. WorldSeed behavior (create or rekey)

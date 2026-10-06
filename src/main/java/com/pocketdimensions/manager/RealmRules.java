@@ -31,6 +31,15 @@ public final class RealmRules {
         return false;
     }
 
+    /**
+     * A World Anchor must leave room for a siege block on top of it: the spot two above the anchor's foot has to be
+     * inside the world and hold nothing unbreakable (hardness below zero, like the Nether's bedrock ceiling or a
+     * modded wall), or the anchor could never be besieged.
+     */
+    public static boolean roomForSiege(int siegeY, int maxY, float hardness) {
+        return siegeY <= maxY && hardness >= 0;
+    }
+
     /** The Access and Manage tabs: add players, remove ordinary players, rename. */
     public static boolean canManage(Role role) { return role != Role.VISITOR; }
 

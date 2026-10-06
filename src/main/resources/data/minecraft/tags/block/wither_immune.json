@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "pocketdimensions:boundary_block",
+    "pocketdimensions:world_anchor",
+    "pocketdimensions:world_core",
+    "pocketdimensions:world_breacher",
+    "pocketdimensions:anchor_breaker"
+  ]
+}
