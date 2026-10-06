@@ -74,6 +74,10 @@ public class RealmManager extends SavedData {
         public @Nullable BlockPos worldCorePos  = null;
         public long createdGameTime = 0;
         public final List<UUID> allowedPlayers = new ArrayList<>();
+        /** Allowed players the owner crowned: they can use the core's Access and Manage tabs. */
+        public final Set<UUID> managers = new LinkedHashSet<>();
+        /** The realm's name ("" = unnamed, shown as "Realm of <owner>"). */
+        public String name = "";
 
         public RealmData(int plotIndex, UUID ownerUUID) {
             this.plotIndex = plotIndex;
@@ -121,7 +125,9 @@ public class RealmManager extends SavedData {
                               Optional<Long> anchorPosLong,
                               Optional<Long> worldCorePosLong,
                               long createdGameTime,
-                              List<UUID> allowedPlayers) {
+                              List<UUID> allowedPlayers,
+                              List<UUID> managers,
+                              String name) {
 
         static final Codec<RealmEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 UUIDUtil.CODEC.fieldOf("ownerUUID").forGetter(RealmEntry::ownerUUID),
@@ -131,7 +137,9 @@ public class RealmManager extends SavedData {
                 Codec.LONG.optionalFieldOf("anchorPosLong").forGetter(RealmEntry::anchorPosLong),
                 Codec.LONG.optionalFieldOf("worldCorePosLong").forGetter(RealmEntry::worldCorePosLong),
                 Codec.LONG.optionalFieldOf("createdGameTime", 0L).forGetter(RealmEntry::createdGameTime),
-                UUIDUtil.CODEC.listOf().optionalFieldOf("allowedPlayers", List.of()).forGetter(RealmEntry::allowedPlayers)
+                UUIDUtil.CODEC.listOf().optionalFieldOf("allowedPlayers", List.of()).forGetter(RealmEntry::allowedPlayers),
+                UUIDUtil.CODEC.listOf().optionalFieldOf("managers", List.of()).forGetter(RealmEntry::managers),
+                Codec.STRING.optionalFieldOf("name", "").forGetter(RealmEntry::name)
         ).apply(instance, RealmEntry::new));
 
         static RealmEntry from(UUID ownerUUID, RealmData data) {
@@ -141,7 +149,9 @@ public class RealmManager extends SavedData {
                     Optional.ofNullable(data.anchorPos).map(BlockPos::asLong),
                     Optional.ofNullable(data.worldCorePos).map(BlockPos::asLong),
                     data.createdGameTime,
-                    List.copyOf(data.allowedPlayers));
+                    List.copyOf(data.allowedPlayers),
+                    List.copyOf(data.managers),
+                    data.name);
         }
 
         RealmData toData() {
@@ -152,6 +162,8 @@ public class RealmManager extends SavedData {
             d.worldCorePos    = worldCorePosLong.map(BlockPos::of).orElse(null);
             d.createdGameTime = createdGameTime;
             d.allowedPlayers.addAll(allowedPlayers);
+            d.managers.addAll(managers);
+            d.name = name;
             return d;
         }
     }
@@ -598,6 +610,9 @@ public class RealmManager extends SavedData {
         fresh.worldCorePos    = old.worldCorePos;
         fresh.createdGameTime = old.createdGameTime;
         fresh.allowedPlayers.addAll(old.allowedPlayers);
+        fresh.managers.addAll(old.managers);
+        fresh.managers.remove(newOwner);
+        fresh.name            = old.name;
         realms.put(newOwner, fresh);
         setDirty();
     }
@@ -622,6 +637,7 @@ public class RealmManager extends SavedData {
         RealmData data = realms.get(ownerUUID);
         if (data == null) return false;
         boolean removed = data.allowedPlayers.remove(playerUUID);
+        data.managers.remove(playerUUID);            // leaving the list takes the crown with it
         if (removed) setDirty();
         return removed;
     }
@@ -636,6 +652,87 @@ public class RealmManager extends SavedData {
         RealmData data = realms.get(ownerUUID);
         if (data == null) return List.of();
         return List.copyOf(data.allowedPlayers);
+    }
+
+    // -------------------------------------------------------------------------
+    // Managers, roles and the realm's name
+    // -------------------------------------------------------------------------
+
+    /** What player can do at ownerUUID's World Core. */
+    public RealmRules.Role roleOf(UUID ownerUUID, UUID player) {
+        if (player.equals(ownerUUID)) return RealmRules.Role.OWNER;
+        RealmData data = realms.get(ownerUUID);
+        return data != null && data.managers.contains(player) ? RealmRules.Role.MANAGER : RealmRules.Role.VISITOR;
+    }
+
+    public boolean isManager(UUID ownerUUID, UUID player) {
+        RealmData data = realms.get(ownerUUID);
+        return data != null && data.managers.contains(player);
+    }
+
+    /** Crown an allowed player or take the crown away. Returns whether they are a manager now. */
+    public boolean toggleManager(UUID ownerUUID, UUID player) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null || !data.allowedPlayers.contains(player)) return false;
+        boolean now = !data.managers.remove(player);
+        if (now) data.managers.add(player);
+        setDirty();
+        return now;
+    }
+
+    public String getName(UUID ownerUUID) {
+        RealmData data = realms.get(ownerUUID);
+        return data != null ? data.name : "";
+    }
+
+    /** Sets the realm's name; pass it through RealmRules.cleanName first ("" = unnamed). */
+    public void setName(UUID ownerUUID, String name) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null) return;
+        data.name = name;
+        setDirty();
+    }
+
+    // -------------------------------------------------------------------------
+    // Relocation
+    // -------------------------------------------------------------------------
+
+    /**
+     * Grows ownerUUID's realm again somewhere new and gives up the old one for good. Everyone in the realm is sent back
+     * to where they entered from, the old World Core is removed, the old plot is retired (never handed out again), and a
+     * new plot is generated with a new core. The access list, managers and name are kept; the realm's age starts again.
+     */
+    public boolean relocate(UUID ownerUUID, ServerLevel realmLevel) {
+        RealmData old = realms.get(ownerUUID);
+        if (old == null) return false;
+        MinecraftServer server = realmLevel.getServer();
+
+        for (ServerPlayer p : new ArrayList<>(realmLevel.players())) {
+            PlayerRealmInfo info = playerRealmInfos.get(p.getUUID());
+            boolean here = (info != null && info.realmOwner.equals(ownerUUID)) || isWithinRealm(ownerUUID, p.getX(), p.getZ());
+            if (here) com.pocketdimensions.event.RealmEventHandler.queueRealmExit(p.getUUID());
+        }
+        // anyone logged out inside the old realm is sent home when they come back
+        playerRealmInfos.values().removeIf(i -> i.realmOwner.equals(ownerUUID));
+
+        if (old.worldCorePos != null) {
+            realmLevel.setBlock(old.worldCorePos.above(), Blocks.AIR.defaultBlockState(), 2);
+            realmLevel.setBlock(old.worldCorePos, Blocks.AIR.defaultBlockState(), 2);
+        }
+
+        invalidPlots.add(old.plotIndex);
+        int index = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
+        RealmData fresh = new RealmData(index, ownerUUID);
+        fresh.anchorDimKey    = old.anchorDimKey;
+        fresh.anchorPos       = old.anchorPos;
+        fresh.createdGameTime = server.overworld().getGameTime();
+        fresh.allowedPlayers.addAll(old.allowedPlayers);
+        fresh.managers.addAll(old.managers);
+        fresh.name            = old.name;
+        realms.put(ownerUUID, fresh);
+        setDirty();
+        ensureGenerated(ownerUUID, realmLevel);
+        return true;
     }
 
     @Nullable
