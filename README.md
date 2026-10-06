@@ -32,6 +32,8 @@ A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, sur
 
 **Look:** the placed anchor is the Tumbling Cube. A head-sized cube hovers in the block, with gold corner knobs, set-back basalt edges, and a window on each side looking into end portal light. A glowing rune is drawn on its top and bottom. It turns slowly on several axes at once inside three bands of runes, whose axes swing round too, so together they sweep out a sphere. While anyone is in the room, the bands brighten and everything turns half again as fast. The anchor gives off light 6, or 9 while the room is occupied. The hitbox is a still, head-sized box around the cube.
 
+**Inside:** the room is the Tumbling Cube seen from within, only far bigger: every wall, the floor and the ceiling are windows into the end portal's void, ringed by netherite edges with gold corners. Everything is full-bright and nothing casts a shadow on the walls.
+
 **Safe arrival:** you arrive at the room's spawn, or if blocks have been built there, at the nearest spot with room to stand. If the room is packed completely full, the two blocks at the spawn are broken open and drop as items, so nobody can be trapped.
 
 **Disconnect safety:** If a player logs off while holding a stolen Pocket Anchor and others are still inside that room, the mod auto-places an anchor at their feet so occupants aren't trapped.
@@ -162,7 +164,6 @@ These are not yet implemented:
 
 **Content & Polish (Phase 6)**
 - Advancements and progression milestones
-- A design for the pocket room's walls (still vanilla white concrete): the inside of the Tumbling Cube, bigger on the inside, with a faint shimmer sweeping across them
 - Warning particles and sounds when an occupied Pocket Anchor is being mined, and a warning for the people inside
 - In-game explanations (tooltips or a guide)
 

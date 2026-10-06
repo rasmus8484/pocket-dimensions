@@ -1,5 +1,22 @@
 {
-    "variants": {
-        "": { "model": "pocketdimensions:block/boundary_block" }
+  "variants": {
+    "heart=false,part=void": {
+      "model": "pocketdimensions:block/boundary_void"
+    },
+    "heart=true,part=void": {
+      "model": "pocketdimensions:block/boundary_void"
+    },
+    "heart=false,part=edge": {
+      "model": "pocketdimensions:block/boundary_edge"
+    },
+    "heart=true,part=edge": {
+      "model": "pocketdimensions:block/boundary_edge"
+    },
+    "heart=false,part=corner": {
+      "model": "pocketdimensions:block/boundary_corner"
+    },
+    "heart=true,part=corner": {
+      "model": "pocketdimensions:block/boundary_corner"
     }
+  }
 }

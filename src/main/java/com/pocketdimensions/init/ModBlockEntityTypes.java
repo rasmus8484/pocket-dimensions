@@ -3,6 +3,7 @@ package com.pocketdimensions.init;
 import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.blockentity.AnchorBreakerBlockEntity;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
+import com.pocketdimensions.blockentity.RoomVoidBlockEntity;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldBreacherBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
@@ -22,6 +23,12 @@ public class ModBlockEntityTypes {
             BLOCK_ENTITY_TYPES.register("pocket_anchor",
                     () -> new BlockEntityType<>(PocketAnchorBlockEntity::new,
                             Set.of(ModBlocks.POCKET_ANCHOR.get())));
+
+    /** The pocket room's floor corner that draws the void across the whole room (RoomVoidRenderer). */
+    public static final RegistryObject<BlockEntityType<RoomVoidBlockEntity>> ROOM_VOID =
+            BLOCK_ENTITY_TYPES.register("room_void",
+                    () -> new BlockEntityType<>(RoomVoidBlockEntity::new,
+                            Set.of(ModBlocks.BOUNDARY_BLOCK.get())));
 
     public static final RegistryObject<BlockEntityType<WorldAnchorBlockEntity>> WORLD_ANCHOR =
             BLOCK_ENTITY_TYPES.register("world_anchor",

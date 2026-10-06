@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -255,9 +256,29 @@ public class PocketRoomManager extends SavedData {
     // Room generation
     // -------------------------------------------------------------------------
 
+    /**
+     * Rooms built before the walls had parts are plain shell: the first time someone enters, give the visible layer its
+     * void, edges and corners, and the floor corner its heart (which draws the void). Cheap check: the heart's state.
+     */
+    private void ensureShellParts(RoomData data, ServerLevel level) {
+        BlockPos origin = plotOrigin(data.plotIndex);
+        int ox = origin.getX() + SHELL_OFFSET_XZ, oy = origin.getY() + SHELL_OFFSET_Y, oz = origin.getZ() + SHELL_OFFSET_XZ;
+        var boundary = (com.pocketdimensions.block.BoundaryBlock) ModBlocks.BOUNDARY_BLOCK.get();
+        BlockPos heart = new BlockPos(ox + RoomShell.HEART_X, oy + RoomShell.HEART_Y, oz + RoomShell.HEART_Z);
+        BlockState hs = level.getBlockState(heart);
+        if (!hs.is(boundary) || hs.getValue(com.pocketdimensions.block.BoundaryBlock.HEART)) return;
+        var m = new BlockPos.MutableBlockPos();
+        for (int x = 0; x < SHELL_SIZE; x++) for (int y = 0; y < SHELL_SIZE; y++) for (int z = 0; z < SHELL_SIZE; z++) {
+            if (RoomShell.partAt(x, y, z) == null) continue;
+            BlockState want = boundary.stateAt(x, y, z), have = level.getBlockState(m.set(ox + x, oy + y, oz + z));
+            if (have.is(boundary) && have != want) level.setBlock(m, want, 3);
+        }
+    }
+
     public void ensureGenerated(UUID pocketId, ServerLevel pocketLevel) {
         RoomData data = rooms.get(pocketId);
-        if (data == null || data.generated) return;
+        if (data == null) return;
+        if (data.generated) { ensureShellParts(data, pocketLevel); return; }
 
         BlockPos origin = plotOrigin(data.plotIndex);
         int ox = origin.getX() + SHELL_OFFSET_XZ;
@@ -273,15 +294,15 @@ public class PocketRoomManager extends SavedData {
             }
         }
 
-        var boundary = ModBlocks.BOUNDARY_BLOCK.get().defaultBlockState();
+        var boundary = (com.pocketdimensions.block.BoundaryBlock) ModBlocks.BOUNDARY_BLOCK.get();
         var air      = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
         var mutable  = new BlockPos.MutableBlockPos();
 
-        // Fill outer 20x20x20 with BoundaryBlock
+        // Fill outer 20x20x20 with BoundaryBlock: void faces, netherite edges, gold corners (RoomShell)
         for (int x = 0; x < SHELL_SIZE; x++) {
             for (int y = 0; y < SHELL_SIZE; y++) {
                 for (int z = 0; z < SHELL_SIZE; z++) {
-                    pocketLevel.setBlock(mutable.set(ox + x, oy + y, oz + z), boundary, 3);
+                    pocketLevel.setBlock(mutable.set(ox + x, oy + y, oz + z), boundary.stateAt(x, y, z), 3);
                 }
             }
         }
