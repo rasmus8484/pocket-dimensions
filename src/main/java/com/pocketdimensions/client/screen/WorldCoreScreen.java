@@ -211,10 +211,10 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         ly = y + 108;
         UUID owner = menu.core() != null ? menu.core().getOwnerUUID() : null;
         label(g, "Owner", x + 20, ly);
-        if (owner != null) face(g, owner, x + 58, ly - 1);
-        carved(g, menu.sync().ownerName(), x + 70, ly);
-        label(g, "Age", x + 20, ly + 12); carved(g, age(), x + 58, ly + 12);
-        if (RealmRules.canManage(role())) { label(g, "Access", x + 20, ly + 24); carved(g, (menu.sync().allowed().size() + 1) + " players", x + 58, ly + 24); }
+        if (owner != null) face(g, owner, x + 64, ly - 1);
+        carved(g, menu.sync().ownerName(), x + 76, ly);
+        label(g, "Age", x + 20, ly + 12); carved(g, age(), x + 64, ly + 12);
+        if (RealmRules.canManage(role())) { label(g, "Access", x + 20, ly + 24); carved(g, (menu.sync().allowed().size() + 1) + " players", x + 64, ly + 24); }
 
         // The ward: a crystal-lined hollow and a crystal vein
         polished(g, x + 190, y + 58, 48, 86);
@@ -351,8 +351,8 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         if (warnOpen) {
             int tx = x + (W - TABLET_W) / 2, ty = y + 70;
             int left = 3 - (int) ((System.currentTimeMillis() - warnOpenedAt) / 1000);
-            out.add(new Btn(tx + 64, ty + TABLET_H - 20, 72, 14, "Keep this realm", false, true, () -> warnOpen = false));
-            out.add(new Btn(tx + 140, ty + TABLET_H - 20, 56, 14, left > 0 ? "Relocate " + left : "Relocate", true, left <= 0, () -> {
+            out.add(new Btn(tx + 42, ty + TABLET_H - 20, 90, 14, "Keep this realm", false, true, () -> warnOpen = false));
+            out.add(new Btn(tx + 136, ty + TABLET_H - 20, 60, 14, left > 0 ? "Relocate " + left : "Relocate", true, left <= 0, () -> {
                 send(ModNetworking.CoreActionC2S.RELOCATE, "", new UUID(0, 0));
                 warnOpen = false;
             }));
