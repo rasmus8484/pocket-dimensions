@@ -100,7 +100,7 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half — *
 
 Both siege blocks require placement directly on top of a World Anchor and break if the anchor is removed. There are no loot tables yet, so siege blocks drop nothing when broken or mined.
 
-**Boss bars:** Players within `siege_bossbar_range` blocks of an active siege block, and everyone inside the besieged realm, see its progress as a boss bar, along with how much lapis the siege block has left.
+**Siege bars:** Players within `siege_bossbar_range` blocks of an active siege block, and everyone inside the besieged realm, see the siege on a themed bar at the top of the screen: its progress, the time left and the lapis. Attackers and anyone outside the realm see **Rift Eye** (a slice of the anchor's rift in gold, counting the siege block's lapis); the realm's people see **Aurora Stones** (the World Core's rock with aurora crystals and its black hole beneath, counting the core's own lapis). While the core holds lapis, a veined blue ward covers the progress line and the time counts the slowed pace.
 
 **Cross-dimension awareness:** Siege blocks and the World Core force-load each other's chunks across dimensions, so boss bars are visible to players inside the realm during an active siege and the beacon color stays accurate regardless of which dimension players are in.
 
