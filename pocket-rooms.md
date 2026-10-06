@@ -25,7 +25,7 @@ No room is its own dimension.
 Boundary is a **custom mod block** with:
 
 - Pure white texture
-- Emits light level **15** (glowstone strength) — *not yet implemented; to be tried in the walls' redesign*
+- Looks like the **inside of the Tumbling Cube** you entered (bigger on the inside): its frame and end-portal starfield windows on the walls, its rune on floor and ceiling, full-bright with no shadows, and a faint magical shimmer that travels across the walls — *planned for the walls' redesign; the walls are vanilla white concrete for now*
 - Unbreakable / extremely high hardness
 - High blast resistance
 - Not movable by pistons

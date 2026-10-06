@@ -162,7 +162,7 @@ These are not yet implemented:
 
 **Content & Polish (Phase 6)**
 - Advancements and progression milestones
-- A design for the pocket room's walls (still vanilla white concrete), trying them glowing
+- A design for the pocket room's walls (still vanilla white concrete): the inside of the Tumbling Cube, bigger on the inside, with a faint shimmer sweeping across them
 - Warning particles and sounds when an occupied Pocket Anchor is being mined, and a warning for the people inside
 - In-game explanations (tooltips or a guide)
 
