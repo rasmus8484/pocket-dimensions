@@ -51,6 +51,11 @@ Each player can own one realm — a region of overworld-like terrain (no structu
 
 **Safe arrival:** you arrive next to the World Core, or if a slope or something built there is in the way, at the nearest spot around the core with room to stand (never on the core itself, never outside the realm).
 
+**The World Core's screen** (crouch + right-click the core): a slab of the core's own rock, its words carved in and its runes glowing in the siege colour. Three rune seals across the top:
+- **Overview** (everyone): the realm's state, owner and age, the **ward** (the lapis slot, with a crystal vein showing how full it is and how long it lasts), and who is in the realm right now. Anyone can add lapis to the ward; only the owner and managers can take it out.
+- **Access** (owner and managers): add players by name or pick them from everyone online; each player in the list has a carved **crown** (the owner fills it with gold to make them a **manager**) and a red cross to remove them. Managers can remove ordinary players but not other managers.
+- **Manage** (owner and managers): name the realm. The owner can also **relocate** it: after a warning, the realm is grown again in a fresh place and everything in the old one is lost (the access list, managers and name are kept).
+
 **Access list:** In the World Core GUI the owner can type a player name and click **Add** to let them through the anchor, or click **x** next to a name to remove them. The list size is capped by `access.max_allowed_players` (0 = unlimited).
 
 The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
