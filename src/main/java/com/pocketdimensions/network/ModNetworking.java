@@ -26,7 +26,8 @@ import java.util.UUID;
 
 /**
  * The World Core screen's packets: one action from the screen (add, remove, crown, rename, relocate), checked against
- * the sender's role on the server, and one sync of everything the screen shows.
+ * the sender's role on the server, and one sync of everything the screen shows. Also carries the siege bars' state
+ * ({@link SiegeBarS2C}).
  */
 public class ModNetworking {
 
@@ -42,6 +43,8 @@ public class ModNetworking {
                 .encoder(CoreActionC2S::encode).decoder(CoreActionC2S::decode).consumerMainThread(CoreActionC2S::handle).add();
         CHANNEL.messageBuilder(CoreSyncS2C.class, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(CoreSyncS2C::encode).decoder(CoreSyncS2C::decode).consumerMainThread(CoreSyncS2C::handle).add();
+        CHANNEL.messageBuilder(SiegeBarS2C.class, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SiegeBarS2C::encode).decoder(SiegeBarS2C::decode).consumerMainThread(SiegeBarS2C::handle).add();
         CHANNEL.build();
     }
 

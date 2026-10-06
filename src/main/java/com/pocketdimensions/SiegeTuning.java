@@ -9,9 +9,4 @@ public final class SiegeTuning {
     public static float mineProgressPerTick(double seconds) {
         return seconds <= 0 ? 1f : (float) (1.0 / (seconds * 20.0));
     }
-
-    /** The fuel counter shown on the siege boss bars. */
-    public static String fuelLabel(int lapis) {
-        return lapis <= 0 ? "no lapis" : lapis + " lapis";
-    }
 }

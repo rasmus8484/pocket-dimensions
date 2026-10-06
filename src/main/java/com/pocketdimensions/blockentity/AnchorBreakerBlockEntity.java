@@ -5,6 +5,7 @@ import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.block.AnchorBreakerBlock;
 import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.init.ModBlockEntityTypes;
+import com.pocketdimensions.network.SiegeBarS2C;
 import com.pocketdimensions.init.ModSounds;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.AABB;
@@ -18,12 +19,9 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
-import net.minecraft.world.BossEvent;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -41,8 +39,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -73,8 +69,8 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
         }
     };
 
-    /** Transient boss bar — not saved to NBT; recreated lazily after server restart. */
-    private ServerBossEvent bossBar = null;
+    /** Who sees this siege's bar (client/siegebar draws it). Transient: rebuilt within a second after a restart. */
+    private final SiegeBarTracker bar = new SiegeBarTracker();
 
     /** Fuel presence last sent to clients (null = not yet this session); the siphon stream shows only while fueled. */
     @Nullable private Boolean syncedFuel = null;
@@ -209,128 +205,33 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
             }
         }
 
-        // --- Boss bar management ---
+        // --- Siege bar ---
         if (be.progressTicks > 0 || be.hasFuel()) {
-            // Lazy create
-            if (be.bossBar == null) {
-                be.bossBar = new ServerBossEvent(
-                        buildBarName(be, defended),
-                        pickColor(be, defended),
-                        BossEvent.BossBarOverlay.PROGRESS);
-            }
-
-            // Every tick: update progress float
-            int duration = PocketDimensionsConfig.BREAKER_DURATION_TICKS.get();
-            be.bossBar.setProgress(Math.min((float) be.progressTicks / duration, 1.0f));
-
-            // Every 20 ticks: update name, color, player list
-            if (level.getGameTime() % 20 == 0) {
-                be.bossBar.setName(buildBarName(be, defended));
-                be.bossBar.setColor(pickColor(be, defended));
-                updateBossBarPlayers(be.bossBar, serverLevel, pos, anchor);
-            }
-        } else if (be.bossBar != null) {
-            // No progress and no fuel — remove bar
-            be.bossBar.removeAllPlayers();
-            be.bossBar = null;
+            if (level.getGameTime() % 20 == 0) be.bar.update(serverLevel, pos, anchor, be.barState(serverLevel, anchor, defended));
+        } else {
+            be.bar.clear();
         }
     }
 
     /** Reset progress when the block is removed from the world. */
     @Override
     public void setRemoved() {
-        if (bossBar != null) {
-            bossBar.removeAllPlayers();
-            bossBar = null;
-        }
+        bar.clear();
         progressTicks = 0;
         super.setRemoved();
     }
 
     // -------------------------------------------------------------------------
-    // Boss bar helpers
+    // Siege bar
     // -------------------------------------------------------------------------
 
-    private static Component buildBarName(AnchorBreakerBlockEntity be, boolean defended) {
-        int duration = PocketDimensionsConfig.BREAKER_DURATION_TICKS.get();
-        int pct = (int) ((be.progressTicks / (double) duration) * 100);
-        boolean complete = be.progressTicks >= duration;
-        boolean paused = !be.hasFuel();
-
-        StringBuilder sb = new StringBuilder("Shattering the Anchor \u2014 ").append(pct).append("%");
-
-        if (complete) {
-            sb.append(" \u2014 The Anchor is Shattered!");
-        } else if (paused) {
-            sb.append(" \u2014 Dormant (starved of lapis)");
-        } else {
-            int remainingTicks = duration - be.progressTicks;
-            int etaSeconds = defended
-                    ? (remainingTicks * PocketDimensionsConfig.CORE_SLOW_FACTOR.get()) / 20
-                    : remainingTicks / 20;
-            sb.append(" \u2014 ").append(formatTime(etaSeconds));
-        }
-
-        if (defended && !complete && !paused) {
-            sb.append(" \u2014 Warded");
-        }
-
-        sb.append(" \u00b7 ").append(com.pocketdimensions.SiegeTuning.fuelLabel(be.fuel + be.inventory.getItem(0).getCount()));
-        return Component.literal(sb.toString());
-    }
-
-    private static BossEvent.BossBarColor pickColor(AnchorBreakerBlockEntity be, boolean defended) {
-        int duration = PocketDimensionsConfig.BREAKER_DURATION_TICKS.get();
-        if (be.progressTicks >= duration) return BossEvent.BossBarColor.GREEN;
-        if (!be.hasFuel()) return BossEvent.BossBarColor.WHITE;
-        if (defended) return BossEvent.BossBarColor.YELLOW;
-        return BossEvent.BossBarColor.RED;
-    }
-
-    private static String formatTime(int totalSeconds) {
-        if (totalSeconds <= 0) return "0s";
-        int hours = totalSeconds / 3600;
-        int minutes = (totalSeconds % 3600) / 60;
-        int seconds = totalSeconds % 60;
-        StringBuilder sb = new StringBuilder();
-        if (hours > 0) sb.append(hours).append("h ");
-        if (minutes > 0) sb.append(minutes).append("m ");
-        sb.append(seconds).append("s");
-        return sb.toString();
-    }
-
-    private static void updateBossBarPlayers(ServerBossEvent bar, ServerLevel level, BlockPos pos,
-                                               @Nullable WorldAnchorBlockEntity anchor) {
-        MinecraftServer server = level.getServer();
-        double range = PocketDimensionsConfig.SIEGE_BOSSBAR_RANGE.get();
-
-        Set<ServerPlayer> eligible = new HashSet<>(
-                server.getPlayerList().getPlayers().stream()
-                        .filter(p -> p.level() == level && p.blockPosition().closerThan(pos, range))
-                        .toList());
-
-        if (anchor != null && anchor.getOwnerUUID() != null) {
-            RealmManager rm = RealmManager.get(server);
-            int[] bounds = rm.getRealmBounds(anchor.getOwnerUUID());
-            ServerLevel realmLevel = server.getLevel(PocketDimensionsMod.REALM_DIM);
-            if (realmLevel != null) {
-                for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                    if (p.level() == realmLevel
-                            && p.getX() >= bounds[0] && p.getX() < bounds[2]
-                            && p.getZ() >= bounds[1] && p.getZ() < bounds[3]) {
-                        eligible.add(p);
-                    }
-                }
-            }
-        }
-
-        Set<ServerPlayer> current = new HashSet<>(bar.getPlayers());
-        for (ServerPlayer p : current) {
-            if (!eligible.contains(p)) bar.removePlayer(p);
-        }
-        for (ServerPlayer p : eligible) {
-            if (!current.contains(p)) bar.addPlayer(p);
-        }
+    /** This siege as its bar shows it: progress, pace (0 dormant, 1, or the core's slow factor), both lapis counts. */
+    private SiegeBarS2C barState(ServerLevel level, @Nullable WorldAnchorBlockEntity anchor, boolean defended) {
+        WorldCoreBlockEntity wc = anchor != null ? findWorldCore(level, anchor) : null;
+        int rate = !hasFuel() || anchor == null ? 0 : defended ? PocketDimensionsConfig.CORE_SLOW_FACTOR.get() : 1;
+        return new SiegeBarS2C(null, false, SiegeBarS2C.BREAKER, progressTicks, PocketDimensionsConfig.BREAKER_DURATION_TICKS.get(), rate,
+                fuel + inventory.getItem(0).getCount(), com.pocketdimensions.PocketDimensionsServerConfig.ANCHOR_BREAKER_MAX_LAPIS.get(),
+                wc != null ? wc.getDefenseLapis() : 0);
     }
 
     // -------------------------------------------------------------------------

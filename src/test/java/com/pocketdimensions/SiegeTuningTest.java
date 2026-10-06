@@ -16,11 +16,4 @@ class SiegeTuningTest {
     void zeroSecondsBreaksInstantly() {
         assertEquals(1f, SiegeTuning.mineProgressPerTick(0.0));
     }
-
-    @Test
-    void theFuelCounterReadsNaturally() {
-        assertEquals("1 lapis", SiegeTuning.fuelLabel(1));
-        assertEquals("37 lapis", SiegeTuning.fuelLabel(37));
-        assertEquals("no lapis", SiegeTuning.fuelLabel(0));
-    }
 }

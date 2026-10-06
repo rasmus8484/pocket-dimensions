@@ -217,6 +217,11 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         return toAdd;
     }
 
+    /** Lapis the core holds for its ward (legacy counter plus the slot), as the siege bar shows it. */
+    public int getDefenseLapis() {
+        return defenseFuel + inventory.getItem(0).getCount();
+    }
+
     /** Called by siege block entities to check if the defender slowdown is active. */
     public boolean hasDefenseFuel() {
         return defenseFuel > 0 || !inventory.getItem(0).isEmpty();
