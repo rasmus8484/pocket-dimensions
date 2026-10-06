@@ -126,8 +126,6 @@ These are features described in design docs that differ from current implementat
 
 | PRD ID | Mismatch |
 |--------|----------|
-| PR-007 | pocket-rooms.md says netherite-tier tool; code requires diamond-tier pickaxe |
 | PR-012 | Docs say miner and occupants are warned with particles/sounds; code only sends the miner an action-bar message |
-| PR-008 | Docs fall back to nearest valid / last known position; code tries feet + 8 neighbours and places no anchor if all are blocked |
 | — | pocket-rooms.md says boundary blocks emit light 15; code sets no light level |
 | SG-008 | Docs require owner inside realm for breacher placement; not enforced |

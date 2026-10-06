@@ -145,9 +145,9 @@ This is intentional irreversible loss.
 Chorus fruit teleportation is cancelled inside pocket rooms.
 
 Tool gating:
-- Requires **netherite-tier or higher** harvest level (long break time)
+- Requires a **diamond-tier or better** pickaxe; the break time is set by `pocket_anchor_mine_seconds` in the server config
 
-*Implementation note: the code currently requires a diamond-tier pickaxe (hardness 50), and only the miner gets a warning — an action-bar message if players are inside. Particles, sounds and occupant warnings are not implemented.*
+*Implementation note: only the miner gets a warning (an action-bar message if players are inside). Particles, sounds and occupant warnings are not implemented.*
 
 ---
 
@@ -229,10 +229,8 @@ then on logout/disconnect:
 - Players inside remain linked to the anchor
 
 If the exact feet position is invalid:
-- Place at nearest valid block at/under that position
-- Fallback to last known valid on-ground position
-
-*Implementation note: the code tries the feet position and its 8 horizontal neighbours; if all are blocked, no anchor is placed.*
+- Place it at one of the 8 blocks around the feet
+- If all of those are blocked too, no anchor is placed: it stays in the offline player's inventory, and anyone exiting the room meanwhile comes out where they entered it from (or at world spawn)
 
 This prevents trapping occupants by logging off with the stolen item.
 
