@@ -86,12 +86,10 @@ Using a WorldSeed on a WorldAnchor:
   - Bind this anchor as their entry point
 
 - If the player **already has a realm**:
-  - **Rekey**: relink the existing realm to this new anchor
-  - Old anchor becomes invalid or unbound
+  - **Rekey**: relink the existing realm to this new anchor, but only once the old anchor has been destroyed
+  - While the old anchor still stands, the rekey is refused ("Sever it first")
 
-Anchors are replaceable; realms persist.
-
-*Implementation note: a rekey is refused while the old anchor still exists ("Sever it first"). The old anchor must be destroyed before a new one can be linked.*
+Anchors are replaceable once lost; realms persist. An owner can never move their entry point away from a siege by linking a second anchor.
 
 ---
 

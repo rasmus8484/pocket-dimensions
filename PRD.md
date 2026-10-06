@@ -31,7 +31,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
 | RL-001 | DONE | Realm allocation | Chunk-aligned plots; config-driven radius/padding; dry-land search for WorldCore |
-| RL-002 | DONE | WorldAnchor + WorldSeed linking | WorldSeed binds anchor to realm; rekey supported (old anchor must be gone) |
+| RL-002 | DONE | WorldAnchor + WorldSeed linking | WorldSeed binds anchor to realm; rekey only once the linked anchor is destroyed (by design: no dodging a siege) |
 | RL-003 | DONE | Realm terrain generation | RealmChunkGenerator: overworld-like noise, no structures, legacy_random_source |
 | RL-004 | DONE | WorldCore placement | Searches for dry land near plot center; clears column above; sets owner UUID |
 | RL-005 | DONE | Realm entry | Right-click linked anchor; owner and access-list players always, others only if breached+fueled |
@@ -40,7 +40,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | RL-008 | DONE | Portal blocking | EntityTravelToDimensionEvent cancelled for all non-queued exits from realm |
 | RL-009 | DONE | Hostile mob spawn blocking | MobSpawnEvent.FinalizeSpawn cancelled for natural Monster spawns in realm |
 | RL-010 | DONE | Ownership transfer | `/pd owner <player|uuid>` command transfers realm, anchor, and core |
-| RL-011 | DONE | Realm relinking | WorldSeed on new anchor rekeys realm; old anchor must be gone first |
+| RL-011 | DONE | Realm relinking | WorldSeed on new anchor rekeys realm; refused while the old anchor stands |
 | RL-012 | DONE | Login restoration | PlayerLoggedInEvent restores runtime bounds or ejects player if no info |
 | RL-013 | DONE | Sleep time advancement | SleepFinishedTimeEvent advances overworld day time from realm |
 | RL-014 | TODO | Passive mob spawn control | Config option to suppress passive spawns in realm dimension |
@@ -129,5 +129,4 @@ These are features described in design docs that differ from current implementat
 | PR-012 | Docs say miner and occupants are warned with particles/sounds; code only sends the miner an action-bar message |
 | PR-008 | Docs fall back to nearest valid / last known position; code tries feet + 8 neighbours and places no anchor if all are blocked |
 | — | pocket-rooms.md says boundary blocks emit light 15; code sets no light level |
-| RL-002 | Docs allow relinking freely; code requires old anchor gone first |
 | SG-008 | Docs require owner inside realm for breacher placement; not enforced |
