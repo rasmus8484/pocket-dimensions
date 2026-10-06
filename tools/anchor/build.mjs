@@ -8,6 +8,7 @@ import { damageShape, damagePaint } from './damage.mjs';
 import { shape as coreShape, paint as corePaint, STATES as CORE_STATES, CORE as CORE_C } from './geode.mjs';
 import { shape as pocketShape, paint as pocketPaint, glowSprite } from './pocket.mjs';
 import { sprite as seedSprite } from './seed.mjs';
+import { slab, polished, hollow, tablet } from './gui.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
@@ -235,5 +236,10 @@ write('items/pocket_anchor.json', json({ model: { type: 'minecraft:model', model
 write('textures/item/world_seed.png', encodePNG(16, 16, seedSprite()));
 write('models/item/world_seed.json', json({ parent: 'minecraft:item/generated', textures: { layer0: 'pocketdimensions:item/world_seed' } }));
 write('items/world_seed.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:item/world_seed' } }));
+
+// World Core screen: the stone surfaces (everything carved or glowing on them is drawn by WorldCoreScreen)
+for (const [name, im] of [['core_slab', slab()], ['core_polished', polished()], ['core_hollow', hollow()], ['core_tablet', tablet()]]) {
+  write(`textures/gui/${name}.png`, encodePNG(im.w, im.h, im.rgba));
+}
 
 console.log(report.join('\n'));

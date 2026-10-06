@@ -199,14 +199,14 @@ public class WorldCoreBlock extends BaseEntityBlock {
         return InteractionResult.SUCCESS;
     }
 
+    /** Anyone who reaches the core may open it; what they see and may do depends on their role (RealmRules). */
     private InteractionResult openGui(Player player, WorldCoreBlockEntity be) {
-        if (be.getOwnerUUID() == null || !be.getOwnerUUID().equals(player.getUUID())) {
-            player.displayClientMessage(Component.literal(
-                    "The core's inner workings remain sealed to all but its master."), false);
+        if (be.getOwnerUUID() == null) {
+            player.displayClientMessage(Component.literal("The core is silent. No realm answers it."), false);
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer sp) {
-            sp.openMenu(be, buf -> WorldCoreMenu.writeExtraData(buf, be));
+            sp.openMenu(be, buf -> WorldCoreMenu.writeExtraData(buf, be, sp));
         }
         return InteractionResult.SUCCESS;
     }

@@ -187,14 +187,10 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     /**
-     * Right-click with lapis: insert into inventory slot (owner only).
+     * Right-click with lapis: feed the ward. Anyone may give the realm lapis; only the owner and managers can take it
+     * back out (through the screen).
      */
     public void tryInsertFuel(Player player, ItemStack stack, Level level) {
-        if (ownerUUID == null || !player.getUUID().equals(ownerUUID)) {
-            player.displayClientMessage(Component.literal(
-                    "The core pulses faintly but refuses your hand. Only the realm's master may feed it."), false);
-            return;
-        }
         int inserted = insertLapis(stack.getCount());
         if (inserted > 0) {
             stack.shrink(inserted);
