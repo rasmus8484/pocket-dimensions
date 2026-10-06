@@ -1,0 +1,25 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "entered_nether": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "minecraft:the_nether"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "entered_nether"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "pocketdimensions:pocket_anchor",
+      "pocketdimensions:world_seed",
+      "pocketdimensions:world_anchor",
+      "pocketdimensions:world_breacher",
+      "pocketdimensions:anchor_breaker"
+    ]
+  }
+}

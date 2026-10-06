@@ -88,6 +88,14 @@ public class AnchorBreakerBlock extends BaseEntityBlock {
         return CODEC;
     }
 
+    /** Mined by a player: destroyed with its fuel, or dropped with it if the server config says so. */
+    @Override
+    public void playerDestroy(Level level, net.minecraft.world.entity.player.Player player, BlockPos pos, BlockState state,
+                              @Nullable BlockEntity blockEntity, ItemStack tool) {
+        super.playerDestroy(level, player, pos, state, blockEntity, tool);
+        if (blockEntity instanceof AnchorBreakerBlockEntity be) SiegeBlockDrops.onMined(level, pos, this, be.getInventory());
+    }
+
     /** Only a diamond-tier pickaxe or better can break it, in a fixed time (server config). */
     @Override
     public float getDestroyProgress(BlockState state, net.minecraft.world.entity.player.Player player,

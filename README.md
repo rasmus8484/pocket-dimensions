@@ -109,6 +109,8 @@ Everything can be gathered once you reach the Nether; nothing needs the End. The
 | World Breacher | iron ingot, hopper, iron ingot | netherite scrap, eye of ender, netherite scrap | iron ingot, amethyst shard, iron ingot |
 | Anchor Breaker | iron ingot, hopper, iron ingot | netherite scrap, magma block, netherite scrap | eye of ender, blaze rod, eye of ender |
 
+All five appear in the recipe book the first time you enter the Nether. They can be crafted before that if you know them.
+
 The World Core and Boundary Block have no recipe: the realm places its core, and the mod builds the room walls.
 
 ### Configuration
@@ -134,6 +136,7 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 | `mining.pocket_anchor_mine_seconds` | 9.4 | Seconds to mine a Pocket Anchor (still needs a diamond-tier pickaxe) |
 | `mining.world_breacher_mine_seconds` | 250 | Seconds to mine a World Breacher (needs a diamond-tier pickaxe) |
 | `mining.anchor_breaker_mine_seconds` | 250 | Seconds to mine an Anchor Breaker (needs a diamond-tier pickaxe) |
+| `mining.siege_blocks_drop` | false | Whether a mined World Breacher or Anchor Breaker drops itself and its lapis (false: destroyed with its fuel) |
 | `fuel.world_breacher_max_lapis` | 5 | Lapis a World Breacher can hold (1-64) |
 | `fuel.anchor_breaker_max_lapis` | 5 | Lapis an Anchor Breaker can hold (1-64) |
 
