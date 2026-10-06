@@ -129,13 +129,30 @@ public class RealmEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // Any arrival in the realm: through an anchor, out of a pocket room, or by /tp, /home, /back or another mod
+    // Any arrival in the realm: through an anchor, out of a pocket room, or by /tp, /home, /back or another mod.
+    // Out of a pocket room you are let in as a guest of whichever realm you step out into (smuggling); every other
+    // route needs a record of entering through an anchor and must still be allowed in.
     // -------------------------------------------------------------------------
 
     private void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer sp) || !event.getTo().equals(PocketDimensionsMod.REALM_DIM)) return;
+        if (!(event.getEntity() instanceof ServerPlayer sp)) return;
         MinecraftServer server = ((ServerLevel) sp.level()).getServer();
-        if (server != null) mayStay(sp, server, RealmManager.get(server).getPlayerRealmInfo(sp.getUUID()));
+        if (server == null) return;
+        RealmManager mgr = RealmManager.get(server);
+        boolean intoRealm = event.getTo().equals(PocketDimensionsMod.REALM_DIM);
+
+        // Leaving a pocket room wipes your realm record; stepping out inside a realm makes you that realm's guest,
+        // whoever you are. Pocket rooms are a way to smuggle people in, or to sneak in through someone else's room.
+        if (event.getFrom().equals(PocketDimensionsMod.POCKET_DIM)) {
+            mgr.clearPlayerRealmInfo(sp.getUUID());
+            if (!intoRealm) return;
+            UUID owner = mgr.realmOwnerAt(sp.getX(), sp.getZ());
+            if (owner == null) { eject(sp, null); return; }
+            mgr.recordInRealm(sp.getUUID(), owner);
+            runtimeStates.remove(sp.getUUID());
+            return;
+        }
+        if (intoRealm) mayStay(sp, server, mgr.getPlayerRealmInfo(sp.getUUID()));
     }
 
     /**

@@ -329,6 +329,19 @@ public class RealmManager extends SavedData {
         return new int[]{ minBlockX, minBlockZ, minBlockX + side, minBlockZ + side };
     }
 
+    /** The owner of the realm whose plot contains (x, z) in the realm dimension, or null between plots. */
+    @Nullable
+    public UUID realmOwnerAt(double x, double z) {
+        for (UUID owner : realms.keySet()) if (isWithinRealm(owner, x, z)) return owner;
+        return null;
+    }
+
+    /** Records the player as inside this owner's realm: its bounds hold them in, and a later arrival check finds them. */
+    public void recordInRealm(UUID playerUUID, UUID ownerUUID) {
+        int[] b = getRealmBounds(ownerUUID);                       // [minX, minZ, maxX, maxZ]
+        setPlayerRealmInfo(playerUUID, ownerUUID, b[0], b[2], b[1], b[3], getSpawnPos(ownerUUID));
+    }
+
     public boolean isWithinRealm(UUID ownerUUID, double x, double z) {
         int[] b = getRealmBounds(ownerUUID);
         return x >= b[0] && x < b[2] && z >= b[1] && z < b[3];

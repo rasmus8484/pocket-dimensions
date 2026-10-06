@@ -49,6 +49,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | RL-017 | DONE | Safe arrival in realms | Realm entry searches around the World Core for free space within the plot, so you never land inside blocks |
 | RL-018 | DONE | World Core screen | Carved-stone screen with Overview / Access / Manage; roles owner, manager, visitor (RealmRules); managers (crown), realm names, online-player picker; visitors see Overview only and can add but never take lapis |
 | RL-019 | DONE | Realm relocation | Owner-only, behind a warning: the realm is regenerated in a new plot; everything in the old one is lost; access list, managers and name are kept |
+| RL-020 | DONE | Pocket room smuggling | Leaving a pocket room clears your realm record; stepping out inside a realm makes you its guest whoever you are, so a pocket anchor inside a realm smuggles people in (or lets them sneak in through someone else's room) |
 
 ---
 
@@ -80,7 +81,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | AE-002 | PARTIAL | Explosion protection | Blast resistance ≥1200 stops TNT/creepers; the Wither can still break Pocket Anchors and siege blocks (not in `wither_immune`) |
 | AE-003 | DONE | Ender pearl blocking | Covered by border enforcement (RL-007): landing outside your realm's bounds pulls you back in |
 | AE-004 | DONE | Chorus fruit blocking | Cancelled in pocket rooms (PR-013); in realms, border enforcement pulls you back |
-| AE-005 | DONE | Command teleport restriction | Out of the realm: cross-dimension teleports are cancelled (only the World Core and Pocket Anchors let you leave). Into it, by any route: you need a record of entering through an anchor and must still be allowed in (owner, access list or an open breach), or you are sent back out. Leaving clears the record |
+| AE-005 | DONE | Command teleport restriction | Out of the realm: cross-dimension teleports are cancelled (only the World Core and Pocket Anchors let you leave). Into it, by any other route: you need a record of entering through an anchor and must still be allowed in (owner, access list or an open breach), or you are sent back out. Leaving clears the record. Pocket rooms are the deliberate exception (RL-020) |
 | AE-006 | DONE | Teleport bypass prevention | Same arrival check as AE-005 for /back, /home and modded teleports; the border's pull-back lands you on a free spot |
 | AE-007 | TODO | Chunk unload duplication | Prevent item/block duplication via chunk boundary exploits |
 | AE-008 | TODO | Hopper/dispenser anchor interaction | Prevent automation from extracting/placing anchors |
