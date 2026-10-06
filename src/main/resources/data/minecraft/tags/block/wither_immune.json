@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "pocketdimensions:boundary_block",
+    "pocketdimensions:world_anchor",
+    "pocketdimensions:world_core"
+  ]
+}
