@@ -13,6 +13,14 @@ public final class RealmRules {
 
     private RealmRules() {}
 
+    /**
+     * Who may be in a realm: its owner, a player on its access list, or anyone while a fuelled, completed World Breacher
+     * stands on its anchor. The anchor checks this on entry; the realm checks it again on any other arrival.
+     */
+    public static boolean mayEnter(boolean owner, boolean allowed, boolean breachOpen) {
+        return owner || allowed || breachOpen;
+    }
+
     /** The Access and Manage tabs: add players, remove ordinary players, rename. */
     public static boolean canManage(Role role) { return role != Role.VISITOR; }
 

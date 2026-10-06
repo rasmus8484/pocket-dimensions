@@ -100,10 +100,7 @@ public class WorldAnchorBlockEntity extends BlockEntity {
                 player.getYRot(), player.getXRot());
 
         // Record persistent realm bounds so enforcement survives server restarts
-        int[] bounds = mgr.getRealmBounds(ownerUUID); // [minX, minZ, maxX, maxZ]
-        BlockPos spawn = mgr.getSpawnPos(ownerUUID);
-        mgr.setPlayerRealmInfo(player.getUUID(), ownerUUID,
-                bounds[0], bounds[2], bounds[1], bounds[3], spawn);
+        mgr.recordInRealm(player.getUUID(), ownerUUID);
 
         RealmEventHandler.queueRealmEntry(player.getUUID(), ownerUUID);
     }
