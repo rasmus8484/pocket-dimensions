@@ -15,8 +15,11 @@
   --gold-hi: #f6d98a;
   --accent: #8cebff;        /* rune light, follows the siege state */
   --accent-deep: #3c82ff;
-  --carve: #2a2730;         /* engraved letters and grooves */
-  --carve-hi: rgba(255, 255, 255, .22);   /* the lit lower lip of a carving */
+  --carve: #17151c;         /* engraved letters and grooves */
+  --carve-hi: rgba(255, 255, 255, .38);   /* the lit lower lip of a carving */
+  --label: #3b3743;         /* engraved labels: lighter than values, still dark */
+  --inlay: #e7b24a;         /* gold inlaid into section headings */
+  --inlay-lo: #4a3208;
   --rock: #79757f;
   --unbind: #ff6a5a;
   --font-pixel: "Pixelify Sans", "Courier New", monospace;
@@ -59,7 +62,12 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
 /* engraved text: dark letters with a lit lower lip; glowing text: rune light */
 .carved { color: var(--carve); text-shadow: 0 1px 0 var(--carve-hi); }
 .glow { color: var(--accent); text-shadow: 0 0 2px var(--accent-deep), 0 0 4px var(--accent-deep), 0 1px 0 rgba(0,0,0,.6); }
-.faint { color: #4a4652; text-shadow: 0 1px 0 var(--carve-hi); }
+.faint { color: var(--label); text-shadow: 0 1px 0 var(--carve-hi); }
+/* level 3: gold inlaid in the stone, for section headings */
+.inlay { margin: 0 0 3px; font: 600 8px var(--font-pixel); color: var(--inlay); text-shadow: 1px 1px 0 var(--inlay-lo), 0 0 1px rgba(0,0,0,.4); display: flex; align-items: center; gap: 3px; }
+.inlay::before { content: ""; width: 3px; height: 3px; background: var(--inlay); box-shadow: 1px 1px 0 var(--inlay-lo); flex: none; }
+/* a polished face: the rock flowed smooth and flat here (like the tablets under the core's openings), so text reads */
+.polished { background: var(--rock-smooth); box-shadow: inset 1px 1px 0 rgba(0,0,0,.28), inset -1px -1px 0 rgba(255,255,255,.3), 0 0 0 1px rgba(0,0,0,.08); padding: 5px 6px; }
 /* a carved groove (dark line over a lit line) */
 .groove { height: 2px; background: linear-gradient(var(--carve) 0 1px, var(--carve-hi) 1px 2px); margin: 5px 0; }
 /* a carved recess: sunk into the rock, lit on its lower right */
@@ -79,13 +87,15 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
 .seal[aria-selected="true"] { color: var(--accent); text-shadow: 0 0 2px var(--accent-deep), 0 0 4px var(--accent-deep); }
 .seal:hover { color: var(--accent); }
 .inscription { display: block; width: 100%; height: 5px; }   /* a line of runes carved along the slab, light flowing through */
-.title { display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 3px; }
-.title .name { font-weight: 600; }
-.state { text-align: center; margin-top: 2px; }
+.title { display: flex; justify-content: center; align-items: center; gap: 5px; margin-top: 4px; }
+.title .name { font-weight: 600; font-size: 16px; line-height: 16px; }          /* level 1: the realm's name, double size */
+.state { text-align: center; margin-top: 3px; }
 
 /* overview */
-.ov { display: grid; grid-template-columns: 1fr 52px; gap: 8px; margin-top: 6px; }
-.facts { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; row-gap: 3px; margin: 5px 0 0; }
+.ov { display: grid; grid-template-columns: 1fr 58px; gap: 6px; margin-top: 7px; }
+.facts { display: grid; grid-template-columns: auto 1fr; column-gap: 7px; row-gap: 3px; margin: 5px 0 0; }
+.facts dt { color: var(--label); text-shadow: 0 1px 0 var(--carve-hi); }
+.facts dd { color: var(--carve); text-shadow: 0 1px 0 var(--carve-hi); }
 .facts dd { margin: 0; display: flex; gap: 3px; align-items: center; }
 .niche { width: 10px; height: 10px; display: grid; place-items: center; flex: none; box-shadow: inset 1px 1px 0 var(--carve), inset -1px -1px 0 var(--carve-hi); }
 .niche canvas { width: 8px; height: 8px; }
@@ -95,7 +105,8 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
 .hollow .item { position: relative; width: 16px; height: 16px; }
 .hollow .count { position: absolute; right: 1px; bottom: 0; color: #fff; text-shadow: 1px 1px 0 #3f3f3f; }
 .vein { width: 6px; height: 30px; }
-.inroom { display: flex; flex-wrap: wrap; gap: 3px 9px; margin-top: 4px; }
+.inroom { display: flex; flex-wrap: wrap; gap: 3px 9px; }
+.block { margin-top: 6px; }
 .inroom span { display: flex; gap: 3px; align-items: center; }
 .pockets { margin-top: 6px; display: grid; grid-template-columns: repeat(9, 18px); justify-content: center; }
 .pocket { width: 18px; height: 18px; box-shadow: inset 1px 1px 0 var(--carve), inset 2px 2px 0 rgba(0,0,0,.2), inset -1px -1px 0 var(--carve-hi); background: rgba(0,0,0,.1); }
@@ -108,7 +119,7 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
   background: rgba(20,18,26,.55); box-shadow: inset 1px 1px 0 rgba(0,0,0,.6), inset -1px -1px 0 var(--carve-hi); }
 .channel::placeholder { color: #8d8996; }
 .channel:focus { outline: none; box-shadow: inset 1px 1px 0 rgba(0,0,0,.6), inset 0 0 0 1px var(--accent); }
-.ledger { margin-top: 6px; height: 110px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #4a4652 transparent; padding: 1px 3px; }
+.ledger { margin-top: 3px; height: 104px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #4a4652 transparent; padding: 1px 3px; }
 .line { display: grid; grid-template-columns: 10px 1fr 11px 9px; gap: 5px; align-items: center; height: 14px; background: linear-gradient(transparent 12px, var(--carve) 12px 13px, var(--carve-hi) 13px 14px); }
 .line .who { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .line:hover .who { color: var(--accent); text-shadow: 0 0 2px var(--accent-deep); }
@@ -128,8 +139,10 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
 
 /* manage */
 .part { margin-top: 6px; display: grid; gap: 4px; }
+.part .inlay { margin: 0; }
 .namerow { display: grid; grid-template-columns: 1fr auto; gap: 4px; }
-.fracture h4 { color: #c0392b; }
+.fracture .inlay { color: #ff7a66; text-shadow: 1px 1px 0 #4a120c, 0 0 2px #b0281c; }
+.fracture .inlay::before { background: #ff7a66; box-shadow: 1px 1px 0 #4a120c; }
 .part h4 { margin: 0; font: 600 8px var(--font-pixel); }
 .slab > .warn { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(8,6,10,.55); }
 .warn .tablet { width: 200px; padding: 9px 10px; display: grid; gap: 5px; position: relative; background: var(--rock-tex), #6b6670; color: var(--carve);
@@ -176,12 +189,13 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
           </div>
           <canvas class="inscription" data-runes="0"></canvas>
           <div class="title"><span class="name glow" id="realmTitle">Hollowmere</span></div>
-          <div class="state carved" id="statePill">at peace</div>
+          <div class="state glow" id="statePill">at peace</div>
 
           <!-- OVERVIEW -->
           <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
             <div class="ov">
-              <div>
+              <div class="polished">
+                <h4 class="inlay">Status</h4>
                 <div class="glow" id="bigState">The realm is at peace</div>
                 <div class="carved" id="stateSub" style="margin-top:2px">No siege block is on your anchor.</div>
                 <dl class="facts">
@@ -191,29 +205,36 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
                   <dt class="faint">Access</dt><dd class="carved" id="accessCount">6 players</dd>
                 </dl>
               </div>
-              <div class="ward">
-                <span class="faint">Ward</span>
+              <div class="ward polished">
+                <h4 class="inlay">Ward</h4>
                 <div class="hollow" title="Lapis lazuli"><canvas class="geode" id="geode" width="22" height="22"></canvas><canvas class="item" id="lapis" width="16" height="16"></canvas><span class="count">24</span></div>
                 <canvas class="vein" id="vein" width="6" height="30" title="24 lapis, about 4 minutes of warding"></canvas>
-                <span class="carved">4m 0s</span>
+                <span class="glow">4m 0s</span>
               </div>
             </div>
-            <div class="groove"></div>
-            <div class="faint">In the realm now (3)</div>
-            <div class="inroom carved" id="inRoom"></div>
+            <div class="polished block">
+              <h4 class="inlay">In the realm now: 3</h4>
+              <div class="inroom carved" id="inRoom"></div>
+            </div>
             <div class="note faint" id="visitorNote" hidden>Lapis you give the ward stays with the realm.</div>
             <div class="pockets" id="pockets" aria-label="Your inventory"></div>
           </section>
 
           <!-- ACCESS -->
           <section id="p-access" role="tabpanel" aria-labelledby="tab-access" hidden>
-            <div class="addrow">
+            <div class="polished block">
+            <h4 class="inlay">Add a player</h4>
+            <div class="addrow" style="margin-top:0">
               <input class="channel" id="nameInput" placeholder="Player name" maxlength="16" autocomplete="off">
               <button class="stone-btn" id="addBtn">Add</button>
               <button class="stone-btn" id="onlineBtn" title="Pick from players online now">Online</button>
             </div>
+            </div>
+            <div class="polished block">
+            <h4 class="inlay">Who may enter</h4>
             <div class="ledger recess" id="ledger" role="list"></div>
             <div class="foot"><span class="faint" id="listCount">6 of unlimited</span><span class="faint">Crown: manager</span></div>
+            </div>
             <div class="cavern" id="cavern" hidden>
               <span class="glow">Players online now</span>
               <div class="pick" id="pick"></div>
@@ -223,25 +244,24 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
 
           <!-- MANAGE -->
           <section id="p-manage" role="tabpanel" aria-labelledby="tab-manage" hidden>
-            <div class="part">
-              <h4 class="carved">Realm name</h4>
+            <div class="part polished">
+              <h4 class="inlay">Realm name</h4>
               <div class="namerow">
                 <input class="channel" id="realmName" value="Hollowmere" maxlength="24" autocomplete="off">
                 <button class="stone-btn" id="saveName">Rename</button>
               </div>
               <span class="faint" id="nameHint">Carved here and on the siege bars.</span>
             </div>
-            <div class="groove"></div>
-            <div class="part">
-              <h4 class="faint">More to come</h4>
+            <div class="part polished">
+              <h4 class="inlay">More to come</h4>
+              <span class="faint">Room for future realm settings.</span>
             </div>
-            <div class="groove"></div>
-            <div class="part fracture" id="relocateZone">
-              <h4 class="carved" style="color:#7a2a22">Relocate realm</h4>
+            <div class="part polished fracture" id="relocateZone">
+              <h4 class="inlay">Relocate realm</h4>
               <span class="carved">Grow a new realm in an untouched place. Everything here is lost.</span>
               <div><button class="stone-btn unbind" id="relocateBtn">Relocate</button></div>
             </div>
-            <div class="part" id="ownerOnly" hidden><span class="faint">Only the owner can relocate the realm.</span></div>
+            <div class="part polished" id="ownerOnly" hidden><span class="faint">Only the owner can relocate the realm.</span></div>
           </section>
 
           <canvas class="inscription" data-runes="3" style="margin-top:7px"></canvas>
@@ -270,7 +290,8 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
     <aside class="notes">
       <h2>The stone is the screen</h2>
       <ul>
-        <li><b>Engraved</b>: everything ordinary is carved into the rock, dark letters with a lit lower lip.</li>
+        <li><b>Polished faces</b>: wherever there is text, the rock flowed smooth and flat, like the tablets under the core's openings, so letters read against calm stone.</li>
+        <li><b>Four levels</b>: the realm's name at double size; glowing rune light for live state; gold-inlaid headings for each part; dark engraved text for everything else.</li>
         <li><b>Rune light</b>: what matters glows: the realm's name, its state, the open seal, anything under your cursor. The glow follows the siege colour.</li>
         <li>Lines of the anchors' runes are carved along the top and bottom of the slab, with light running through them slowly.</li>
         <li>The ward is a small crystal-lined hollow in the rock; the vein beside it fills with crystal as you add lapis.</li>
@@ -317,6 +338,12 @@ header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1
   }
   root.style.setProperty('--rock-tex', rockTile([122, 117, 130], 5));
   root.style.setProperty('--rock-tex-dark', rockTile([82, 78, 90], 15));
+  { const T = 64, c = document.createElement('canvas'); c.width = c.height = T; const g = c.getContext('2d');
+    for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+      const k = 0.97 + hash(x >> 2, y >> 2, 41) * 0.04 + hash(x, y, 42) * 0.02;
+      g.fillStyle = `rgb(${[150, 146, 158].map(v => Math.round(v * k)).join(',')})`; g.fillRect(x, y, 1, 1);
+    }
+    root.style.setProperty('--rock-smooth', `url(${c.toDataURL()}) 0 0 / ${T}px ${T}px`); }
 
   // ---- seals (tab icons): carved rune circles ----
   const SEALS = {
