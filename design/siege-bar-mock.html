@@ -1,0 +1,846 @@
+<meta charset="utf-8">
+<title>Siege Bars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: a night-sky workbench. Controls on top, then the Overworld (anchor) side and the Realm (core) side, each a column of bars drawn at real GUI pixels. */
+:root {
+  --night: #12131a; --panel: #1b1d27; --line: #2c2f3d; --parch: #e8e4da; --muted: #a6a3b3;
+  --gold: #d6a23c; --cyan: #8cebff; --amethyst: #c79bff;
+  --font-pixel: "Pixelify Sans", ui-monospace, monospace; --font-body: "Alegreya Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--night); color: var(--parch); font-family: var(--font-body); font-size: 16px; line-height: 1.45; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-pixel); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.7rem; color: var(--gold); }
+h2 { font-size: 1.15rem; color: var(--parch); }
+h3 { font-size: 0.95rem; color: var(--gold); }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 14px 22px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; align-items: end; }
+.ctl { display: grid; gap: 6px; min-width: 0; }
+.ctl > span { font-family: var(--font-pixel); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { font: inherit; font-size: 0.9rem; background: transparent; color: var(--muted); border: 0; padding: 5px 11px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--line); color: var(--parch); }
+.seg button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+input[type="range"] { width: 150px; accent-color: var(--gold); }
+.val { font-variant-numeric: tabular-nums; color: var(--parch); font-size: 0.9rem; }
+.side { display: grid; gap: 14px; }
+.side-head { display: grid; gap: 4px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.side-head p { color: var(--muted); font-size: 0.95rem; }
+.side.anchor h2::before { content: ""; display: inline-block; width: 10px; height: 10px; background: var(--cyan); margin-right: 8px; vertical-align: 1px; }
+.side.core h2::before { content: ""; display: inline-block; width: 10px; height: 10px; background: var(--amethyst); margin-right: 8px; vertical-align: 1px; }
+.card { display: grid; gap: 8px; min-width: 0; }
+.card-top { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.card-top .meta { font-family: var(--font-pixel); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; }
+.card p { color: var(--muted); font-size: 0.95rem; }
+.frame { overflow-x: auto; display: grid; gap: 4px; }
+.pair { display: grid; gap: 12px; }
+.tag { font-family: var(--font-pixel); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; max-width: 100%; height: auto; border-radius: 3px; }
+.notes { display: grid; gap: 8px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.notes ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
+.notes b { color: var(--parch); font-weight: 500; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <h1>Siege Bars</h1>
+    <p class="lede">Round two, built the way Cataclysm builds its boss bars: a thin ornate frame, a big emblem that breaks the bar's outline, and a dark outline around every piece. Each bar is a stack: a crest, a carved banner holding the flavour text, the bar itself, a plaque holding the numbers, and a pendant. The themed art sits behind every line of text, and both lines run the full width, left to right.</p>
+  </header>
+
+  <section class="controls" aria-label="Bar state">
+    <label class="ctl"><span>Progress</span><input id="in-p" type="range" min="0" max="100" value="62"><output class="val" id="out-p">62%</output></label>
+    <label class="ctl"><span>Core lapis (warded rows)</span><input id="in-core" type="range" min="1" max="64" value="40"><output class="val" id="out-core">40 / 64</output></label>
+    <label class="ctl"><span>Siege block lapis</span><input id="in-fuel" type="range" min="0" max="5" value="3"><output class="val" id="out-fuel">3</output></label>
+    <div class="ctl"><span>Max lapis (config)</span>
+      <div class="seg" data-key="cap"><button id="cap-5" data-v="5">5</button><button id="cap-12" data-v="12">12</button><button id="cap-16" data-v="16">16</button><button id="cap-32" data-v="32">32</button><button id="cap-64" data-v="64">64</button></div></div>
+    <div class="ctl"><span>Sky</span>
+      <div class="seg" data-key="sky"><button id="sky-day" data-v="day">Day</button><button id="sky-dusk" data-v="dusk">Dusk</button><button id="sky-night" data-v="night">Night</button></div></div>
+    <div class="ctl"><span>GUI scale</span>
+      <div class="seg" data-key="zoom"><button id="z-2" data-v="2">2</button><button id="z-3" data-v="3">3</button><button id="z-4" data-v="4">4</button></div></div>
+  </section>
+
+  <section class="card" aria-label="Vanilla reference">
+    <div class="card-top"><h3>Vanilla bar, for size</h3><span class="meta">19 px per bar</span></div>
+    <div class="frame"><canvas id="cv-vanilla"></canvas></div>
+  </section>
+
+  <section class="side anchor">
+    <div class="side-head"><h2>Overworld: the anchor's side</h2><p>Seen by players within range of the siege block. Gold, dressed stone and cyan runes, with the attacking block's own colour eating in.</p></div>
+    <div class="card"><div class="card-top"><h3>Rift Eye (chosen)</h3><span class="meta">56 px tall</span></div>
+      <p>The banner and plaque are cut from the rift itself, a starry dark with gold borders. A small rift in gold claws crowns it and another hangs below; their ring turns to the attacker's colour.</p>
+      <div class="pair">
+        <div class="frame"><span class="tag">World Breacher</span><canvas id="cv-E3"></canvas></div>
+        <div class="frame"><span class="tag">World Breacher · core warded</span><canvas id="cv-E3w"></canvas></div>
+        <div class="frame"><span class="tag">Anchor Breaker</span><canvas id="cv-E3b"></canvas></div>
+        <div class="frame"><span class="tag">Anchor Breaker · core warded</span><canvas id="cv-E3bw"></canvas></div>
+      </div></div>
+  </section>
+
+  <section class="side core">
+    <div class="side-head"><h2>Realm: the core's side</h2><p>Seen by players inside the realm, the defenders. The core's weathered rock slab, styled like the World Core screen: carvings, runes glowing in the beacon's colour, gold inlay. The fuel line and the count on the plaque are the World Core's own lapis (a full stack of 64); while it has any, the siege is warded.</p></div>
+    <div class="card"><div class="card-top"><h3>Aurora Stones</h3><span class="meta">56 px tall</span></div>
+      <p>The core's rock slab with three aurora crystals standing on it where the stones stood. Beneath, the core's black hole sits half hidden behind the plaque, its lensed ring curving around it as a glowing border. Only the near half of its wide accretion disk shows: a glowing arc that sweeps across the hole's face and meets the bottom of the bar at both ends, its light running on a little way along the edge. The ring turns from the core's blue toward the siege colour as the siege grows.</p>
+      <div class="pair">
+        <div class="frame"><span class="tag">World Breacher</span><canvas id="cv-E5"></canvas></div>
+        <div class="frame"><span class="tag">World Breacher · core warded</span><canvas id="cv-E5w"></canvas></div>
+        <div class="frame"><span class="tag">Anchor Breaker</span><canvas id="cv-E5b"></canvas></div>
+        <div class="frame"><span class="tag">Anchor Breaker · core warded</span><canvas id="cv-E5bw"></canvas></div>
+      </div></div>
+  </section>
+
+  <section class="notes">
+    <h3>How the lines behave</h3>
+    <ul>
+      <li><b>Progress</b> (the upper line) runs left to right in the siege colour, a slow wave flowing toward its bright head. Warded tints it toward the core's blue with a sheen; out of lapis it goes cold and still, and so do the glows.</li>
+      <li><b>Fuel</b> (the lower line) is the siege block's lapis on the anchor side and the World Core's lapis on the core side. One slot per lapis while the max is 16 or less, one continuous line above that; the exact count always reads on the plaque.</li>
+      <li><b>Warded</b>: while the World Core has lapis, a veined blue force field covers the progress line and the time on the plaque turns ward-blue behind a small shield, counting the slowed time. The progress keeps its siege colour underneath. With no lapis in the siege block, it goes dormant.</li>
+      <li><b>The plaque</b> under the bar reads progress on the left, time left in the middle (or Warded, or Dormant), and lapis on the right.</li>
+      <li><b>Height</b> is 48 px per bar against vanilla's 19. Say the word and I'll trim crest and pendant first; they're the cheapest rows to lose.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(() => {
+const W = 256, H = 56;
+const S = { siege: 'breacher', mode: 'warded', p: 0.62, fuel: 3, cap: 5, coreFuel: 40, zoom: 3, sky: 'dusk', t: 0 };
+
+// ---------- pixel buffer ----------
+class Buf {
+  constructor(w, h) { this.w = w; this.h = h; this.d = new Uint8ClampedArray(w * h * 4); }
+  ok(x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h; }
+  set(x, y, c) { if (!this.ok(x, y)) return; const i = (y * this.w + x) * 4, d = this.d; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }
+  add(x, y, c, k) { if (!this.ok(x, y)) return; const i = (y * this.w + x) * 4, d = this.d; d[i] += c[0] * k; d[i + 1] += c[1] * k; d[i + 2] += c[2] * k; }
+  get(x, y) { const i = (y * this.w + x) * 4, d = this.d; return [d[i], d[i + 1], d[i + 2]]; }
+}
+function hash3(x, y, z) {
+  let n = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(z | 0, 1274126177);
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+}
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const shade = (c, k) => c.map(v => v * k);
+const desat = (c, k) => { const l = (c[0] + c[1] + c[2]) / 3; return c.map(v => v + (l - v) * k); };
+const tone = (c, x, y, s, amt = 0.12) => shade(c, 1 - amt / 2 + hash3(x, y, s) * amt);
+
+// ---------- palettes ----------
+const PAL = { stone: [66, 70, 88], plinth: [48, 50, 62], gold: [214, 162, 60], rune: [140, 235, 255], carved: [34, 36, 46], out: [20, 20, 28] };
+const goldT = (x, y) => hash3(x + 11, y, 5) > 0.93 ? [250, 226, 150] : tone(PAL.gold, x, y, 9, 0.14);
+const ROCK = [122, 117, 130], LICHEN = [104, 120, 88], CALC = [222, 224, 228];
+const SIEGE = {
+  breacher: { lo: [170, 40, 160], mid: [255, 90, 220], hi: [255, 160, 240], br: [255, 220, 250] },
+  breaker: { lo: [170, 28, 14], mid: [250, 70, 32], hi: [255, 118, 62], br: [255, 196, 150] },
+};
+const WARD = [140, 235, 255];
+const LAPIS = { lo: [28, 50, 140], mid: [55, 100, 230], hi: [130, 170, 255], br: [205, 222, 255] };
+const GLYPHS = [
+  ['XXXX', 'X...', 'XXX.', '...X', 'XXXX'], ['.XX.', 'X..X', '.XX.', '..X.', 'XXX.'], ['X.X.', 'XXXX', 'X.X.', '..X.', '..XX'],
+  ['XXX.', '..X.', 'XXXX', '.X..', 'XX..'], ['X..X', 'X.X.', 'XX..', 'X.X.', 'X..X'], ['.X..', 'XXX.', '.X.X', '...X', '..XX'],
+];
+const GEM = ['..X..', '.XXX.', 'XXXXX', '.XXX.', '..X..'];
+const DIG = ['111101101101111', '010110010010111', '111001111100111', '111001011001111', '101101111001001',
+             '111100111001111', '111100111101111', '111001010010010', '111101111101111', '111101111001111'];
+
+function siegePal() {
+  const mapP = (p, f) => ({ lo: f(p.lo), mid: f(p.mid), hi: f(p.hi), br: f(p.br) });
+  let p = SIEGE[S.siege];
+  if (S.mode === 'dormant') p = mapP(p, c => shade(desat(c, 0.85), 0.5));
+  return p;
+}
+/** Colour of a lit progress pixel: i along the line, row r of rows, fw = lit width. */
+function lit(p, i, r, rows, fw) {
+  let c = r === 0 ? p.hi : r === rows - 1 ? p.lo : p.mid;
+  if (S.mode === 'dormant') return c;
+  c = shade(c, 0.84 + 0.16 * Math.sin(S.t * 1.6 - i * 0.09));
+  if (i >= fw - 1) c = mix(c, p.br, 0.75); else if (i === fw - 2) c = mix(c, p.br, 0.35);
+  return c;
+}
+function runeCol() { return S.mode === 'dormant' ? [70, 96, 120] : shade(PAL.rune, 0.86 + 0.14 * Math.sin(S.t * 1.2)); }
+
+// ---------- text ----------
+// A Minecraft-style bitmap font: 7 rows above the baseline, an 8th for descenders, 1 px between glyphs.
+const F = {
+  A: '.###.|#...#|#...#|#####|#...#|#...#|#...#', B: '####.|#...#|####.|#...#|#...#|#...#|####.', D: '####.|#...#|#...#|#...#|#...#|#...#|####.',
+  S: '.####|#....|.###.|....#|....#|#...#|.###.', V: '#...#|#...#|#...#|#...#|#...#|.#.#.|..#..', W: '#...#|#...#|#...#|#.#.#|#.#.#|##.##|#...#',
+  a: '.....|.....|.###.|....#|.####|#...#|.####', b: '#....|#....|#.##.|##..#|#...#|#...#|####.', c: '.....|.....|.###.|#...#|#....|#...#|.###.',
+  d: '....#|....#|.##.#|#..##|#...#|#...#|.####', e: '.....|.....|.###.|#...#|#####|#....|.####', f: '..##|.#..|####|.#..|.#..|.#..|.#..',
+  g: '.....|.....|.####|#...#|#...#|.####|....#|####.', h: '#....|#....|#.##.|##..#|#...#|#...#|#...#', i: '#|.|#|#|#|#|#',
+  k: '#...|#...|#..#|#.#.|##..|#.#.|#..#', l: '#.|#.|#.|#.|#.|#.|.#', m: '.....|.....|##.#.|#.#.#|#.#.#|#...#|#...#',
+  n: '.....|.....|####.|#...#|#...#|#...#|#...#', o: '.....|.....|.###.|#...#|#...#|#...#|.###.', p: '.....|.....|#.##.|##..#|#...#|####.|#....|#....',
+  r: '.....|.....|#.##.|##..#|#....|#....|#....', s: '.....|.....|.####|#....|.###.|....#|####.', t: '.#.|.#.|###|.#.|.#.|.#.|..#',
+  u: '.....|.....|#...#|#...#|#...#|#...#|.####', v: '.....|.....|#...#|#...#|#...#|.#.#.|..#..', w: '.....|.....|#...#|#...#|#.#.#|#.#.#|.####',
+  x: '.....|.....|#...#|.#.#.|..#..|.#.#.|#...#', y: '.....|.....|#...#|#...#|#...#|.####|....#|####.', z: '.....|.....|#####|...#.|..#..|.#...|#####',
+  0: '.###.|#...#|#..##|#.#.#|##..#|#...#|.###.', 1: '..#..|.##..|..#..|..#..|..#..|..#..|#####', 2: '.###.|#...#|....#|..##.|.#...|#....|#####',
+  3: '.###.|#...#|....#|..##.|....#|#...#|.###.', 4: '...##|..#.#|.#..#|#...#|#####|....#|....#', 5: '#####|#....|####.|....#|....#|#...#|.###.',
+  6: '..##.|.#...|#....|####.|#...#|#...#|.###.', 7: '#####|#...#|....#|...#.|..#..|..#..|..#..', 8: '.###.|#...#|#...#|.###.|#...#|#...#|.###.',
+  9: '.###.|#...#|#...#|.####|....#|...#.|.##..', '%': '#...#|#..#.|...#.|..#..|.#...|.#..#|#...#', '/': '....#|...#.|...#.|..#..|.#...|.#...|#....', '\u00b7': '.|.|.|#|.|.|.', ' ': '...',
+};
+const masks = new Map();
+function mask(str) {
+  if (masks.has(str)) return masks.get(str);
+  const pts = []; let x = 0;
+  for (const ch of str) {
+    const rows = (F[ch] || F[' ']).split('|');
+    rows.forEach((row, y) => [...row].forEach((c, dx) => { if (c === '#') pts.push([x + dx, y]); }));
+    x += rows[0].length + 1;
+  }
+  const m = { pts, w: x - 1 }; masks.set(str, m); return m;
+}
+function text(b, str, x, y, col, opt = {}) {
+  const m = mask(str), sh = opt.shadow === undefined ? shade(col, 0.22) : opt.shadow;
+  if (opt.glow) for (const [px, py] of m.pts) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) b.add(x + px + dx, y + py + dy, opt.glow, 0.09);
+  if (sh) for (const [px, py] of m.pts) b.set(x + px + 1, y + py + 1, sh);
+  for (const [px, py] of m.pts) b.set(x + px, y + py, col);
+  return m.w;
+}
+function carved(b, str, x, y, dark, light) {
+  const m = mask(str);
+  for (const [px, py] of m.pts) b.set(x + px, y + py + 1, light);
+  for (const [px, py] of m.pts) b.set(x + px, y + py, dark);
+}
+function digits(b, n, cx, y, col, glow) {
+  const s = String(n), w = s.length * 4 - 1; let x = cx - (w >> 1);
+  for (const ch of s) {
+    const g = DIG[+ch];
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) if (g[r * 3 + c] === '1') {
+      if (glow) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) b.add(x + c + dx, y + r + dy, glow, 0.12);
+    }
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) if (g[r * 3 + c] === '1') b.set(x + c, y + r, col);
+    x += 4;
+  }
+}
+function glyph(b, g, x, y, col, halo) {
+  if (halo) for (let r = 0; r < g.length; r++) for (let c = 0; c < g[r].length; c++) if (g[r][c] === 'X')
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const rr = r + dy, cc = c + dx; if (!(g[rr] && g[rr][cc] === 'X')) b.add(x + cc, y + rr, col, 0.16); }
+  for (let r = 0; r < g.length; r++) for (let c = 0; c < g[r].length; c++) if (g[r][c] === 'X') b.set(x + c, y + r, col);
+}
+function gem(b, x, y) {
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (GEM[r][c] === 'X') b.set(x + c, y + r, r + c < 4 ? LAPIS.hi : r + c > 4 ? LAPIS.lo : LAPIS.mid);
+  b.set(x + 1, y + 1, LAPIS.br);
+}
+
+// ---------- strings ----------
+const NAME = { breacher: 'Breaching the Veil', breaker: 'Shattering the Anchor' };
+function eta() {
+  let s = Math.round((1 - S.p) * 1200 * (S.mode === 'warded' ? 3 : 1));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); s %= 60;
+  return (h ? h + 'h ' : '') + (m ? m + 'm ' : '') + s + 's';
+}
+const status = () => S.mode === 'dormant' ? 'Dormant' : eta();
+const pct = () => Math.floor(S.p * 100) + '%';
+const titleLine = () => `${NAME[S.siege]} · ${pct()} · ${status()}`;
+
+function segments(len, cap) {
+  const avail = len - (cap - 1), out = []; let x = 0;
+  for (let i = 0; i < cap; i++) { const w = Math.floor(avail * (i + 1) / cap) - Math.floor(avail * i / cap); out.push([x, w]); x += w + 1; }
+  return out;
+}
+// ---------- layers: ornament art gets a crisp dark outline, like a sprite ----------
+class Layer {
+  constructor() { this.c = new Array(W * H).fill(null); this.g = []; }
+  set(x, y, col) { if (x < 0 || y < 0 || x >= W || y >= H || !col) return; this.c[y * W + x] = col; }
+  get(x, y) { return (x < 0 || y < 0 || x >= W || y >= H) ? null : this.c[y * W + x]; }
+  sym(x, y, col) { this.set(x, y, col); this.set(255 - x, y, col); }
+  glow(x, y, col, k = 0.14) { this.g.push([x, y, col, k]); }
+  symGlow(x, y, col, k) { this.glow(x, y, col, k); this.glow(255 - x, y, col, k); }
+}
+function finish(L, b, ol = [14, 12, 20]) {
+  const out = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++)
+    if (!L.get(x, y) && (L.get(x - 1, y) || L.get(x + 1, y) || L.get(x, y - 1) || L.get(x, y + 1))) out.push([x, y]);
+  for (const [x, y] of out) b.set(x, y, ol);
+  for (let i = 0; i < W * H; i++) if (L.c[i]) b.set(i % W, (i / W) | 0, L.c[i]);
+  for (const [x, y, col, k] of L.g) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) b.add(x + dx, y + dy, col, dx && dy ? k * 0.5 : k);
+}
+
+// ---------- shared geometry ----------
+// The axis of symmetry runs between pixel 127 and 128. Rails occupy rows 20..29: progress 21..25 (5 rows), fuel 27..28.
+const yT = 19, XC = 128, YC = 25;
+const live = () => S.mode !== 'dormant';
+const AC = { a: [30, 120, 120], b: [70, 220, 190], c: [180, 255, 235] };
+const SEEDC = { lo: [40, 200, 140], hi: [160, 255, 215], rim: [16, 70, 62], night: [14, 20, 44], star: [235, 255, 248], blue: [90, 120, 230] };
+const ringPal = mixP => { const p = siegePal(), base = { lo: [40, 110, 230], mid: [120, 210, 255], hi: [150, 240, 255], br: [220, 250, 255] };
+  const k = Math.min(1, mixP); return { lo: mix(base.lo, p.lo, k), mid: mix(base.mid, p.mid, k), hi: mix(base.hi, p.hi, k), br: mix(base.br, p.br, k) }; };
+const lapisCol = (x, y, r) => { let c = r === 0 ? mix(LAPIS.mid, LAPIS.hi, 0.6) : mix(LAPIS.lo, LAPIS.mid, 0.45); if (hash3(x, y, 71) > 0.86) c = mix(c, LAPIS.hi, 0.6); return c; };
+
+/** Both lines run the full width, left to right: progress above, fuel below. */
+function lines(L, emptyP, emptyF, gapF, fuel = S.fuel, cap = S.cap) {
+  const p = siegePal(), n = 182, fw = Math.round(n * S.p), sg = cap <= 16 ? segments(n, cap) : null, ft = Math.round(n * fuel / cap);
+  for (let k = 0; k < n; k++) {
+    const x = 37 + k;
+    for (let r = 0; r < 5; r++) { const y = yT + 2 + r; L.set(x, y, k < fw ? lit(p, k, r, 5, fw) : emptyP(x, y, r)); }
+    let slot = -1, filled;
+    if (sg) {
+      slot = sg.findIndex(([s0, w]) => k >= s0 && k < s0 + w);
+      if (slot < 0) { for (let r = 0; r < 2; r++) L.set(x, yT + 8 + r, gapF(x, yT + 8 + r)); continue; }
+      filled = slot < fuel;
+    } else filled = k < ft;
+    for (let r = 0; r < 2; r++) {
+      const y = yT + 8 + r; let c = filled ? lapisCol(x, y, r) : emptyF(x, y, r);
+      if (filled && sg && r === 0) { const [s0, w] = sg[slot]; if (k === s0 + (w >> 1) && hash3(slot, Math.floor(S.t * 0.8), 7) > 0.75) c = LAPIS.br; }
+      L.set(x, y, c);
+    }
+  }
+  if (live()) for (let k = 0; k < fw; k++) { const w = 0.1 + 0.04 * Math.sin(S.t * 1.6 - k * 0.09); L.glow(37 + k, yT + 4, p.mid, w * 0.6); }
+  return { n, fw, p };
+}
+/** The count (continuous fuel) or a lapis gem, set into the left end; a gem on the right. cx = centre column of the left socket. */
+function socketsOld(b, cx, cy) {
+  if (S.cap > 16) digits(b, S.fuel, cx, cy - 2, LAPIS.hi, LAPIS.mid); else gem(b, cx - 2, cy - 2);
+  gem(b, 255 - cx - 2, cy - 2);
+}
+function chevrons(L, colF) {
+  for (let x = 26; x <= 36; x++) for (let y = yT - 3; y <= yT + 12; y++) {
+    const a = x - 26; if (Math.abs(y + 0.5 - YC) <= a * 0.62 + 0.6) L.sym(x, y, colF(x, y, a));
+  }
+}
+function cracksIn(seed, count, cx, cy, r0, r1, spread) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const a0 = (i / count) * Math.PI * 2 + hash3(i, 1, seed) * 0.8, pts = [];
+    let last = '';
+    for (let s = 0; s < 40; s++) {
+      const r = r0 - s * 0.7; if (r < r1) break;
+      const a = a0 + (hash3(i, s, seed + 1) - 0.5) * spread;
+      const x = Math.floor(cx + Math.cos(a) * r), y = Math.floor(cy + Math.sin(a) * r * 0.9), key = x + ',' + y;
+      if (key !== last) pts.push([x, y]); last = key;
+    }
+    out.push(pts);
+  }
+  return out;
+}
+function drawCracks(L, paths, stagger, col) {
+  paths.forEach((pts, i) => {
+    const f = Math.max(0, Math.min(1, (S.p - i * stagger) / 0.5)), m = Math.ceil(pts.length * f);
+    for (let j = 0; j < m; j++) { const [x, y] = pts[j]; if (L.get(x, y)) { L.set(x, y, col); if (live()) L.glow(x, y, col, 0.1); } }
+  });
+}
+function blackHole(L, cx, cy, r, ring, t, rw = 1.4) {
+  const R = Math.ceil(r + rw + 1);
+  for (let y = Math.floor(cy - R); y <= cy + R; y++) for (let x = Math.floor(cx - R); x <= cx + R; x++) {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+    if (d <= r) L.set(x, y, d > r - 1 ? [26, 14, 34] : [6, 4, 10]);
+    else if (d <= r + rw) {
+      const a = Math.atan2(dy, dx), k = 0.5 + 0.5 * Math.cos(a - t * 0.9);
+      const c = k > 0.8 ? mix(ring.hi, ring.br, (k - 0.8) * 5) : mix(ring.lo, ring.hi, k / 0.8);
+      L.set(x, y, c); if (k > 0.75 && live()) L.glow(x, y, ring.hi, 0.1);
+    }
+  }
+}
+function shard(L, sx, sy, dx, dy, len, tint, mirror = true) {
+  for (let s = 0; s <= len; s++) {
+    const x = Math.round(sx + dx * s), y = Math.round(sy + dy * s), k = 0.86 + 0.14 * Math.sin(S.t * 0.9 + s * 0.5);
+    const cor = s < len * tint;
+    const put = (xx, yy, c) => { c = shade(cor ? mix(c, siegePal().mid, 0.55) : c, k); mirror ? L.sym(xx, yy, c) : L.set(xx, yy, c); };
+    if (s === len) { put(x, y, AC.c); if (mirror) L.symGlow(x, y, AC.b, 0.12); continue; }
+    put(x, y, s % 3 === 0 ? AC.c : AC.b); put(x, y + 1, AC.a);
+  }
+}
+function rockAt(x, y, seed = 5) { return rock(x, y, ROCK, seed); }
+function rockRails(L, seed) {
+  for (let x = 30; x <= 128; x++) {
+    L.sym(x, yT + 1, rockAt(x, yT + 1, seed)); L.sym(x, yT + 7, tone(CALC, x, 0, 61, 0.1)); L.sym(x, yT + 10, shade(rockAt(x, yT + 10, seed), 0.7));
+    if (hash3(x >> 1, 1, seed) > 0.62) L.sym(x, yT, shade(rockAt(x, yT, seed), 1.1));
+    if (hash3(x >> 1, 2, seed) > 0.7) L.sym(x, yT + 11, shade(rockAt(x, yT + 11, seed), 0.6));
+    if (hash3(x, 3, seed) > 0.93) L.sym(x, yT, LICHEN);
+  }
+}
+function rockChunk(L, x0, x1, y0, y1, seed) {
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2, ry = (y1 - y0) / 2;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 + hash3(x >> 1, y >> 1, seed) * 0.5;
+    if (d > 1.15) continue;
+    let c = rockAt(x, y, seed); c = shade(c, 1.12 - 0.25 * ((y - y0) / (y1 - y0)));
+    if (y - y0 < 2 && hash3(x, y, seed + 4) > 0.5) c = LICHEN;
+    if (hash3(x, y, seed + 9) > 0.94) c = CALC;
+    L.sym(x, y, c);
+  }
+}
+function titleRow(b, nameCol, restCol, shadowCol) {
+  const a = NAME[S.siege], r = ` · ${pct()} · ${status()}`, wa = mask(a).w, wr = mask(r).w, x = XC - ((wa + wr + 1) >> 1);
+  text(b, a, x, 1, nameCol, { shadow: shadowCol });
+  text(b, r, x + wa + 1, 1, restCol, { shadow: shadowCol });
+}
+
+// ---------- the stack: crest, banner (flavour text), bar, plaque (stats), pendant ----------
+// Banner rows 7..18 (title at row 10), bar rows 19..28, plaque rows 28..39 (stats at row 30), crest above, pendant below.
+const BAN0 = 7, BAN1 = 18, PLQ0 = 30, PLQ1 = 41, TITLE_Y = 10, STAT_Y = 32;
+const banHalf = () => Math.max(64, (mask(NAME[S.siege]).w >> 1) + 17);          // the banner widens to fit a long title
+const banW = y => { const h = banHalf(); return y === BAN0 ? h - 3 : y === BAN0 + 1 ? h - 1 : h; };
+const plqW = y => Math.round(80 - (y - PLQ0) * 1.1) - (y === PLQ1 ? 2 : y === PLQ1 - 1 ? 1 : 0);
+const inBanner = (x, y) => y >= BAN0 && y <= BAN1 && Math.abs(x + 0.5 - XC) <= banW(y);
+const inPlaque = (x, y) => y >= PLQ0 && y <= PLQ1 && Math.abs(x + 0.5 - XC) <= plqW(y);
+
+function title(b, col, sh) { const a = NAME[S.siege]; text(b, a, XC - (mask(a).w >> 1), TITLE_Y, col, { shadow: sh }); }
+function stats(b, pctCol, midCol, sh, fuel = S.fuel, cap = S.cap) {
+  // left: progress, then the time left (ward-blue behind a small shield while warded); right: lapis
+  const l = pct(), m = status(), r = fuel + ' / ' + cap, warded = S.mode === 'warded';
+  let x = XC - 66 + text(b, l, XC - 66, STAT_Y, pctCol, { shadow: sh }) + 7;
+  if (warded) {
+    const SH = ['XXXXX', 'XXXXX', 'XX.XX', '.XXX.', '..X..'];
+    for (let rr = 0; rr < 5; rr++) for (let c = 0; c < 5; c++) if (SH[rr][c] === 'X') { b.add(x + c, STAT_Y + 1 + rr, WARD, 0.1); b.set(x + c, STAT_Y + 2 + rr, rr < 2 && c < 2 ? [230, 250, 255] : WARD); }
+    x += 8;
+  }
+  text(b, m, x, STAT_Y, warded ? WARD : midCol, { shadow: sh });
+  const rw = mask(r).w; text(b, r, XC + 66 - rw, STAT_Y, LAPIS.hi, { shadow: sh });
+  gem(b, XC + 66 - rw - 8, STAT_Y + 2);
+}
+function sockets(b, cx, cy) { gem(b, cx - 2, cy - 2); gem(b, 255 - cx - 2, cy - 2); }
+
+/** Anchor panels: dark dressed stone (or a slice of the rift's starry dark) in gold borders, faint runes cut at the flanks. */
+function anchorPanels(L, fill) {
+  for (let y = BAN0; y <= BAN1; y++) for (let x = 30; x <= 127; x++) {
+    const hw = banW(y), d = Math.abs(x + 0.5 - XC); if (d > hw) continue;
+    let c;
+    if (y === BAN0) c = gHi; else if (d > hw - 1) c = goldT(x, y); else if (y === BAN0 + 1 || d > hw - 2) c = shade(fill(x, y), 0.7); else c = fill(x, y);
+    L.sym(x, y, c);
+  }
+  for (let y = PLQ0; y <= PLQ1; y++) for (let x = 30; x <= 127; x++) {
+    const hw = plqW(y), d = Math.abs(x + 0.5 - XC); if (d > hw) continue;
+    let c;
+    if (y === PLQ1) c = gLo; else if (d > hw - 1) c = goldT(x, y); else if (y === PLQ1 - 1 || d > hw - 2) c = shade(fill(x, y), 0.7); else c = fill(x, y);
+    L.sym(x, y, c);
+  }
+  const rc = live() ? [64, 120, 140] : [48, 60, 72];
+  const gx = XC - banHalf() + 6; glyph(L, GLYPHS[3], gx, 11, rc, false); glyph(L, GLYPHS[1], 255 - gx - 3, 11, rc, false);
+  for (const [x, y] of [[XC - banHalf() + 2, 9], [XC - banHalf() + 2, 16], [52, 30], [56, 37]]) { L.sym(x, y, gHi); }
+}
+const stoneFill = (x, y) => { let c = tone([42, 44, 58], x, y, 7, 0.12); if ((x + (y >> 2) * 7) % 23 === 0) c = shade(c, 0.85); return c; };
+const riftFill = (x, y) => { const h = hash3(x, y, 90 + Math.floor(S.t * 0.4 + hash3(x, y, 91) * 5)); return h > 0.975 ? [190, 210, 255] : h > 0.93 ? [70, 52, 120] : mix([12, 10, 26], [34, 20, 58], hash3(x >> 3, y >> 2, 92)); };
+
+/** Core panels: a slab of the core's rock with a broken edge, lichen on top, a dark polished face behind the text. */
+function corePanels(L, seed) {
+  const bite = (i, side, amp) => Math.floor(hash3(Math.floor(i / 3), side, seed) * amp);
+  const put = (x, y, inside, inner) => {
+    if (!inside) return;
+    let c = inner ? shade(tone([70, 66, 80], x, y, seed, 0.08), 0.9 + hash3(x >> 2, y >> 1, seed) * 0.08) : rockAt(x, y, seed);
+    if (!inner && y <= BAN0 + 1 && hash3(x, y, seed + 4) > 0.45) c = LICHEN;
+    if (!inner && hash3(x, y, seed + 9) > 0.95) c = CALC;
+    L.sym(x, y, c);
+  };
+  for (let y = BAN0 - 1; y <= BAN1; y++) for (let x = 30; x <= 127; x++) {
+    const d = Math.abs(x + 0.5 - XC), hw = banHalf() - bite(y, 2, 3), top = BAN0 + bite(x, 1, 2) - 1;
+    put(x, y, d <= hw && y >= top, d <= hw - 3 && y >= BAN0 + 2);
+  }
+  for (let y = PLQ0; y <= PLQ1 + 1; y++) for (let x = 30; x <= 127; x++) {
+    const d = Math.abs(x + 0.5 - XC), hw = plqW(Math.min(y, PLQ1)) - bite(y, 4, 3), bot = PLQ1 + 1 - bite(x, 3, 2);
+    put(x, y, d <= hw && y <= bot, d <= hw - 3 && y <= PLQ1 - 2);
+  }
+  for (let x = 30; x <= 127; x++) { const d = Math.abs(x + 0.5 - XC); if (d <= 61 && d > 0) { L.sym(x, BAN0 + 1, tone(CALC, x, 0, 61, 0.1)); } if (d <= plqW(PLQ1 - 1) - 3) L.sym(x, PLQ1 - 1, tone(CALC, x, 1, 61, 0.1)); }
+}
+
+// ---------- anchor side ----------
+const gHi = [250, 226, 150], gLo = [150, 104, 36];
+const goldRails = L => { for (let x = 30; x <= 128; x++) { L.sym(x, yT + 1, goldT(x, yT + 1)); L.sym(x, yT + 7, shade(goldT(x, yT + 7), 0.8)); L.sym(x, yT + 10, shade(goldT(x, yT + 10), 0.66)); } };
+const anchorEmpty = (x, y, r) => r === 0 ? [18, 19, 27] : [30, 32, 42];
+const goldChevron = (x, y, a) => { const e = Math.abs(y + 0.5 - YC) > a * 0.62 - 0.6; return e ? (y + 0.5 < YC ? gHi : goldT(x, y)) : tone(PAL.plinth, x, y, 3); };
+/** The World Core's ward: a veined blue force field laid over just the bar while the core has lapis.
+ *  Veins are the borders between drifting cells (cellular noise), brightest where cells meet; the field's rim glows. */
+function wardField(b) {
+  if (S.mode !== 'warded') return;
+  const x0 = 33, x1 = 222, y0 = yT + 1, y1 = yT + 7, CELL = 6, pulse = 0.85 + 0.15 * Math.sin(S.t * 1.1);
+  const inField = (x, y) => { if (y < y0 || y > y1) return false; const end = Math.min(x - x0, x1 - x); if (end < 0) return false; const cy = (y0 + y1) / 2, ry = (y1 - y0) / 2 + 0.5; return end >= 5 || ((5 - end) / 5) ** 2 + ((y + 0.5 - cy - 0.5) / ry) ** 2 <= 1; };
+  const feature = (cx, cy) => {
+    const ph = hash3(cx, cy, 201) * 6.28;
+    return [(cx + 0.2 + 0.6 * hash3(cx, cy, 202) + 0.18 * Math.sin(S.t * 0.5 + ph)) * CELL, (cy + 0.2 + 0.6 * hash3(cx, cy, 203) + 0.18 * Math.cos(S.t * 0.4 + ph)) * CELL];
+  };
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    if (!inField(x, y)) continue;
+    const gx = Math.floor(x / CELL), gy = Math.floor(y / CELL);
+    let f1 = 1e9, f2 = 1e9;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const [fx, fy] = feature(gx + i, gy + j), d = Math.hypot(x + 0.5 - fx, (y + 0.5 - fy) * 1.6);
+      if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d;
+    }
+    const vein = Math.max(0, 1 - (f2 - f1) / 1.3);                       // 1 on a vein, 0 in a cell's middle
+    const rim = !inField(x - 1, y) || !inField(x + 1, y) || !inField(x, y - 1) || !inField(x, y + 1);
+    let c = mix(b.get(x, y), [80, 160, 255], 0.14 * pulse);              // the field's faint blue body
+    if (vein > 0.35) c = mix(c, [150, 225, 255], 0.6 * pulse * (vein - 0.35) / 0.65 + 0.15);
+    if (rim) c = mix(c, [190, 240, 255], 0.65 * pulse);
+    b.set(x, y, c);
+    if (vein > 0.8 || rim) b.add(x, y - 1, WARD, 0.05);
+  }
+}
+function anchorBar(b) {
+  const B = new Layer();
+  goldRails(B);
+  lines(B, anchorEmpty, anchorEmpty, (x, y) => goldT(x, y));
+  chevrons(B, goldChevron);
+  finish(B, b);
+  wardField(b);
+}
+function anchorText(b, p) {
+  title(b, gHi, [40, 28, 10]);
+  stats(b, live() ? SIEGE[S.siege].hi : [170, 166, 180], [226, 222, 236], [16, 14, 22]);
+  sockets(b, 31, YC);
+}
+const seedGem = (L, cx, cy, r, cracks) => {
+  for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.abs(dx) + Math.abs(dy); if (d > r) continue;
+    let c;
+    if (d > r - 1.4) c = dx + dy < -1 ? gHi : d > r - 0.6 ? gLo : goldT(x, y);
+    else if (d > r - 2.2) c = SEEDC.rim;
+    else if (d <= r * 0.3) { const h = hash3(x, y, 22 + Math.floor(S.t * 0.4)); c = h > 0.88 ? SEEDC.star : SEEDC.night; }
+    else c = shade(mix(SEEDC.hi, SEEDC.lo, (dy + r) / (2 * r)), dx < 0 ? (dy < 0 ? 1.1 : 0.88) : (dy < 0 ? 0.96 : 0.72));
+    L.set(x, y, c);
+  }
+  if (cracks) drawCracks(L, cracks, 0.12, live() ? siegePal().br : siegePal().mid);
+};
+const CR_CREST = cracksIn(31, 4, XC, 5, 4.4, 0.8, 0.9);
+
+/** A1 Seized Seed */
+function E1(b) {
+  const L = new Layer(), p = siegePal(), F = new Layer();
+  anchorPanels(L, stoneFill);
+  finish(L, b);
+  // wings resting on the banner's crown; the attacker's colour runs in from the tips
+  for (let x = 134; x <= 182; x++) {
+    const t = (x - 134) / 48, y = 5 - Math.round(3 * Math.sin(Math.PI * t)) + Math.round(3 * t), taken = live() && (1 - t) < S.p;
+    F.sym(x, y, taken ? p.hi : gHi); F.sym(x, y + 1, taken ? p.mid : goldT(x, y)); F.sym(x, y + 2, shade(goldT(x, y), 0.6));
+    if (taken) F.symGlow(x, y, p.mid, 0.06);
+    const f = [142, 150, 158, 166, 174].indexOf(x);
+    if (f >= 0) for (let k = 1; k <= (f > 2 ? 2 : 3); k++) F.sym(x + (k > 1 ? 1 : 0), y - k, k === (f > 2 ? 2 : 3) ? (taken ? p.br : gHi) : goldT(x, y - k));
+  }
+  seedGem(F, XC, 5, 5.6, CR_CREST);
+  // the pendant: a gold drop holding a rune
+  for (let y = 39; y <= 47; y++) for (let x = 120; x <= 135; x++) {
+    const dx = x + 0.5 - XC, dy = y + 0.5 - 42.5, d = Math.abs(dx) + Math.abs(dy) * (dy > 0 ? 0.8 : 1.4); if (d > 6) continue;
+    F.set(x, y, d > 4.8 ? (dx < 0 ? gHi : goldT(x, y)) : d > 3.8 ? gLo : tone(PAL.plinth, x, y, 3));
+  }
+  for (const [x, y] of [[127, 42], [128, 42], [127, 43], [128, 43]]) { F.set(x, y, live() ? mix(PAL.rune, p.mid, S.p) : [70, 96, 120]); if (live()) F.glow(x, y, PAL.rune, 0.1); }
+  finish(F, b);
+  anchorBar(b);
+  anchorText(b, p);
+}
+/** A2 Monolith Crown */
+function E2(b) {
+  const L = new Layer(), p = siegePal(), F = new Layer(), rc = live() ? mix(runeCol(), p.hi, S.p) : [70, 96, 120];
+  anchorPanels(L, stoneFill);
+  finish(L, b);
+  // rune pillars stepping down outside the banner
+  [[194, 9], [199, 12], [204, 15]].forEach(([x0, top], k) => {
+    for (let y = top; y <= yT; y++) for (let x = x0; x < x0 + 3; x++) {
+      let c = shade(tone(PAL.stone, x, y, 4, 0.14), 0.92 - (x - x0) * 0.08); if (y === top) c = gHi; else if (y === top + 1) c = goldT(x, y);
+      F.sym(x, y, c);
+    }
+    const on = 0.5 + 0.5 * Math.sin(S.t * 1.3 - k * 0.9);
+    F.sym(x0 + 1, top + 3, shade(rc, 0.6 + 0.4 * on)); if (live()) F.symGlow(x0 + 1, top + 3, rc, 0.1 * on);
+  });
+  // the monolith's head above the banner, its foot below the plaque
+  for (let y = 0; y <= 9; y++) for (let x = 120; x <= 135; x++) {
+    const xi = x < XC ? x : 255 - x; let c = null;
+    if (y === 0 && xi >= 126) c = gHi; else if (y === 1 && xi >= 125) c = gHi; else if (y === 2 && xi >= 124) c = goldT(x, y);
+    else if (y === 3 && xi >= 123) c = shade(goldT(x, y), 0.8);
+    else if (y >= 4 && xi >= 122) { c = shade(tone(PAL.stone, x, y, 4, 0.14), x < XC ? 1.1 : 0.82); if (xi === 122) c = shade(c, x < XC ? 1.12 : 0.85); }
+    if (c) F.set(x, y, c);
+  }
+  for (const [x, y] of [[124, 6], [131, 6], [127, 5], [128, 5], [127, 7], [128, 7]]) { F.set(x, y, rc); if (live()) F.glow(x, y, rc, 0.1); }
+  for (let y = 38; y <= 47; y++) for (let x = 119; x <= 136; x++) {
+    const xi = x < XC ? x : 255 - x; let c = null;
+    if (y <= 44 && xi >= 122) c = shade(tone(PAL.stone, x, y, 4, 0.14), x < XC ? 1.1 : 0.82);
+    else if (y === 45 && xi >= 121) c = goldT(x, y); else if (y >= 46 && xi >= 120) c = shade(goldT(x, y), 0.66);
+    if (c) F.set(x, y, c);
+  }
+  glyph(F, GLYPHS[S.siege === 'breacher' ? 0 : 4], 126, 40, rc, false);
+  if (live()) for (let r = 0; r < 5; r++) for (let c = 0; c < 4; c++) if (GLYPHS[S.siege === 'breacher' ? 0 : 4][r][c] === 'X') F.glow(126 + c, 40 + r, rc, 0.1);
+  finish(F, b);
+  anchorBar(b);
+  anchorText(b, p);
+}
+/** A3 Rift Eye: the banner and plaque are cut from the rift itself; the rift crowns them in gold claws. */
+function E3(b) {
+  const L = new Layer(), p = siegePal(), F = new Layer(), ring = ringPal(S.p * 1.2);
+  anchorPanels(L, riftFill);
+  finish(L, b);
+  for (let y = 0; y <= 12; y++) for (let x = 119; x <= 136; x++) { const d = Math.hypot(x + 0.5 - XC, y + 0.5 - 4.6); if (d <= 3.8) F.set(x, y, riftFill(x, y)); }
+  blackHole(F, XC, 4.6, 3.8, ring, S.t, 1.3);
+  for (const sx of [1, -1]) {
+    for (let r = 7; r <= 13; r += 0.5) { const x = Math.floor(XC + sx * r), y = Math.floor(5.5 - Math.sin((r - 7) / 6 * Math.PI) * 3 + (r - 7) * 0.3); F.set(x, y, r > 12.4 ? gHi : goldT(x, y)); F.set(x, y + 1, shade(goldT(x, y), 0.7)); }
+    for (let r = 7; r <= 11; r += 0.5) { const x = Math.floor(XC + sx * r), y = Math.floor(7 + (r - 7) * 0.6); F.set(x, y, goldT(x, y)); }
+  }
+  // gold rays fanning out across the banner's crown and the plaque's foot
+  for (const [dx, dy] of [[1, -0.08], [1, 0.05]]) for (let s = 15; s <= 40; s++) { if (s % 4 === 3) continue; const x = Math.round(XC + dx * s); F.sym(x, BAN0 - 1 + Math.round(dy * s) - (s > 36 ? 0 : 0), s > 38 ? gHi : goldT(x, 6)); }
+  for (let y = 42; y <= 49; y++) for (let x = 120; x <= 135; x++) { const d = Math.hypot(x + 0.5 - XC, y + 0.5 - 44); if (d <= 3.4) F.set(x, y, riftFill(x, y)); }
+  blackHole(F, XC, 44, 3.4, ring, S.t * 1.3, 1.3);
+  finish(F, b);
+  anchorBar(b);
+  anchorText(b, p);
+}
+
+// ---------- core side ----------
+// The defenders' bar, in the World Core screen's language: the core's weathered rock, carvings, glowing runes, gold inlay.
+// Progress is the siege's; the fuel line is the World Core's own lapis (a full stack of 64).
+const coreEmpty = (x, y, r) => r === 0 ? [22, 18, 30] : hash3(x, y, 52) > 0.9 ? [62, 50, 82] : [32, 28, 42];
+const INLAY = [231, 178, 74], INLAY_LO = [74, 50, 8];
+/** The runes glow in the beacon's colour: pink while a Breacher is at the anchor, ember for a Breaker. */
+const accent = () => { const s = SIEGE[S.siege]; return live() ? { hi: s.hi, mid: s.mid, lo: s.lo } : { hi: [150, 146, 160], mid: [110, 106, 120], lo: [80, 76, 90] }; };
+function coreBar(b, seed, extra) {
+  const B = new Layer();
+  rockRails(B, seed);
+  const r = lines(B, coreEmpty, coreEmpty, (x, y) => tone(CALC, x, y, 33, 0.08), S.coreFuel, 64);
+  rockChunk(B, 24, 37, 18, 33, seed);
+  if (extra) extra(B, r);
+  finish(B, b);
+  wardField(b);
+  return r;
+}
+function coreText(b, p, titleCol = [236, 234, 242], titleSh = [30, 26, 36]) {
+  title(b, titleCol, titleSh);
+  stats(b, live() ? SIEGE[S.siege].hi : [170, 166, 180], [236, 234, 242], [24, 20, 30], S.coreFuel, 64);
+  sockets(b, 31, YC);
+}
+/** The slab: weathered rock with a broken edge and lichen on its crown, a dark smoothed face behind the text. */
+function corePanels(L, seed) {
+  const bite = (i, side, amp) => Math.floor(hash3(Math.floor(i / 3), side, seed) * amp);
+  const put = (x, y, inside, inner) => {
+    if (!inside) return;
+    let c = inner ? shade(tone([70, 66, 80], x, y, seed, 0.08), 0.9 + hash3(x >> 2, y >> 1, seed) * 0.08) : rockAt(x, y, seed);
+    if (!inner && y <= BAN0 + 1 && hash3(x, y, seed + 4) > 0.45) c = LICHEN;
+    if (!inner && hash3(x, y, seed + 9) > 0.95) c = CALC;
+    L.sym(x, y, c);
+  };
+  for (let y = BAN0 - 1; y <= BAN1; y++) for (let x = 30; x <= 127; x++) {
+    const d = Math.abs(x + 0.5 - XC), hw = banHalf() - bite(y, 2, 3), top = BAN0 + bite(x, 1, 2) - 1;
+    put(x, y, d <= hw && y >= top, d <= hw - 3 && y >= BAN0 + 2);
+  }
+  for (let y = PLQ0; y <= PLQ1 + 1; y++) for (let x = 30; x <= 127; x++) {
+    const d = Math.abs(x + 0.5 - XC), hw = plqW(Math.min(y, PLQ1)) - bite(y, 4, 3), bot = PLQ1 + 1 - bite(x, 3, 2);
+    put(x, y, d <= hw && y <= bot, d <= hw - 3 && y <= PLQ1 - 2);
+  }
+  for (let x = 30; x <= 127; x++) { const d = Math.abs(x + 0.5 - XC); if (d <= banHalf() - 3 && d > 0) L.sym(x, BAN0 + 1, tone(CALC, x, 0, 61, 0.1)); if (d <= plqW(PLQ1 - 1) - 3) L.sym(x, PLQ1 - 1, tone(CALC, x, 1, 61, 0.1)); }
+}
+/** A rune carved into stone and glowing: carved dark first, then the light inside it, with a soft halo. */
+function glowRune(L, g, x, y, ac, sym = true, k = 1) {
+  const put = sym ? (xx, yy, c) => L.sym(xx, yy, c) : (xx, yy, c) => L.set(xx, yy, c);
+  const pulse = live() ? (0.82 + 0.18 * Math.sin(S.t * 1.2 + x * 0.1)) * k : 0.7;
+  for (let r = 0; r < g.length; r++) for (let c = 0; c < g[r].length; c++) if (g[r][c] === 'X') {
+    put(x + c, y + r, mix(ac.mid, ac.hi, pulse - 0.6));
+    if (live()) { L.glow(x + c, y + r, ac.mid, 0.07 * pulse); if (sym) L.glow(255 - x - c, y + r, ac.mid, 0.07 * pulse); }
+  }
+}
+/** A round stone seal: a smoothed rim lit from the top left, a carved hollow, a glowing rune inside (the World Core screen's tab seals). */
+function seal(L, cx, cy, r, g, ac) {
+  for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+    if (d > r) continue;
+    let c;
+    if (d > r - 1.3) c = shade([150, 146, 158], dx + dy < 0 ? 1.12 : 0.72);
+    else if (d > r - 2.1) c = dx + dy < 0 ? [34, 30, 42] : [96, 92, 106];
+    else c = tone([52, 48, 62], x, y, 44, 0.08);
+    L.set(x, y, c);
+  }
+  const gw = g[0].length, gh = g.length;
+  glowRune(L, g, Math.round(cx - gw / 2), Math.round(cy - gh / 2), ac, false);
+}
+const TINY = [['XX.', '.X.', '.XX'], ['X.X', '.X.', 'X.X'], ['XXX', 'X..', 'X..'], ['.X.', 'XXX', '.X.'], ['X..', 'XX.', '..X'], ['.XX', 'X..', 'XX.']];
+
+/** C1 Rune Seals: a carved seal crowns the slab and a smaller one hangs below; runes glow at the slab's corners. */
+function E4(b) {
+  const L = new Layer(), p = siegePal(), ac = accent(), F = new Layer();
+  corePanels(L, 7);
+  glowRune(L, GLYPHS[3], 68, 11, ac);
+  finish(L, b);
+  seal(F, XC, 5, 5.2, GLYPHS[S.siege === 'breacher' ? 0 : 4], ac);
+  for (let y = PLQ1; y <= PLQ1 + 2; y++) for (const x of [127, 128]) F.set(x, y, shade(ROCK, 0.6));
+  seal(F, XC, PLQ1 + 6, 3.8, TINY[3], ac);
+  finish(F, b);
+  coreBar(b, 7);
+  coreText(b, p);
+}
+/** C2 Standing Stones: three carved menhirs stand on the slab, rubble hangs beneath; a line of small runes runs along the face. */
+function E5(b) {
+  const L = new Layer(), p = siegePal(), ac = accent(), F = new Layer();
+  hangingHeart(b);
+  corePanels(L, 13);
+  finish(L, b);
+  // aurora crystals standing on the slab where the stones stood: tallest in the middle, stepping down outward
+  const crystal = (x0, w, top, base) => {
+    for (let y = top; y <= base; y++) {
+      const fromTip = y - top, ww = fromTip === 0 ? 1 : fromTip === 1 ? Math.min(w, 2) : w;
+      const xs = x0 + Math.floor((w - ww) / 2);
+      for (let i = 0; i < ww; i++) {
+        const x = xs + i, k = 0.86 + 0.14 * Math.sin(S.t * 0.9 + y * 0.5 + x0);
+        let c = fromTip === 0 ? [230, 255, 245] : i === 0 ? AC.c : i === ww - 1 ? AC.a : AC.b;
+        if (ww >= 3 && i === 1 && (y + x0) % 3 === 0) c = mix(AC.b, AC.c, 0.5);
+        F.sym(x, y, shade(c, k));
+      }
+      if (fromTip === 0) F.symGlow(xs, y, AC.b, S.mode === 'warded' ? 0.3 : 0.12);
+    }
+  };
+  crystal(125, 4, 0, 8);
+  crystal(116, 4, 2, 8);
+  crystal(107, 3, 4, 8);
+  finish(F, b);
+  // small runes inscribed down the banner face, beside the title
+  const R = new Layer();
+  const rx = XC - banHalf() + 3; glowRune(R, TINY[0], rx, 10, ac); glowRune(R, TINY[4], rx, 14, ac);
+  for (const g of R.g) b.add(g[0], g[1], g[2], g[3]);
+  for (let i = 0; i < W * H; i++) if (R.c[i]) b.set(i % W, (i / W) | 0, R.c[i]);
+  coreBar(b, 13);
+  heartEdgeGlow(b);
+  coreText(b, p);
+}
+/** The disk's light carries on a little way along the plaque's bottom edge, so it flows into the bar. Drawn after the slab. */
+function heartEdgeGlow(b) {
+  if (!live()) return;
+  const sg = SIEGE[S.siege], mid = mix([120, 210, 255], sg.mid, 0.3 + S.p * 0.7), DISK = 30;
+  for (let d = 0; d < 18; d++) for (const sx of [1, -1]) {
+    const x = Math.floor(XC + sx * (DISK - 6 + d)), k = (1 - d / 18) * (sx < 0 ? 1 : 0.68);
+    b.add(x, PLQ1 + 1, mid, 0.3 * k); b.add(x, PLQ1, mid, 0.22 * k); b.add(x, PLQ1 - 1, mid, 0.08 * k);
+  }
+}
+/** The core's black hole, half hidden behind the plaque: a black circle, its flat accretion disk just touching the plaque's
+ *  bottom edge and crossing in front of the hole, and the lensed ring curving around the hole as a glowing border. Drawn first, so the slab covers its top. */
+function hangingHeart(b) {
+  const sg = SIEGE[S.siege], kk = live() ? 0.3 + S.p * 0.7 : 0, base = { lo: [40, 110, 230], mid: [120, 210, 255], hi: [160, 240, 255], br: [235, 252, 255] };
+  const ring = live() ? { lo: mix(base.lo, sg.lo, kk), mid: mix(base.mid, sg.mid, kk), hi: mix(base.hi, sg.hi, kk), br: mix(base.br, sg.br, kk) } : { lo: [60, 58, 70], mid: [100, 98, 112], hi: [130, 128, 142], br: [150, 148, 160] };
+  // a wide flat disk seen nearly edge-on: an elliptical band from just outside the hole to DISK, squashed by TILT
+  const TILT = 0.24, DISK = 30, IN = 11.2, R = 10, RW = 1.8, cy = PLQ1 + 1, H2 = new Layer();
+  const glowCol = k => k > 0.8 ? mix(ring.hi, ring.br, (k - 0.8) * 5) : mix(ring.lo, ring.hi, k / 0.8);
+  const disk = front => {
+    for (let y = Math.floor(cy - DISK * TILT) - 1; y <= cy + DISK * TILT + 1; y++) for (let x = XC - DISK - 1; x <= XC + DISK; x++) {
+      const dx = x + 0.5 - XC, dy = y + 0.5 - cy; if ((dy >= 0) !== front) continue;
+      const rr = Math.hypot(dx, dy / TILT); if (rr < IN || rr > DISK) continue;
+      const a = Math.atan2(dy / TILT, dx), t = (rr - IN) / (DISK - IN);
+      const side = dx < 0 ? 1 : 0.68;                                                        // the side turning toward us is brighter
+      const streak = live() ? 0.72 + 0.28 * Math.sin(a * 3 + rr * 0.55 - S.t * 1.6) : 0.6;    // bands of matter swirling round
+      const k = Math.pow(1 - t, 1.3) * side * streak * (front ? 1 : 0.85);
+      H2.set(x, y, k < 0.12 ? mix([30, 16, 40], ring.lo, k * 6) : glowCol(Math.min(1, k * 1.2)));
+      if (live() && k > 0.3) H2.glow(x, y, ring.mid, 0.06 * k);
+    }
+  };
+  disk(false);                                                                                // the far half, behind the hole
+  // the hole, and the lensed ring hugging its edge as a glowing border
+  for (let y = Math.floor(cy - R - RW - 1); y <= cy + R + RW + 1; y++) for (let x = XC - 13; x <= XC + 13; x++) {
+    const dx = x + 0.5 - XC, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+    if (d <= R) H2.set(x, y, d > R - 1 ? [24, 12, 32] : [4, 2, 8]);
+    else if (d <= R + RW) {
+      const a = Math.atan2(dy, dx), k = live() ? 0.55 + 0.45 * Math.cos(a - S.t * 0.9) : 0.3;
+      H2.set(x, y, glowCol(Math.min(1, k + (d < R + 0.8 ? 0.15 : 0))));
+      if (live()) H2.glow(x, y, ring.mid, 0.08 + 0.06 * k);
+    }
+  }
+  disk(true);                                                                                 // the near half, across the hole's face
+  finish(H2, b);
+}
+/** C3 Keystone: a keystone inlaid with gold crowns the slab, gold brackets hold its corners, and cracks glowing in the beacon's colour spread through the rock. */
+function E6(b) {
+  const L = new Layer(), p = siegePal(), ac = accent(), F = new Layer();
+  corePanels(L, 21);
+  const reach = Math.round(S.p * 60);
+  for (const [y0, lo, hi] of [[BAN0 + 1, BAN0, BAN0 + 2], [PLQ1 - 1, PLQ1 - 2, PLQ1]]) {
+    let y = y0;
+    for (let s = 0; s < reach; s++) { const x = 58 + s; y += hash3(s, y0, 79) > 0.75 ? 1 : hash3(s, y0, 79) < 0.25 ? -1 : 0; y = Math.max(lo, Math.min(hi, y)); if (L.get(x, y)) { L.sym(x, y, ac.hi); if (live()) L.symGlow(x, y, ac.mid, 0.1); } }
+  }
+  // gold brackets at the corners of the face
+  for (const [x, y, dy] of [[66, BAN0 + 2, 1], [52, PLQ1 - 2, -1]]) { for (let k = 0; k < 5; k++) { L.sym(x + k, y, INLAY); L.sym(x, y + dy * k, INLAY); } L.sym(x + 1, y + dy, INLAY_LO); }
+  finish(L, b);
+  // the keystone, wider at the top, a gold-inlaid rune in its face
+  for (let y = 0; y <= 9; y++) {
+    const hw = 9 - Math.floor(y * 0.5);
+    for (let x = XC - hw; x < XC + hw; x++) {
+      let c = rockAt(x, y, 22); c = shade(c, x < XC - hw + 2 ? 1.15 : x >= XC + hw - 2 ? 0.75 : 1);
+      if (y === 0) c = hash3(x, 0, 23) > 0.4 ? LICHEN : shade(c, 1.15);
+      F.set(x, y, c);
+    }
+  }
+  const g = GLYPHS[S.siege === 'breacher' ? 0 : 4];
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 4; c++) if (g[r][c] === 'X') { F.set(126 + c, 2 + r + 1, INLAY_LO); F.set(126 + c, 2 + r, INLAY); }
+  for (let y = PLQ1 + 1; y <= 46; y++) {
+    const hw = 3 + Math.floor((y - PLQ1) * 0.5);
+    for (let x = XC - hw; x < XC + hw; x++) F.set(x, y, shade(rockAt(x, y, 24), x < XC ? 1.08 : 0.8));
+  }
+  for (const [x, y] of [[127, 42], [128, 42], [127, 43], [128, 43]]) F.set(x, y, INLAY);
+  finish(F, b);
+  coreBar(b, 21);
+  coreText(b, p, INLAY, INLAY_LO);
+}
+
+const CLUSTER = ['..c....', '.cb..c.', '.bb.cb.', 'cbba.b.', 'bba.bba', '.aa.ba.', '..aaa..'];
+function cluster(L, x, y, flip) {
+  for (let r = 0; r < CLUSTER.length; r++) for (let c = 0; c < 7; c++) {
+    const ch = CLUSTER[r][c]; if (ch === '.') continue;
+    const k = 0.86 + 0.14 * Math.sin(S.t * 0.9 + r * 0.6 + c * 0.3);
+    L.sym(x + c, y + r, shade(AC[ch], k));
+  }
+}
+function rock(x, y, base, seed) {
+  const h = hash3(x, y, seed), bl = hash3(x >> 2, y >> 2, seed + 1), m = hash3(x >> 3, y >> 3, seed + 2);
+  return base.map(v => v * (0.86 + h * 0.14) * (bl > 0.8 ? 0.88 : 1) * (0.94 + m * 0.1));
+}
+
+// ---------- backdrops ----------
+const SKIES = { day: [[112, 160, 250], [170, 202, 255]], dusk: [[52, 40, 92], [214, 120, 96]], night: [[8, 10, 26], [30, 36, 70]] };
+function backdrop(b, realm) {
+  const [top, bot] = SKIES[S.sky];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let c = mix(top, bot, y / H);
+    if (S.sky === 'night' && hash3(x, y, 3) > 0.993) c = [200, 210, 240];
+    const hill = H - 4 + Math.round(2 * Math.sin(x * 0.045 + (realm ? 2.1 : 0)) + 1.2 * Math.sin(x * 0.13 + 1));
+    if (y >= hill) c = shade(y === hill ? tone([92, 148, 58], x, y, 3, 0.2) : tone([116, 86, 58], x, y, 4, 0.2), S.sky === 'night' ? 0.35 : S.sky === 'dusk' ? 0.6 : 1);
+    b.set(x, y, c);
+  }
+}
+
+function vanilla(b) {
+  const str = `${NAME[S.siege]} · ${pct()}`; text(b, str, XC - (mask(str).w >> 1), 3, [255, 255, 255], { shadow: [62, 62, 62] });
+  const x0 = XC - 91, fw = Math.round(182 * S.p), col = S.siege === 'breacher' ? [236, 0, 184] : [236, 40, 40];
+  for (let x = 0; x < 182; x++) for (let y = 0; y < 5; y++) b.set(x0 + x, 12 + y, x < fw ? shade(col, y === 0 ? 1 : y === 4 ? 0.6 : 0.85) : shade(col, y === 0 ? 0.35 : 0.22));
+}
+
+// ---------- canvases ----------
+const VIEWS = [['vanilla', vanilla, false, 24]];
+for (const [id, fn, realm] of [['E3', E3, false], ['E5', E5, true]]) VIEWS.push([id, fn, realm, H, 'breacher', false], [id + 'w', fn, realm, H, 'breacher', true], [id + 'b', fn, realm, H, 'breaker', false], [id + 'bw', fn, realm, H, 'breaker', true]);
+const views = VIEWS.map(([id, draw, realm, h, siege, ward]) => {
+  const cv = document.getElementById('cv-' + id); cv.width = W; cv.height = h;
+  return { cv, ctx: cv.getContext('2d'), draw, realm, b: new Buf(W, h), h, siege, ward };
+});
+function drawAll() {
+  for (const v of views) {
+    if (v.h === H) backdrop(v.b, v.realm); else { const [t, bo] = SKIES[S.sky]; for (let y = 0; y < v.h; y++) for (let x = 0; x < W; x++) v.b.set(x, y, mix(t, bo, y / v.h)); }
+    const was = [S.siege, S.mode, S.coreFuel];
+    if (v.siege) { S.siege = v.siege; S.coreFuel = v.ward ? S.coreFuel || 40 : 0; S.mode = S.fuel === 0 ? 'dormant' : v.ward ? 'warded' : 'active'; }
+    v.draw(v.b);
+    [S.siege, S.mode, S.coreFuel] = was;
+    v.ctx.putImageData(new ImageData(v.b.d, W, v.h), 0, 0);
+  }
+}
+function size() { for (const v of views) v.cv.style.width = W * S.zoom + 'px'; }
+
+// ---------- controls ----------
+const inC = document.getElementById('in-core'), outC = document.getElementById('out-core');
+const mode = () => { S.mode = S.fuel === 0 ? 'dormant' : S.coreFuel > 0 ? 'warded' : 'active'; };
+const outP = document.getElementById('out-p'), outF = document.getElementById('out-fuel'), inF = document.getElementById('in-fuel'), inP = document.getElementById('in-p');
+function syncControls() {
+  document.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-pressed', String(String(S[seg.dataset.key]) === bt.dataset.v))));
+  mode(); outC.textContent = S.coreFuel + ' / 64';
+  inF.max = S.cap; inF.value = S.fuel; outF.textContent = S.fuel + ' / ' + S.cap; outP.textContent = Math.round(S.p * 100) + '%';
+}
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const bt = e.target.closest('button'); if (!bt) return;
+  const k = seg.dataset.key, v = bt.dataset.v;
+  S[k] = (k === 'cap' || k === 'zoom') ? +v : v;
+  if (k === 'cap') S.fuel = Math.min(S.fuel, S.cap) || Math.min(3, S.cap);
+  if (k === 'cap' && S.cap > 16 && S.fuel <= 5) S.fuel = Math.round(S.cap * 0.6);
+  if (k === 'zoom') size();
+  syncControls();
+}));
+inP.addEventListener('input', () => { S.p = inP.value / 100; syncControls(); });
+inF.addEventListener('input', () => { S.fuel = +inF.value; syncControls(); });
+inC.addEventListener('input', () => { S.coreFuel = +inC.value; syncControls(); });
+
+const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let last = 0;
+function frame(now) {
+  if (now - last > 33) { if (!still) S.t = now / 1000; drawAll(); last = now; }
+  requestAnimationFrame(frame);
+}
+syncControls(); size();
+requestAnimationFrame(frame);
+})();
+</script>

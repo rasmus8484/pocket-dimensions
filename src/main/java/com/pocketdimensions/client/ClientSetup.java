@@ -28,6 +28,7 @@ public class ClientSetup {
     public ClientSetup(BusGroup modBusGroup) {
         EntityRenderersEvent.RegisterRenderers.BUS.addListener(this::onRegisterRenderers);
         FMLClientSetupEvent.getBus(modBusGroup).addListener(this::onClientSetup);
+        com.pocketdimensions.client.siegebar.SiegeBarClient.register();
         RegisterParticleProvidersEvent.BUS.addListener(e -> {
             e.registerSpriteSet(ModParticles.RUNE.get(), s -> new RuneParticle.Provider(s, RuneParticle.CYAN));
             e.registerSpriteSet(ModParticles.RUNE_PINK.get(), s -> new RuneParticle.Provider(s, RuneParticle.PINK));
