@@ -7,6 +7,7 @@ import { shape as breakerShape, paint as breakerPaint, Y0 as K_Y0, Y1 as K_Y1 } 
 import { damageShape, damagePaint } from './damage.mjs';
 import { shape as coreShape, paint as corePaint, STATES as CORE_STATES, CORE as CORE_C } from './geode.mjs';
 import { shape as pocketShape, paint as pocketPaint, glowSprite } from './pocket.mjs';
+import { sprite as seedSprite } from './seed.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
@@ -229,5 +230,10 @@ write('models/item/pocket_anchor.json', json({
   },
 }));
 write('items/pocket_anchor.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:item/pocket_anchor' } }));
+
+// World Seed (Starseed): a flat item sprite, no 3D model
+write('textures/item/world_seed.png', encodePNG(16, 16, seedSprite()));
+write('models/item/world_seed.json', json({ parent: 'minecraft:item/generated', textures: { layer0: 'pocketdimensions:item/world_seed' } }));
+write('items/world_seed.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:item/world_seed' } }));
 
 console.log(report.join('\n'));
