@@ -25,7 +25,7 @@ No room is its own dimension.
 Boundary is a **custom mod block** with:
 
 - Pure white texture
-- Emits light level **15** (glowstone strength) — *not yet implemented: the block currently sets no light level*
+- Emits light level **15** (glowstone strength) — *not yet implemented; to be tried in the walls' redesign*
 - Unbreakable / extremely high hardness
 - High blast resistance
 - Not movable by pistons

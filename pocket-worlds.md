@@ -133,15 +133,13 @@ World Breacher is a malicious add-on structure that must be placed **on top of**
 
 Placement is allowed only if:
 
-- The realm owner is currently **inside** their realm **at the moment of placement**
+- Someone who belongs to the realm (its owner or anyone on its access list) is **inside** it **at the moment of placement**. Players in through a breach or smuggled through a pocket room don't count.
 
 After placement:
 
-- The siege can continue even if the owner leaves or disconnects
+- The siege can continue even if they leave or disconnect
 
-Only one breacher per anchor.
-
-*Implementation note: the owner-inside requirement is not enforced yet. Siege blocks must sit directly on the anchor's upper half, which also means only one siege block (breacher or breaker) fits per anchor.*
+Only one breacher per anchor: siege blocks sit directly on the anchor's upper half, which has room for one (breacher or breaker).
 
 ---
 

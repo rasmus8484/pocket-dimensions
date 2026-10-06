@@ -64,7 +64,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | SG-005 | DONE | WorldCore defensive fuel | Owner inserts lapis into WorldCore; slows attacker progress by core_slow_factor |
 | SG-006 | DONE | Dynamic beacon colour | WorldCore beam: blue=normal, pink=breacher present, red=breaker active+fueled; anchor destroyed = core inert (no beam) |
 | SG-007 | DONE | WorldAnchor indestructible | Hardness -1; only removable by AnchorBreaker via level.setBlock() (upper half follows) |
-| SG-008 | TODO | Breacher placement gating | Design: World Breacher placement requires realm owner inside realm; not enforced |
+| SG-008 | DONE | Breacher placement gating | A World Breacher can only be placed while the realm's owner or someone on its access list is inside the realm (breach visitors and smuggled players don't count) |
 | SG-009 | DONE | One siege block per anchor | Enforced by geometry: siege blocks must sit directly on the anchor's upper half, which has room for one |
 | SG-010 | DONE | Siege bars | Themed bars within `siege_bossbar_range` (Rift Eye outside the realm, Aurora Stones inside), drawn by a HUD layer from `SiegeBarS2C`; cross-dimension chunk force-loading keeps both sides ticking |
 | SG-011 | DONE | Siege visuals on the World Anchor | While a siege block is active, World Breacher done: anchor `INFLUENCE` 0..4 drives EMBER rings, a top-down pink rune gradient with breach progress, pink/gold rune particles and drain particles. Anchor Breaker (Unmaker) done: anchor `DAMAGE` 0..4 drives EMBER rings, cracks, heated runes and the sigil; breaker `CHARGE` 0..4 fills the coils and adds frozen lightning sets at 25/50/75 %, with siphon stream, red motes and the `reality_crack` sound |
@@ -95,7 +95,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | CP-001 | DONE | Crafting recipes | Pocket Anchor, World Seed, World Anchor, World Breacher, Anchor Breaker; nothing from the End. All five unlock on first entering the Nether |
 | CP-002 | DONE | Drops | By design: siege blocks vanish unless `siege_blocks_drop` (then they drop themselves and their lapis, in code, no loot tables); a mined Pocket Anchor destroys its room and drops nothing; World Anchor and World Core are indestructible |
 | CP-003 | TODO | Advancements | Progression milestones (first room, first realm, first siege, etc.); only a hidden recipe-unlock advancement exists |
-| CP-004 | PARTIAL | Custom textures | Every block and item has its own generated design (`tools/anchor/`) except the BoundaryBlock (pocket room wall), still vanilla white concrete |
+| CP-004 | PARTIAL | Custom textures | Every block and item has its own generated design (`tools/anchor/`) except the BoundaryBlock (pocket room wall), still vanilla white concrete; its redesign should try glowing walls |
 | CP-005 | DONE | Mining/tool tags | Pocket Anchor, World Breacher and Anchor Breaker in `mineable/pickaxe` and `needs_diamond_tool`; mining times from the server config |
 | CP-006 | TODO | Anchor break warning FX | Particles and sounds when anchor is being mined/destroyed |
 | CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker), World Core (Geode Heart, two blocks, model per siege state), Pocket Anchor (Tumbling Cube: renderer-drawn cube, end portal windows, three rune bands, OCCUPIED state) and the World Seed item (Starseed sprite): generated models (`tools/anchor/`), renderers and particles; only the BoundaryBlock is still a plain cube |
@@ -127,5 +127,4 @@ These are features described in design docs that differ from current implementat
 | PRD ID | Mismatch |
 |--------|----------|
 | PR-012 | Docs say miner and occupants are warned with particles/sounds; code only sends the miner an action-bar message |
-| — | pocket-rooms.md says boundary blocks emit light 15; code sets no light level |
-| SG-008 | Docs require owner inside realm for breacher placement; not enforced |
+| — | pocket-rooms.md says boundary blocks emit light 15; code sets no light level (to be tried in the walls' redesign, CP-004) |
