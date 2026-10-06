@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "EDE",
+    "TST",
+    "EDE"
+  ],
+  "key": {
+    "E": "minecraft:emerald",
+    "D": "minecraft:diamond",
+    "T": "minecraft:ghast_tear",
+    "S": "minecraft:nether_star"
+  },
+  "result": {
+    "id": "pocketdimensions:world_seed",
+    "count": 1
+  }
+}

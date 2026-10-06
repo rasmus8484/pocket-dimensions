@@ -97,6 +97,20 @@ Both siege blocks require placement directly on top of a World Anchor and break 
 
 **Cross-dimension awareness:** Siege blocks and the World Core force-load each other's chunks across dimensions, so boss bars are visible to players inside the realm during an active siege and the beacon color stays accurate regardless of which dimension players are in.
 
+### Recipes
+
+Everything can be gathered once you reach the Nether; nothing needs the End. The mod's items are powerful, so each costs netherite or a nether star.
+
+| Item | Top | Middle | Bottom |
+|------|-----|--------|--------|
+| Pocket Anchor | gold ingot, ender pearl, gold ingot | ender pearl, netherite ingot, ender pearl | gold ingot, ender pearl, gold ingot |
+| World Seed | emerald, diamond, emerald | ghast tear, nether star, ghast tear | emerald, diamond, emerald |
+| World Anchor | netherite scrap, gold block, netherite scrap | obsidian, lodestone, obsidian | netherite scrap, gold block, netherite scrap |
+| World Breacher | iron ingot, hopper, iron ingot | netherite scrap, eye of ender, netherite scrap | iron ingot, amethyst shard, iron ingot |
+| Anchor Breaker | iron ingot, hopper, iron ingot | netherite scrap, magma block, netherite scrap | eye of ender, blaze rod, eye of ender |
+
+The World Core and Boundary Block have no recipe: the realm places its core, and the mod builds the room walls.
+
 ### Configuration
 
 All timing values are configurable in `config/pocketdimensions-common.toml`:

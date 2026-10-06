@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GEG",
+    "ENE",
+    "GEG"
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "E": "minecraft:ender_pearl",
+    "N": "minecraft:netherite_ingot"
+  },
+  "result": {
+    "id": "pocketdimensions:pocket_anchor",
+    "count": 1
+  }
+}

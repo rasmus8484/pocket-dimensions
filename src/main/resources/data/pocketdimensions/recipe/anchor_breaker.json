@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IHI",
+    "NMN",
+    "EBE"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "H": "minecraft:hopper",
+    "N": "minecraft:netherite_scrap",
+    "M": "minecraft:magma_block",
+    "E": "minecraft:ender_eye",
+    "B": "minecraft:blaze_rod"
+  },
+  "result": {
+    "id": "pocketdimensions:anchor_breaker",
+    "count": 1
+  }
+}
