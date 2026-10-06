@@ -114,6 +114,23 @@ public class WorldBreacherBlock extends BaseEntityBlock {
                 : createTickerHelper(type, ModBlockEntityTypes.WORLD_BREACHER.get(), WorldBreacherBlockEntity::serverTick);
     }
 
+    /**
+     * A breach can only begin while the realm has a defender inside (its owner or someone on its access list), so the
+     * defenders are there when the siege starts. Checked on the server; the client's guess is corrected.
+     */
+    @Override
+    public @Nullable BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext ctx) {
+        BlockState state = super.getStateForPlacement(ctx);
+        Level level = ctx.getLevel();
+        if (state == null || !(level instanceof net.minecraft.server.level.ServerLevel sl)) return state;
+        if (!(level.getBlockEntity(ctx.getClickedPos().below(2)) instanceof com.pocketdimensions.blockentity.WorldAnchorBlockEntity anchor)
+                || anchor.getOwnerUUID() == null) return state;
+        if (com.pocketdimensions.manager.RealmManager.get(sl.getServer()).defenderInside(sl.getServer(), anchor.getOwnerUUID())) return state;
+        if (ctx.getPlayer() != null) ctx.getPlayer().displayClientMessage(Component.literal(
+                "The realm beyond lies empty. A breach can only begin while someone who belongs there stands inside."), true);
+        return null;
+    }
+
     /** Only survives when placed on the UPPER half of a WorldAnchor. */
     @Override
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {

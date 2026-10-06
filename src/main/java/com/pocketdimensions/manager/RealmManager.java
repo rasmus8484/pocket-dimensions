@@ -329,6 +329,15 @@ public class RealmManager extends SavedData {
         return new int[]{ minBlockX, minBlockZ, minBlockX + side, minBlockZ + side };
     }
 
+    /** Whether the realm's owner or anyone on its access list is inside it right now (see RealmRules#defenderInside). */
+    public boolean defenderInside(MinecraftServer server, UUID ownerUUID) {
+        ServerLevel realm = server.getLevel(com.pocketdimensions.PocketDimensionsMod.REALM_DIM);
+        if (realm == null) return false;
+        List<UUID> inside = new java.util.ArrayList<>();
+        for (ServerPlayer p : realm.players()) if (isWithinRealm(ownerUUID, p.getX(), p.getZ())) inside.add(p.getUUID());
+        return RealmRules.defenderInside(ownerUUID, getAllowedPlayers(ownerUUID), inside);
+    }
+
     /** The owner of the realm whose plot contains (x, z) in the realm dimension, or null between plots. */
     @Nullable
     public UUID realmOwnerAt(double x, double z) {

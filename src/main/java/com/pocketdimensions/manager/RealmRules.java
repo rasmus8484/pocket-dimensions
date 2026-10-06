@@ -21,6 +21,16 @@ public final class RealmRules {
         return owner || allowed || breachOpen;
     }
 
+    /**
+     * A World Breacher may only be set on an anchor while the realm has a defender inside: its owner or someone on its
+     * access list. Players in through a breach or smuggled through a pocket room don't count.
+     */
+    public static boolean defenderInside(java.util.UUID owner, java.util.Collection<java.util.UUID> allowed,
+                                         java.util.Collection<java.util.UUID> inside) {
+        for (java.util.UUID p : inside) if (p.equals(owner) || allowed.contains(p)) return true;
+        return false;
+    }
+
     /** The Access and Manage tabs: add players, remove ordinary players, rename. */
     public static boolean canManage(Role role) { return role != Role.VISITOR; }
 

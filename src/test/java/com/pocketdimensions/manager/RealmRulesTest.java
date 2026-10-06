@@ -16,6 +16,16 @@ class RealmRulesTest {
     }
 
     @Test
+    void aBreacherNeedsSomeoneFromTheRealmInsideIt() {
+        java.util.UUID owner = new java.util.UUID(0, 1), friend = new java.util.UUID(0, 2), stranger = new java.util.UUID(0, 3);
+        java.util.List<java.util.UUID> allowed = java.util.List.of(friend);
+        assertFalse(RealmRules.defenderInside(owner, allowed, java.util.List.of()), "an empty realm");
+        assertFalse(RealmRules.defenderInside(owner, allowed, java.util.List.of(stranger)), "only someone who was let in by a breach or smuggled");
+        assertTrue(RealmRules.defenderInside(owner, allowed, java.util.List.of(stranger, friend)), "someone on the access list");
+        assertTrue(RealmRules.defenderInside(owner, allowed, java.util.List.of(owner)), "the owner");
+    }
+
+    @Test
     void onlyOwnersAndManagersSeeAccessAndManage() {
         assertTrue(RealmRules.canManage(OWNER));
         assertTrue(RealmRules.canManage(MANAGER));

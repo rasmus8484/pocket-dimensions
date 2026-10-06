@@ -102,7 +102,7 @@ Both siege blocks require placement directly on top of a World Anchor and break 
 
 **Siege bars:** Players within `siege_bossbar_range` blocks of an active siege block, and everyone inside the besieged realm, see the siege on a themed bar at the top of the screen: its progress, the time left and the lapis. Attackers and anyone outside the realm see **Rift Eye** (a slice of the anchor's rift in gold, counting the siege block's lapis); the realm's people see **Aurora Stones** (the World Core's rock with aurora crystals and its black hole beneath, counting the core's own lapis). While the core holds lapis, a veined blue ward covers the progress line and the time counts the slowed pace.
 
-**Cross-dimension awareness:** Siege blocks and the World Core force-load each other's chunks across dimensions, so boss bars are visible to players inside the realm during an active siege and the beacon color stays accurate regardless of which dimension players are in.
+**Cross-dimension awareness:** Siege blocks and the World Core force-load each other's chunks across dimensions, so the siege bars reach players inside the realm during an active siege and the beacon color stays accurate regardless of which dimension players are in.
 
 ### Recipes
 
@@ -157,22 +157,16 @@ These are not yet implemented:
 
 **Anti-Exploit (Phase 5)**
 - Wither protection for Pocket Anchors and siege blocks (TNT/creepers already can't break them; pistons can't move any of the mod's blocks)
-- Ender pearl and chorus fruit blocking across realm boundaries
-- Command teleport restrictions for non-admins in realms
 - Hopper/dispenser interaction prevention with anchors
 
 **Content & Polish (Phase 6)**
-- Crafting recipes for all items and blocks (currently creative-only)
-- Loot tables and block drop tables
 - Advancements and progression milestones
-- Custom textures and models (only the World Anchor has them so far; everything else uses vanilla placeholder textures)
-- Visual/audio feedback during siege progression
-- Warning particles and sounds when anchors are being destroyed
+- A design for the pocket room's walls (still vanilla white concrete), trying them glowing
+- Warning particles and sounds when an occupied Pocket Anchor is being mined, and a warning for the people inside
+- In-game explanations (tooltips or a guide)
 
 **Gameplay Refinements**
-- World Breacher placement gating (require realm owner to be inside)
 - Optional passive mob spawn control in realms
-- Anchor break warning effects for room occupants
 
 ---
 
