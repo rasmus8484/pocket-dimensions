@@ -51,6 +51,9 @@ public class ClientSetup {
         event.<AnchorBreakerBlockEntity, AnchorBreakerRenderState>registerBlockEntityRenderer(
                 ModBlockEntityTypes.ANCHOR_BREAKER.get(),
                 ctx -> new AnchorBreakerBlockEntityRenderer(ctx));
+        event.<com.pocketdimensions.blockentity.RoomVoidBlockEntity, net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState>registerBlockEntityRenderer(
+                ModBlockEntityTypes.ROOM_VOID.get(),
+                ctx -> new RoomVoidRenderer(ctx));
         event.<PocketAnchorBlockEntity, PocketAnchorRenderState>registerBlockEntityRenderer(
                 ModBlockEntityTypes.POCKET_ANCHOR.get(),
                 ctx -> new PocketAnchorRenderer(ctx));

@@ -25,7 +25,7 @@ No room is its own dimension.
 Boundary is a **custom mod block** with:
 
 - Pure white texture
-- Looks like the **inside of the Tumbling Cube** you entered (bigger on the inside): its frame and end-portal starfield windows on the walls, its rune on floor and ceiling, full-bright with no shadows, and a faint magical shimmer that travels across the walls — *planned for the walls' redesign; the walls are vanilla white concrete for now*
+- Looks like the **inside of the Tumbling Cube** you entered (bigger on the inside): every wall, the floor and the ceiling are windows into the end-portal void, ringed by netherite edges with gold corners. Full-bright, nothing casts a shadow on them. One renderer per room draws the void (from a block entity in one floor corner)
 - Unbreakable / extremely high hardness
 - High blast resistance
 - Not movable by pistons
