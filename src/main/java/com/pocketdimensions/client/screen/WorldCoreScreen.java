@@ -73,6 +73,12 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
     private int ledgerScroll, pickScroll;
     private String renamedFlash = "";
     private long renamedAt;
+    /**
+     * The slab is drawn at the largest whole-number scale that leaves a margin around it, never larger than the player's
+     * GUI scale (so at "Auto" on a 1080p screen, scale 4, it draws as at scale 3: the slab is 270 GUI pixels tall and
+     * scale 4 leaves only 270). Whole numbers keep the pixel art crisp. fit = that scale / the GUI scale.
+     */
+    private float fit = 1f;
 
     /** A carved button: drawn and hit-tested by the screen itself, so it can live on the stone and inside overlays. */
     private record Btn(int x, int y, int w, int h, String label, boolean unbind, boolean enabled, Runnable action) {
@@ -87,6 +93,12 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
 
     @Override
     protected void init() {
+        var win = minecraft.getWindow();
+        int gui = win.getGuiScale();
+        int k = Math.max(1, Math.min(gui, Math.min(win.getHeight() / (H + 16), win.getWidth() / (W + 16))));
+        fit = (float) k / gui;
+        this.width = Math.round(win.getGuiScaledWidth() / fit);       // lay out in the slab's own (scaled) space
+        this.height = Math.round(win.getGuiScaledHeight() / fit);
         super.init();
         nameInput = new EditBox(font, leftPos + 21, topPos + 76, 116, 12, Component.literal("Player name"));
         nameInput.setBordered(false); nameInput.setMaxLength(16); nameInput.setTextColor(0xFFF2EEFA);
@@ -124,6 +136,30 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
     private void click() {
         if (minecraft != null) minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
+
+    // =====================================================================================================
+    // Fitting the slab to the screen: draw and take input in the slab's scaled space
+    // =====================================================================================================
+
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        g.pose().pushMatrix();
+        g.pose().scale(fit, fit);
+        super.render(g, Math.round(mouseX / fit), Math.round(mouseY / fit), partialTick);
+        g.renderDeferredElements();                                      // tooltips, in the same space
+        g.pose().popMatrix();
+    }
+
+    private MouseButtonEvent scaled(MouseButtonEvent e) { return new MouseButtonEvent(e.x() / fit, e.y() / fit, e.buttonInfo()); }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) { return super.mouseReleased(scaled(event)); }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) { return super.mouseDragged(scaled(event), dx / fit, dy / fit); }
+
+    @Override
+    public void mouseMoved(double mx, double my) { super.mouseMoved(mx / fit, my / fit); }
 
     // =====================================================================================================
     // Drawing: the stone (renderBg, absolute coordinates)
@@ -369,7 +405,8 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    public boolean mouseClicked(MouseButtonEvent raw, boolean doubleClick) {
+        MouseButtonEvent event = scaled(raw);
         double mx = event.x(), my = event.y();
         if (event.button() == 0) {
             for (Btn b : buttons()) if (b.enabled && b.hit(mx, my)) { click(); b.action.run(); return true; }
@@ -394,7 +431,8 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+    public boolean mouseScrolled(double rawX, double rawY, double sx, double sy) {
+        double mx = rawX / fit, my = rawY / fit;
         if (pickerOpen) {
             int max = Math.max(0, menu.sync().online().size() * 16 - 140);
             pickScroll = (int) Math.max(0, Math.min(max, pickScroll - sy * 16));
