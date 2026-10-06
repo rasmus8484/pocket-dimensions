@@ -1,0 +1,280 @@
+<title>Pocket Room Walls</title>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: a viewport into the room on top, the variant picker and notes below. Single dark look (the room is the point). */
+:root {
+  --night: #0f1018; --panel: #191a25; --line: #2b2d3c; --parch: #e8e4da; --muted: #a6a3b3;
+  --gold: #d6a23c; --cyan: #8cebff;
+  --font-pixel: "Pixelify Sans", ui-monospace, monospace; --font-body: "Alegreya Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--night); color: var(--parch); font-family: var(--font-body); font-size: 16px; line-height: 1.45; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 18px; }
+h1, h2, h3 { font-family: var(--font-pixel); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.6rem; color: var(--gold); }
+h3 { font-size: 0.95rem; color: var(--gold); }
+p { margin: 0; max-width: 72ch; }
+.lede { color: var(--muted); }
+.stage { position: relative; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #000; }
+.stage canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; cursor: grab; touch-action: none; }
+.stage canvas:active { cursor: grabbing; }
+.hint { position: absolute; left: 10px; bottom: 8px; font-family: var(--font-pixel); font-size: 0.72rem; color: rgba(232, 228, 218, 0.7); pointer-events: none; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 20px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; align-items: end; }
+.ctl { display: grid; gap: 6px; min-width: 0; }
+.ctl > span { font-family: var(--font-pixel); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { font: inherit; font-size: 0.9rem; background: transparent; color: var(--muted); border: 0; padding: 5px 11px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--line); color: var(--parch); }
+.seg button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+input[type="range"] { width: 140px; accent-color: var(--gold); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.card { display: grid; gap: 6px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.card.on { border-color: var(--gold); }
+.card p { color: var(--muted); font-size: 0.95rem; }
+.notes { display: grid; gap: 8px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.notes ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
+.notes b { color: var(--parch); font-weight: 500; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <h1>Pocket Room Walls</h1>
+    <p class="lede">Standing inside a full 20 x 20 x 20 pocket room. The walls are the inside of the Tumbling Cube you stepped into, so the room reads as that small cube, only far bigger from within. Everything is full-bright with no shading, and a faint shimmer travels across the walls.</p>
+  </header>
+
+  <div class="stage">
+    <canvas id="view" width="1280" height="720"></canvas>
+    <div class="hint">Drag to look around · scroll to zoom</div>
+  </div>
+
+  <section class="controls" aria-label="View">
+    <div class="ctl"><span>Walls</span>
+      <div class="seg" id="seg-variant"><button id="v-0" data-v="0">A · Cube Panels</button><button id="v-1" data-v="1">B · Open Void</button><button id="v-2" data-v="2">C · The Great Cube</button><button id="v-3" data-v="3">D · Rune Cells</button></div></div>
+    <div class="ctl"><span>View</span>
+      <div class="seg" id="seg-view"><button id="w-0" data-v="0">Standing</button><button id="w-1" data-v="1">Corner</button><button id="w-2" data-v="2">Cut-away</button></div></div>
+    <label class="ctl"><span>Shimmer</span><input id="in-shimmer" type="range" min="0" max="100" value="60"></label>
+  </section>
+
+  <section class="cards" aria-label="Variants">
+    <div class="card" id="c-0"><h3>A · Cube Panels</h3><p>Every wall block is one face of the cube: a stone frame, gold knobs where four blocks meet, a recessed ring and an end-portal starfield window. Floor and ceiling are the cube's rune plates. The shimmer lights the frames in a slow wave.</p></div>
+    <div class="card" id="c-1"><h3>B · Open Void</h3><p>The walls are almost all starfield, so the room seems to hang in space. Only the room's twelve edges are the cube's stone edges, with gold knobs at its eight corners, and a faint grid shows the blocks. An aurora wave rolls across the void.</p></div>
+    <div class="card" id="c-2"><h3>C · The Great Cube</h3><p>The whole room is one giant Tumbling Cube seen from inside: a stone frame around each wall, gold corner knobs, one continuous starfield window per wall, and the cube's rune spanning the whole floor and ceiling. The shimmer runs along the giant rune and sweeps across the windows.</p></div>
+    <div class="card" id="c-3"><h3>D · Rune Cells</h3><p>Bevelled stone tiles from the cube's plates, each with a small carved rune, and the starfield showing through thin cracks between them. The runes light up in a wave that travels across the room.</p></div>
+  </section>
+
+  <section class="notes">
+    <h3>How it would be built</h3>
+    <ul>
+      <li><b>No shadows:</b> the wall models switch shading and ambient occlusion off and give their faces full light emission, so nothing darkens them.</li>
+      <li><b>Starfield:</b> an animated, tileable texture (stars drift and twinkle). It is close to the Tumbling Cube's end-portal windows but not the same effect, since plain block models can't use the end portal's render type.</li>
+      <li><b>Shimmer as one wave:</b> each wall block gets a phase from its position when the room is built, and picks the matching offset of the animated texture, so the shimmer rolls across the walls instead of every block pulsing together. Very cheap: no renderers on the roughly 2,400 wall blocks.</li>
+      <li><b>C and the room edges in B</b> need each block to know where it sits (edge, corner, which piece of the giant rune); that is a few block variants placed by the room generator.</li>
+    </ul>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.05, 200);
+
+// The six runes (4 x 5) from the Runebound design, as a tiny lookup texture: 4 wide, 30 tall (glyph g, row r at y = g*5 + r).
+const GLYPHS = [
+  ['XXXX', 'X...', 'XXX.', '...X', 'XXXX'], ['.XX.', 'X..X', '.XX.', '..X.', 'XXX.'], ['X.X.', 'XXXX', 'X.X.', '..X.', '..XX'],
+  ['XXX.', '..X.', 'XXXX', '.X..', 'XX..'], ['X..X', 'X.X.', 'XX..', 'X.X.', 'X..X'], ['.X..', 'XXX.', '.X.X', '...X', '..XX'],
+];
+const TINY = [['XX.', '.X.', '.XX'], ['X.X', '.X.', 'X.X'], ['XXX', 'X..', 'X..'], ['.X.', 'XXX', '.X.'], ['X..', 'XX.', '..X'], ['.XX', 'X..', 'XX.']];
+const gdata = new Uint8Array(4 * 48 * 4);
+GLYPHS.forEach((g, gi) => g.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') gdata[((gi * 5 + r) * 4 + c) * 4] = 255; })));
+TINY.forEach((g, gi) => g.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') gdata[((30 + gi * 3 + r) * 4 + c) * 4] = 255; })));
+const glyphTex = new THREE.DataTexture(gdata, 4, 48, THREE.RGBAFormat);
+glyphTex.magFilter = glyphTex.minFilter = THREE.NearestFilter; glyphTex.needsUpdate = true;
+
+const uniforms = { uTime: { value: 0 }, uVariant: { value: 0 }, uShimmer: { value: 0.6 }, uGlyph: { value: glyphTex } };
+
+const vert = `
+varying vec3 vW; varying vec3 vN;
+void main() { vW = (modelMatrix * vec4(position, 1.0)).xyz; vN = normal; gl_Position = projectionMatrix * viewMatrix * vec4(vW, 1.0); }`;
+
+const frag = `
+precision highp float;
+varying vec3 vW; varying vec3 vN;
+uniform float uTime, uVariant, uShimmer; uniform sampler2D uGlyph;
+const float ROOM = 20.0;
+const vec3 STONE = vec3(66.0, 70.0, 88.0) / 255.0;
+const vec3 GOLD = vec3(214.0, 162.0, 60.0) / 255.0, GHI = vec3(250.0, 226.0, 150.0) / 255.0;
+const vec3 RUNE = vec3(140.0, 235.0, 255.0) / 255.0, CARVED = vec3(34.0, 36.0, 46.0) / 255.0;
+
+float h(vec3 p) { p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float tone(vec2 px, float f) { return 0.93 + 0.14 * h(vec3(px, f + 7.0)); }
+float glyph(float g, float r, float c) { return texture2D(uGlyph, vec2((c + 0.5) / 4.0, (g * 5.0 + r + 0.5) / 48.0)).r; }
+float tiny(float g, float r, float c) { return texture2D(uGlyph, vec2((c + 0.5) / 4.0, (30.0 + g * 3.0 + r + 0.5) / 48.0)).r; }
+
+// The end-portal-like void: two drifting layers of stars over a dark violet wash (an animated, tileable texture in game).
+vec3 starfield(vec2 gp, float face) {
+  vec3 c = mix(vec3(10.0, 8.0, 22.0) / 255.0, vec3(30.0, 18.0, 54.0) / 255.0, h(vec3(floor(gp / 8.0), face)));
+  vec2 a = gp + vec2(floor(uTime * 1.5), 0.0), b = gp + vec2(0.0, floor(uTime * 0.6));
+  float sa = h(vec3(a, face + 3.0)), sb = h(vec3(b, face + 5.0));
+  float tw = step(0.45, h(vec3(gp, floor(uTime * 0.7 + sa * 6.0))));
+  if (sa > 0.988) c = mix(c, vec3(200.0, 220.0, 255.0) / 255.0, 0.45 + 0.55 * tw);
+  else if (sb > 0.982) c = mix(c, vec3(120.0, 160.0, 255.0) / 255.0, 0.6);
+  else if (sb > 0.955) c = mix(c, vec3(70.0, 52.0, 120.0) / 255.0, 0.7);
+  return c;
+}
+
+// The shimmer: one value per block (as the game would do it), rolling across the face as a wave.
+float wave(vec2 bp, float face) {
+  float w = dot(bp, vec2(0.37, 0.23)) + face * 1.7 - uTime * 0.55;
+  return pow(0.5 + 0.5 * cos(w * 0.9), 10.0) * uShimmer;
+}
+
+void main() {
+  // which face, and 2D coordinates on it in blocks
+  vec2 ab; float face; bool plate;
+  if (vN.y < -0.5) { ab = vW.xz; face = 0.0; plate = true; }
+  else if (vN.y > 0.5) { ab = vW.xz; face = 1.0; plate = true; }
+  else if (abs(vN.x) > 0.5) { ab = vec2(vW.z, vW.y); face = vN.x > 0.0 ? 2.0 : 3.0; plate = false; }
+  else { ab = vec2(vW.x, vW.y); face = vN.z > 0.0 ? 4.0 : 5.0; plate = false; }
+  ab = clamp(ab, 0.0, ROOM - 0.0001);
+  vec2 bp = floor(ab), pp = floor(fract(ab) * 16.0), gp = floor(ab * 16.0);
+  float s = wave(bp, face);
+  float e = min(min(pp.x, 15.0 - pp.x), min(pp.y, 15.0 - pp.y));
+  vec3 c;
+  int v = int(uVariant + 0.5);
+
+  if (v == 0) {                                                       // A: every block is a cube face
+    bool knob = (pp.x < 2.0 || pp.x > 13.0) && (pp.y < 2.0 || pp.y > 13.0);
+    if (knob) c = (pp.x + pp.y < 3.0 || (pp.x < 2.0 && pp.y > 13.0)) ? GHI : GOLD * tone(gp, face);
+    else if (e < 1.0) c = STONE * 0.78 * tone(gp, face);
+    else if (e < 2.0) c = STONE * tone(gp, face);
+    else if (e < 3.0) c = STONE * 0.52;
+    else if (plate) {
+      float g = floor(h(vec3(bp, face + 11.0)) * 6.0);
+      float gx = floor((pp.x - 4.0) / 2.0), gy = floor((pp.y - 3.0) / 2.0);
+      bool on = gx >= 0.0 && gx < 4.0 && gy >= 0.0 && gy < 5.0 && glyph(g, face > 0.5 ? gy : 4.0 - gy, gx) > 0.5;
+      c = on ? mix(RUNE * 0.75, RUNE, s) : STONE * 0.95 * tone(gp, face);
+    } else c = starfield(gp, face);
+    if (e < 3.0) c += RUNE * 0.22 * s;
+    else if (!plate) c += RUNE * 0.08 * s;
+  }
+  else if (v == 1) {                                                  // B: open void, the room's edges are the cube's edges
+    c = starfield(gp, face);
+    if (pp.x == 0.0 || pp.y == 0.0) c = mix(c, STONE, 0.22);          // a faint block grid
+    float ex = min(ab.x, ROOM - ab.x), ey = min(ab.y, ROOM - ab.y);
+    if (ex < 1.0 || ey < 1.0) {
+      bool corner = ex < 1.5 && ey < 1.5;
+      c = corner ? ((pp.x + pp.y < 6.0) ? GHI : GOLD * tone(gp, face)) : STONE * 0.8 * tone(gp, face);
+      if (!corner && (min(ex, ey) > 0.875)) c = STONE * 0.5;            // the edge's inner lip
+    }
+    vec3 aur = mix(vec3(70.0, 220.0, 190.0), vec3(150.0, 110.0, 230.0), 0.5 + 0.5 * sin(bp.x * 0.3 + uTime * 0.2)) / 255.0;
+    c += aur * 0.28 * s;
+  }
+  else if (v == 2) {                                                  // C: the room is one giant cube
+    float ex = min(ab.x, ROOM - ab.x), ey = min(ab.y, ROOM - ab.y), em = min(ex, ey);
+    bool knob = ex < 2.0 && ey < 2.0;
+    if (knob) c = (pp.x + pp.y < 4.0) ? GHI : GOLD * tone(gp, face);
+    else if (em < 1.0) c = STONE * 0.78 * tone(gp, face);
+    else if (em < 1.5) c = STONE * tone(gp, face);
+    else if (em < 2.0) c = STONE * 0.52;
+    else if (plate) {
+      // the cube's rune, each rune pixel a 3 x 3 block cell, across the whole floor or ceiling
+      vec2 cell = floor((ab - vec2(4.0, 2.5)) / 3.0);
+      bool on = cell.x >= 0.0 && cell.x < 4.0 && cell.y >= 0.0 && cell.y < 5.0 && glyph(face > 0.5 ? 3.0 : 0.0, face > 0.5 ? cell.y : 4.0 - cell.y, cell.x) > 0.5;
+      float run = pow(0.5 + 0.5 * cos((cell.x + cell.y * 2.0) * 0.8 - uTime * 1.4), 6.0) * uShimmer;
+      vec2 inCell = fract((ab - vec2(4.0, 2.5)) / 3.0) * 3.0;
+      float rim = step(min(min(inCell.x, 3.0 - inCell.x), min(inCell.y, 3.0 - inCell.y)), 0.13);
+      c = on ? mix(RUNE * (0.62 + 0.12 * h(vec3(gp, 9.0))) * (1.0 - 0.25 * rim), vec3(1.0), 0.35 * run) : STONE * 0.92 * tone(gp, face);
+      if (!on && (pp.x == 0.0 || pp.y == 0.0)) c *= 0.9;
+    } else {
+      c = starfield(gp, face);
+      float band = pow(0.5 + 0.5 * cos((ab.x + ab.y) * 0.35 - uTime * 0.9), 14.0) * uShimmer;
+      c += RUNE * 0.16 * floor(band * 6.0) / 6.0;
+    }
+    if (em < 2.0 && !knob) c += RUNE * 0.12 * s;
+  }
+  else {                                                              // D: rune cells over the void
+    if (e < 1.0) c = starfield(gp, face) * 1.3 + RUNE * 0.05;
+    else {
+      c = STONE * tone(gp, face);
+      if (pp.x < 2.0 || pp.y < 2.0) c *= 1.18;                       // bevel lit from the top left
+      else if (pp.x > 13.0 || pp.y > 13.0) c *= 0.72;
+      float g = floor(h(vec3(bp, face + 13.0)) * 6.0);
+      float gx = floor((pp.x - 5.0) / 2.0), gy = floor((pp.y - 5.0) / 2.0);
+      if (gx >= 0.0 && gx < 3.0 && gy >= 0.0 && gy < 3.0 && tiny(g, 2.0 - gy, gx) > 0.5) c = mix(CARVED + RUNE * 0.18, RUNE, 0.25 + 0.75 * s);
+    }
+  }
+  gl_FragColor = vec4(c, 1.0);
+}`;
+
+const mat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag, side: THREE.BackSide });
+const room = new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), mat);
+room.position.set(10, 10, 10);
+scene.add(room);
+
+// the Tumbling Cube itself, small, hovering where you stepped in: a reminder of the outside
+const cube = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), new THREE.MeshBasicMaterial({ color: 0x424658 }));
+const edges = new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({ color: 0xd6a23c }));
+cube.add(edges);
+cube.position.set(10, 1.4, 6);
+scene.add(cube);
+
+// looking around
+let yaw = Math.PI, pitch = 0.08, fov = 75, view = 0;
+const VIEWS = [
+  { p: [10, 1.62, 13.5], yaw: Math.PI, pitch: 0.12 },
+  { p: [3.2, 1.62, 3.2], yaw: Math.PI * 1.25, pitch: 0.28 },
+  { p: [36, 30, 40], yaw: Math.PI * 0.16 + Math.PI, pitch: -0.52 },
+];
+function setView(i) {
+  view = i; const v = VIEWS[i];
+  camera.position.set(...v.p); yaw = v.yaw; pitch = v.pitch; fov = i === 2 ? 50 : 75;
+}
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  yaw -= (e.clientX - drag[0]) * 0.005; pitch = Math.max(-1.45, Math.min(1.45, pitch - (e.clientY - drag[1]) * 0.005));
+  drag = [e.clientX, e.clientY];
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', e => { e.preventDefault(); fov = Math.max(30, Math.min(100, fov + Math.sign(e.deltaY) * 4)); }, { passive: false });
+
+function size() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', size);
+
+// controls
+function wire(segId, cb, init) {
+  const seg = document.getElementById(segId);
+  const set = v => { seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(v)))); cb(+v); };
+  seg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) set(b.dataset.v); });
+  set(init);
+}
+wire('seg-variant', v => { uniforms.uVariant.value = v; document.querySelectorAll('.card').forEach((c, i) => c.classList.toggle('on', i === v)); }, 0);
+wire('seg-view', setView, 0);
+document.getElementById('in-shimmer').addEventListener('input', e => { uniforms.uShimmer.value = e.target.value / 100; });
+
+const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const t0 = performance.now();
+function frame(now) {
+  uniforms.uTime.value = still ? 4 : (now - t0) / 1000;
+  camera.fov = fov; camera.updateProjectionMatrix();
+  const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+  camera.lookAt(camera.position.clone().add(dir));
+  cube.rotation.x = now / 2300; cube.rotation.y = now / 1700; cube.position.y = 1.4 + 0.08 * Math.sin(now / 900);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+size();
+requestAnimationFrame(frame);
+})();
+</script>
