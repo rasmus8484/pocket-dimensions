@@ -96,7 +96,7 @@ body { background: var(--night); color: var(--parch); font-family: var(--font-bo
   <div class="eyebrow"><span id="cKind">World Core</span> · <span id="cIndex"></span></div>
   <h1 id="cName">Weathered</h1>
   <p id="cLine"></p>
-  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">72 · layered cube, 13 runes per band</span></div>
+  <div class="scale">1 voxel = 1 px = 1/16 block · drag to orbit · scroll to zoom · build <span id="build">73 · world seed sprites</span></div>
 </header>
 
 <aside class="notes" id="notes">
@@ -4395,9 +4395,104 @@ const R21 = [
 ];
 
 // ---------------------------------------------------------------------------
+// ROUND 22: the World Seed, a 16 x 16 item sprite matching the seed that floats in the World Anchor's claws
+// (a teal gem, lighter toward its tip). Each sprite is a function (x, y) -> [r, g, b] or null, y = 0 at the top.
+// ---------------------------------------------------------------------------
+const SEED_LO = [40, 200, 140], SEED_HI = [160, 255, 215], SEED_RIM = [16, 70, 62], SEED_SPARK = [235, 255, 248];
+const seedCol = y => mix(SEED_HI, SEED_LO, Math.min(1, Math.max(0, (y - 1) / 13)));
+// the anchor's gem in profile: |dx| + |dy| * k < r, centred between pixels 7 and 8
+const gemIn = (x, y, r, k = 0.8, cy = 7.5) => Math.abs(x + 0.5 - 8) + Math.abs(y + 0.5 - cy) * k < r;
+
+// Faceted gem: four facets lit from the top left, a bright ridge down the middle, a dark rim
+function seedGem(x, y, r = 6.2, cy = 7.5) {
+  if (!gemIn(x, y, r, 0.8, cy)) return null;
+  const edge = !gemIn(x - 1, y, r, 0.8, cy) || !gemIn(x + 1, y, r, 0.8, cy) || !gemIn(x, y - 1, r, 0.8, cy) || !gemIn(x, y + 1, r, 0.8, cy);
+  if (edge) return SEED_RIM;
+  const left = x < 8, top = y + 0.5 < cy;
+  const k = top ? (left ? 1.12 : 0.96) : (left ? 0.86 : 0.7);
+  let c = shade(seedCol(y), k);
+  if (x === 7 && top) c = mix(c, SEED_SPARK, 0.55);                // ridge catching the light
+  if ((x === 5 && y === Math.round(cy) - 3) || (x === 6 && y === Math.round(cy) - 4)) c = SEED_SPARK;   // glint
+  return c;
+}
+
+const SEED_SPRITES = {
+  // I: the anchor's gem on its own
+  gem: (x, y) => seedGem(x, y),
+  // II: the gem held in a small gold cradle like the anchor's claws, a rune glowing on its band
+  cradle: (x, y) => {
+    const band = (y === 12 && x >= 3 && x <= 12) || (y === 13 && x >= 4 && x <= 11), prong = (y >= 8 && y <= 11) && (x === 3 || x === 12) || (y >= 6 && y <= 7) && (x === 4 || x === 11);
+    if (band) return (y === 12 && (x === 6 || x === 9)) ? PK_RUNE : shade(GOLD, y === 13 ? 0.78 : 1.05);
+    if (prong) return shade(GOLD, x < 8 ? 1.1 : 0.85);
+    if (y === 14 && x >= 6 && x <= 9) return shade(GOLD, 0.65);
+    return seedGem(x, y, 4.6, 7);
+  },
+  // III: a shell of seed crystal around a core of starry night, the realm waiting to unfold
+  starseed: (x, y) => {
+    const g = seedGem(x, y);
+    if (!g) return null;
+    if (gemIn(x, y, 3.1)) {
+      const h = hash3(x, y, 22);
+      return h > 0.9 ? SEED_SPARK : h > 0.78 ? [90, 120, 230] : [14, 20, 44];
+    }
+    return g;
+  },
+};
+
+function seedDesign(d) {
+  const sprite = SEED_SPRITES[d.sprite];
+  return {
+    round: 22, kind: 'World Seed', bounds: { x0: -1, x1: 17, y0: 0, y1: 16 }, alwaysLive: true,
+    labels: ['In the inventory', 'Dropped'], sublabels: ['the sprite, flat', 'turning, as items do on the ground'],
+    hStory: 'The item', hChange: 'Where it ends up',
+    rift: VANILLA, light: 0x96f0ff, bloom: 0.35, glow: 1.0, pulse: 1.1, camLift: -0.55, labelY: 1.35, core: [8, 60, 8],   // keep the point light off the sprite
+    name: d.name, line: d.line, story: d.story, change: 'Used on a World Anchor it links the anchor to a new realm, and the same gem rises into the anchor\'s claws and floats there, turning.',
+    swatches: d.swatches,
+    interact: 'An item, not a block: hold it and right-click a World Anchor to link it.',
+    code: ['One 16 x 16 item texture (no 3D model); in the hand and on the ground Minecraft extrudes it one pixel thick, as shown on the right', ...(d.code || [])],
+    shape: () => null, paint: () => ({ c: [0, 0, 0] }), rifts: [],
+    extras(L, group) {
+      const part = voxPart({
+        bounds: { x0: 0, x1: 16, y0: 0, y1: 16 },
+        shape: (x, y, z) => z === 0 && sprite(x, 15 - y) ? 'p' : null,
+        paint: (k, x, y) => ({ c: sprite(x, 15 - y) }),
+        pivot: [8, 8, 0.5],
+      });
+      const holder = new THREE.Group();
+      holder.add(part);
+      holder.position.set(8 * PX, 8 * PX, 8 * PX);
+      part.position.set(0, 0, 0);
+      group.add(holder);
+      return t => {
+        if (!L) { holder.lookAt(camera.getWorldPosition(new THREE.Vector3())); return; }   // flat, facing you like an icon
+        holder.scale.setScalar(0.5);
+        holder.rotation.y = t * 0.9;
+        holder.position.y = (4 + Math.sin(t * 1.6) * 1) * PX;
+      };
+    },
+  };
+}
+
+const R22 = [
+  seedDesign({ sprite: 'gem', name: 'Seed Gem',
+    line: 'The seed from the anchor\'s claws, on its own.',
+    story: 'The same teal gem that floats in a linked World Anchor\'s claws, drawn as an item: four facets lit from the top left, a bright ridge down its middle, a glint near the tip, lighter toward the top like the anchor\'s seed.',
+    swatches: [['#a0ffd7', 'Seed tip'], ['#28c88c', 'Seed base'], ['#10463e', 'Rim'], ['#ebfff8', 'Glint']] }),
+  seedDesign({ sprite: 'cradle', name: 'Cradled Seed',
+    line: 'The gem held in a little gold cradle, like the anchor\'s claws.',
+    story: 'A smaller seed gem held by four gold prongs rising from a gold band, an echo of the claws on top of the World Anchor, with two cyan rune marks glowing on the band.',
+    swatches: [['#a0ffd7', 'Seed tip'], ['#28c88c', 'Seed base'], ['#d6a23c', 'Gold cradle'], ['#8cebff', 'Rune light']] }),
+  seedDesign({ sprite: 'starseed', name: 'Starseed',
+    line: 'A shell of seed crystal around a core of starry night: a realm waiting to unfold.',
+    story: 'The seed gem with its heart full of night sky: deep blue with scattered stars, like the starry sphere of a linked anchor, wrapped in the teal crystal.',
+    swatches: [['#a0ffd7', 'Seed tip'], ['#28c88c', 'Seed base'], ['#0e142c', 'Night core'], ['#5a78e6', 'Star blue']] }),
+];
+
+// ---------------------------------------------------------------------------
 // Designs
 // ---------------------------------------------------------------------------
 const DESIGNS = [
+  ...R22,
   ...R21,
   ...R20,
   ...R19,
@@ -5122,11 +5217,11 @@ addEventListener('resize', resize);
 const $ = id => document.getElementById(id);
 const press = (btn, on) => btn.setAttribute('aria-pressed', String(on));
 const state = { design: 0, view: 'vBoth', grid: false, motion: true, player: true };
-try { const saved = localStorage.getItem('anchorDesign21'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
+try { const saved = localStorage.getItem('anchorDesign22'); if (saved !== null && DESIGNS[+saved]) state.design = +saved; } catch (e) {}
 let anchors = [];
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-const CUR_ROUND = 21;
+const CUR_ROUND = 22;
 const cur = DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === CUR_ROUND);
 const byRound = n => DESIGNS.map((D, i) => [D, i]).filter(([D]) => D.round === n);
 cur.forEach(([D, i], n) => {
@@ -5137,7 +5232,7 @@ cur.forEach(([D, i], n) => {
   $('designButtons').appendChild(b);
 });
 $('earlier').append(new Option('Earlier rounds…', ''));
-for (const n of [20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+for (const n of [21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
   const og = document.createElement('optgroup'); og.label = 'Round ' + n;
   og.append(...byRound(n).map(([D, i]) => new Option(D.name, String(i))));
   $('earlier').append(og);
@@ -5146,7 +5241,7 @@ $('earlier').addEventListener('change', e => { if (e.target.value !== '') select
 
 function selectDesign(i) {
   state.design = i;
-  try { localStorage.setItem('anchorDesign21', String(i)); } catch (e) {}
+  try { localStorage.setItem('anchorDesign22', String(i)); } catch (e) {}
   bloomPass.strength = DESIGNS[i].bloom || 0.4;
   const D = DESIGNS[i];
   cur.forEach(([, j]) => press($('d' + j), j === i));
