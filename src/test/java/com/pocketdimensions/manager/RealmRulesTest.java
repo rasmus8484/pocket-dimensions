@@ -26,6 +26,15 @@ class RealmRulesTest {
     }
 
     @Test
+    void anAnchorMustLeaveRoomAboveItForASiegeBlock() {
+        assertTrue(RealmRules.roomForSiege(70, 319, 0f), "open air above");
+        assertTrue(RealmRules.roomForSiege(70, 319, 50f), "obsidian above: slow, but a siege can clear it");
+        assertFalse(RealmRules.roomForSiege(127, 255, -1f), "the Nether's bedrock ceiling");
+        assertTrue(RealmRules.roomForSiege(319, 319, 0f), "the very top of the world still fits a siege block");
+        assertFalse(RealmRules.roomForSiege(320, 319, 0f), "above the build limit");
+    }
+
+    @Test
     void onlyOwnersAndManagersSeeAccessAndManage() {
         assertTrue(RealmRules.canManage(OWNER));
         assertTrue(RealmRules.canManage(MANAGER));

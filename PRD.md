@@ -85,6 +85,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | AE-006 | DONE | Teleport bypass prevention | Same arrival check as AE-005 for /back, /home and modded teleports; the border's pull-back lands you on a free spot |
 | AE-007 | TODO | Chunk unload duplication | Prevent item/block duplication via chunk boundary exploits |
 | AE-008 | TODO | Hopper/dispenser anchor interaction | Prevent automation from extracting/placing anchors |
+| AE-009 | DONE | Unbesiegeable anchor placement | A World Anchor can't be placed where the siege spot above it (two above its foot) is unbreakable (hardness below zero: the Nether's bedrock ceiling, modded walls) or outside the world |
 
 ---
 
