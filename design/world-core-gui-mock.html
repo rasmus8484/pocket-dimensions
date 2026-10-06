@@ -3,21 +3,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Alegreya+Sans:wght@400;500;700&display=swap">
 <style>
-/* Layout: one game-scaled GUI in the middle of a dark stage, controls above it, notes beside it.
-   GUI pieces are sized in Minecraft GUI pixels and the whole panel is zoomed by a whole number. */
+/* Layout: one game-scaled GUI on a stage, switches above, notes beside it. GUI pieces are sized in Minecraft
+   GUI pixels and the GUI is zoomed by a whole number. Three styles share one structure:
+   core = a face of the Geode Heart itself, projection = a spell of light in front of it, mind = a vision in the void. */
 :root {
   color-scheme: dark;
-  --night: #0b0c12;        /* page ground */
-  --stone: #2b2a33;        /* weathered geode stone */
-  --stone-hi: #45434f;     /* bevel light */
-  --stone-lo: #15141b;     /* bevel shadow, sunken wells */
-  --parch: #e9e4d6;        /* text */
+  --night: #0b0c12;
+  --parch: #e9e4d6;
   --muted: #a39f94;
-  --gold: #d6a23c;         /* crown, owner */
+  --gold: #d6a23c;
   --gold-hi: #f6d98a;
   --danger: #ff5a46;
-  --accent: #8cebff;       /* siege state colour, swapped by the Siege switch */
+  --accent: #8cebff;        /* siege colour: crystal glow, runes */
   --accent-deep: #3c82ff;
+  --rock: #706c78;          /* the Geode Heart's weathered rock */
+  --rock-dark: #4a4752;
+  --tablet: #5b5765;        /* smooth rune-tablet stone */
+  --calcite: #dedfe4;
+  --lichen: #68785a;
   --font-pixel: "Pixelify Sans", "Courier New", monospace;
   --font-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
 }
@@ -25,122 +28,186 @@
 :root[data-siege="breaking"]  { --accent: #ffaa3c; --accent-deep: #ff5028; }
 [hidden] { display: none !important; }
 body { background: var(--night); color: var(--parch); font-family: var(--font-body); margin: 0; }
-.page { padding-inline: 16px; padding-block: 24px 40px; max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
-header h1 { font-family: var(--font-pixel); font-weight: 600; font-size: 1.6rem; margin: 0; color: var(--gold); letter-spacing: .02em; }
-header p { margin: 4px 0 0; color: var(--muted); max-width: 68ch; line-height: 1.45; }
-.controls { display: flex; flex-wrap: wrap; gap: 12px; }
-.seg { display: flex; gap: 2px; background: var(--stone-lo); border: 1px solid var(--stone-hi); padding: 3px; border-radius: 4px; align-items: center; }
-.seg span { font-size: .8rem; color: var(--muted); padding: 0 8px; text-transform: uppercase; letter-spacing: .08em; }
-.seg button { font: 500 .9rem var(--font-body); color: var(--muted); background: transparent; border: 0; padding: 6px 12px; border-radius: 3px; cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--stone); color: var(--parch); box-shadow: inset 0 -2px 0 var(--accent); }
+.page { padding-inline: 16px; padding-block: 24px 40px; max-width: 1120px; margin: 0 auto; display: grid; gap: 18px; }
+header h1 { font-family: var(--font-pixel); font-weight: 600; font-size: 1.6rem; margin: 0; color: var(--gold); }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; line-height: 1.45; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; }
+.seg { display: flex; flex-wrap: wrap; gap: 2px; background: #15141b; border: 1px solid #34323d; padding: 3px; border-radius: 4px; align-items: center; }
+.seg span { font-size: .78rem; color: var(--muted); padding: 0 8px; text-transform: uppercase; letter-spacing: .08em; }
+.seg button { font: 500 .9rem var(--font-body); color: var(--muted); background: transparent; border: 0; padding: 6px 11px; border-radius: 3px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: #2b2a33; color: var(--parch); box-shadow: inset 0 -2px 0 var(--accent); }
 .seg button:focus-visible, .gui :focus-visible { outline: 1px solid var(--gold-hi); outline-offset: 1px; }
-.stage-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 24px; align-items: start; }
+.stage-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 290px); gap: 24px; align-items: start; }
 @media (max-width: 860px) { .stage-row { grid-template-columns: minmax(0, 1fr); } }
-.stage { display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #1a1b26 0%, var(--night) 70%); border: 1px solid #1d1e28; border-radius: 6px; padding-block: 28px; overflow: hidden; min-width: 0; }
+.stage { position: relative; display: grid; place-items: center; border: 1px solid #1d1e28; border-radius: 6px; padding-block: 30px; overflow: hidden; min-width: 0; min-height: 560px; background: #101118; }
+.stage > canvas.bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
 .notes { font-size: .95rem; line-height: 1.5; min-width: 0; }
 .notes h2 { font-family: var(--font-pixel); font-weight: 600; font-size: 1rem; color: var(--gold); margin: 0 0 8px; }
-.notes ul { margin: 0 0 18px; padding-left: 18px; color: var(--parch); }
+.notes ul { margin: 0 0 18px; padding-left: 18px; }
 .notes li { margin-bottom: 6px; }
 .notes li b { color: var(--accent); font-weight: 500; }
 
-/* ------------------------------------------------------------------ the GUI (Minecraft GUI pixels) */
-.gui { --z: 3; zoom: var(--z); width: 248px; position: relative; font-family: var(--font-pixel); font-size: 8px; line-height: 9px; color: var(--parch); image-rendering: pixelated; user-select: none; }
-.tabs { display: flex; gap: 2px; padding-left: 6px; position: relative; z-index: 2; }
-.tab { font: 600 8px var(--font-pixel); color: var(--muted); background: var(--stone-lo); border: 0; height: 18px; padding: 0 9px; margin-top: 3px; cursor: pointer;
-  box-shadow: inset 1px 1px 0 var(--stone-hi), inset -1px 0 0 #0a0a0e; display: flex; align-items: center; gap: 4px; }
-.tab[aria-selected="true"] { background: var(--stone); color: var(--parch); height: 22px; margin-top: 0; margin-bottom: -2px; box-shadow: inset 1px 1px 0 var(--stone-hi), inset -1px 0 0 #0a0a0e, inset 0 2px 0 var(--accent); }
-.tab .gem { width: 4px; height: 4px; background: var(--accent); box-shadow: 0 0 2px var(--accent); }
-.tab[aria-selected="false"] .gem { background: #4a4855; box-shadow: none; }
-.panel { position: relative; background-color: var(--stone); background-image: var(--noise); background-size: 64px 64px;
-  box-shadow: inset 1px 1px 0 var(--stone-hi), inset -1px -1px 0 #0a0a0e, inset 2px 2px 0 #34323d, inset -2px -2px 0 #1c1b22; padding: 7px 8px 8px; min-height: 196px; }
-.corner { position: absolute; width: 5px; height: 5px; background: var(--accent); box-shadow: 0 0 3px var(--accent); }
-.corner.tl { top: 2px; left: 2px; } .corner.tr { top: 2px; right: 2px; } .corner.bl { bottom: 2px; left: 2px; } .corner.br { bottom: 2px; right: 2px; }
-.titlebar { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #1c1b22; box-shadow: 0 1px 0 var(--stone-hi); }
-.titlebar .name { font-weight: 600; color: var(--gold-hi); text-shadow: 1px 1px 0 #3a2a08; }
-.pill { padding: 1px 4px 2px; background: var(--stone-lo); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-deep); white-space: nowrap; }
-.well { background: var(--stone-lo); box-shadow: inset 1px 1px 0 #08080b, inset -1px -1px 0 var(--stone-hi); }
-.label { color: var(--muted); }
-.shadow { text-shadow: 1px 1px 0 #000; }
-.btn { font: 600 8px var(--font-pixel); color: var(--parch); background: #3d3b47; border: 0; padding: 3px 6px 4px; cursor: pointer; text-shadow: 1px 1px 0 #000;
-  box-shadow: inset 1px 1px 0 #6a6777, inset -1px -1px 0 #121117, 0 0 0 1px #08080b; }
-.btn:hover { background: #4a4857; box-shadow: inset 1px 1px 0 var(--accent), inset -1px -1px 0 #121117, 0 0 0 1px #08080b; }
-.btn.danger { background: #5b2420; box-shadow: inset 1px 1px 0 #a04a3c, inset -1px -1px 0 #1c0806, 0 0 0 1px #08080b; }
-.btn.danger:hover { background: #742c26; }
+/* ------------------------------------------------------------------ shared GUI structure (GUI pixels) */
+.gui { --z: 3; zoom: var(--z); width: 248px; position: relative; z-index: 1; font-family: var(--font-pixel); font-size: 8px; line-height: 9px; color: var(--parch); user-select: none; }
+.gui canvas { image-rendering: pixelated; }
+.tabs { display: flex; gap: 3px; padding-left: 8px; position: relative; z-index: 2; }
+.tab { font: 600 8px var(--font-pixel); border: 0; height: 18px; padding: 0 8px; margin-top: 3px; cursor: pointer; display: flex; align-items: center; gap: 4px; background: none; color: inherit; }
+.tab[aria-selected="true"] { height: 21px; margin-top: 0; }
+.tab canvas { width: 7px; height: 7px; }
+.panel { position: relative; padding: 9px 10px 10px; min-height: 196px; }
+.panel > canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.panel > *:not(canvas) { position: relative; }
+.titlebar { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; padding-bottom: 5px; }
+.titlebar .name { font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.pill { padding: 1px 4px 2px; white-space: nowrap; }
+.label, .hint { color: var(--muted); }
+.btn { font: 600 8px var(--font-pixel); border: 0; padding: 3px 6px 4px; cursor: pointer; color: inherit; background: none; }
 .btn[disabled] { opacity: .45; cursor: default; }
-.field { font: 400 8px var(--font-pixel); color: var(--parch); background: #000; border: 0; padding: 3px 4px; box-shadow: inset 0 0 0 1px #a39f94; width: 100%; box-sizing: border-box; }
-.field:focus { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
-.face { width: 8px; height: 8px; display: block; flex: none; box-shadow: 0 0 0 1px #000; }
-canvas.face { image-rendering: pixelated; }
-
-/* overview */
-.ov { display: grid; grid-template-columns: 1fr 64px; gap: 8px; }
+.field { font: 400 8px var(--font-pixel); border: 0; padding: 3px 4px; width: 100%; box-sizing: border-box; }
+.field:focus { outline: none; }
+.face { width: 8px; height: 8px; display: block; flex: none; }
+.ov { display: grid; grid-template-columns: 1fr 64px; gap: 7px; }
 .status { padding: 5px 6px; display: grid; gap: 3px; }
-.status .big { font-size: 8px; font-weight: 600; color: var(--accent); text-shadow: 0 0 3px var(--accent-deep); }
-.facts { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; row-gap: 2px; margin-top: 2px; }
+.status .big { font-weight: 600; color: var(--accent); }
+.facts { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; row-gap: 2px; margin: 2px 0 0; }
 .facts dt { color: var(--muted); } .facts dd { margin: 0; display: flex; gap: 3px; align-items: center; }
 .fuelbox { padding: 5px 4px; display: grid; justify-items: center; gap: 4px; text-align: center; }
-.slot { width: 18px; height: 18px; position: relative; background: #8b8b8b; box-shadow: inset 1px 1px 0 #373737, inset -1px -1px 0 #fff; display: grid; place-items: center; }
-.slot .count { position: absolute; right: 0; bottom: -1px; font-size: 8px; color: #fff; text-shadow: 1px 1px 0 #3f3f3f; }
-.gauge { width: 10px; height: 34px; position: relative; background: #0a0a10; box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #2a2935; }
-.gauge i { position: absolute; left: 1px; right: 1px; bottom: 1px; background: linear-gradient(var(--accent), var(--accent-deep)); box-shadow: 0 0 3px var(--accent); }
+.slot { width: 18px; height: 18px; position: relative; display: grid; place-items: center; }
+.slot .count { position: absolute; right: 0; bottom: -1px; color: #fff; text-shadow: 1px 1px 0 #3f3f3f; }
+.gauge { width: 10px; height: 34px; position: relative; }
+.gauge i { position: absolute; left: 2px; right: 2px; bottom: 2px; background: linear-gradient(var(--accent), var(--accent-deep)); }
 .online { margin-top: 6px; padding: 4px 5px; }
 .online-row { display: flex; flex-wrap: wrap; gap: 3px 8px; margin-top: 3px; }
 .online-row span { display: flex; gap: 3px; align-items: center; }
-.inv { margin-top: 7px; display: grid; grid-template-columns: repeat(9, 18px); gap: 0; justify-content: center; }
-.inv .slot { width: 18px; height: 18px; }
+.inv { margin-top: 7px; display: grid; grid-template-columns: repeat(9, 18px); justify-content: center; }
 .inv .hot { margin-top: 4px; }
-
-/* access */
 .addrow { display: grid; grid-template-columns: 1fr auto auto; gap: 3px; align-items: center; }
-.list { margin-top: 5px; height: 112px; overflow-y: auto; padding: 2px; scrollbar-width: thin; scrollbar-color: #6a6777 #0a0a0e; }
+.list { margin-top: 5px; height: 112px; overflow-y: auto; padding: 2px; scrollbar-width: thin; }
 .row { display: grid; grid-template-columns: 8px 1fr 11px 9px; gap: 5px; align-items: center; height: 14px; padding: 0 3px; }
-.row:nth-child(odd) { background: rgba(255,255,255,.03); }
-.row:hover { background: rgba(140,235,255,.07); }
 .row .who { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .row .role { color: var(--gold); }
 .crown { width: 11px; height: 8px; border: 0; padding: 0; background: transparent; cursor: pointer; display: block; }
 .crown svg { display: block; width: 11px; height: 8px; }
 .crown[disabled] { cursor: default; }
-.x { color: #c9443a; background: none; border: 0; font: 600 8px var(--font-pixel); cursor: pointer; padding: 0; width: 9px; text-align: center; }
-.x:hover { color: var(--danger); }
+.x { color: #e0574a; background: none; border: 0; font: 600 8px var(--font-pixel); cursor: pointer; padding: 0; width: 9px; text-align: center; }
 .count-line { margin-top: 4px; display: flex; justify-content: space-between; }
-.popup { position: absolute; inset: 22px 10px 10px; z-index: 5; padding: 6px; background: var(--stone-lo); box-shadow: 0 0 0 1px #000, inset 0 0 0 1px var(--accent-deep), 0 4px 0 rgba(0,0,0,.5); display: grid; grid-template-rows: auto 1fr auto; gap: 5px; }
-.popup h3 { margin: 0; font: 600 8px var(--font-pixel); color: var(--accent); }
+.popup { position: absolute; inset: 24px 12px 12px; z-index: 5; padding: 6px; display: grid; grid-template-rows: auto 1fr auto; gap: 5px; }
+.popup h3, .section h4, .modal h3 { margin: 0; font: 600 8px var(--font-pixel); }
 .plist { overflow-y: auto; }
 .prow { display: grid; grid-template-columns: 8px 1fr auto; gap: 5px; align-items: center; height: 15px; padding: 0 2px; }
-.prow .done { color: var(--muted); }
-
-/* manage */
 .section { padding: 6px; display: grid; gap: 4px; }
 .section + .section { margin-top: 6px; }
-.section h4 { margin: 0; font: 600 8px var(--font-pixel); color: var(--gold-hi); }
 .namerow { display: grid; grid-template-columns: 1fr auto; gap: 3px; }
-.hint { color: var(--muted); }
-.danger-zone { box-shadow: inset 0 0 0 1px #6b2a24; }
-.danger-zone h4 { color: var(--danger); }
-.saved { color: var(--accent); }
-.modal { position: absolute; inset: 0; z-index: 10; background: rgba(5,4,8,.78); display: grid; place-items: center; }
-.modal .box { width: 196px; padding: 8px; background: #241212; box-shadow: 0 0 0 1px #000, inset 0 0 0 1px var(--danger), inset 0 0 0 2px #3a1612; display: grid; gap: 5px; }
-.modal h3 { margin: 0; font: 600 8px var(--font-pixel); color: var(--danger); }
-.modal ul { margin: 0; padding-left: 9px; color: var(--parch); }
+.modal { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; }
+.modal .box { width: 196px; padding: 8px; display: grid; gap: 5px; }
+.modal ul { margin: 0; padding-left: 9px; }
 .modal .actions { display: flex; justify-content: flex-end; gap: 4px; }
-@media (prefers-reduced-motion: no-preference) {
-  .corner, .tab[aria-selected="true"] .gem { animation: pulse 3.2s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .55; } }
-}
+
+/* ------------------------------------------------------------------ CORE FACE: a face of the Geode Heart */
+[data-style="core"] .stage { background: #14131a; }
+[data-style="core"] .panel { background: linear-gradient(rgba(104,120,88,.55), rgba(104,120,88,0) 14px), var(--rock-tex), var(--rock);
+  clip-path: var(--rough, none); padding: 17px 17px 17px; }
+[data-style="core"] .panel::before { content: ""; position: absolute; inset: 9px; pointer-events: none;   /* the hollow: calcite rim, crystal lining */
+  box-shadow: 0 0 0 1px var(--calcite), 0 0 0 2px #b9bac2, inset 0 0 0 1px var(--accent), inset 0 0 6px var(--accent-deep); background: rgba(22,20,30,.82); }
+[data-style="core"] .tab { background: var(--tablet); color: #cfcad8; box-shadow: inset 1px 1px 0 #7a7684, inset -1px 0 0 #2e2b35; }
+[data-style="core"] .tab[aria-selected="true"] { color: var(--accent); text-shadow: 0 0 3px var(--accent-deep); background: #6a6674; }
+[data-style="core"] .titlebar { border-bottom: 1px dotted #6f6a7a; }
+[data-style="core"] .titlebar .name { color: var(--calcite); }
+[data-style="core"] .pill { color: var(--accent); background: #1a1822; box-shadow: inset 0 0 0 1px var(--accent-deep); text-shadow: 0 0 3px var(--accent-deep); }
+[data-style="core"] .well { background: var(--tablet); box-shadow: inset 1px 1px 0 #3a3742, inset -1px -1px 0 #7b7786, 0 0 0 1px #2c2a33; }   /* smooth rune tablets set in the hollow */
+[data-style="core"] .status .big { text-shadow: 0 0 3px var(--accent-deep); }
+[data-style="core"] .btn { background: #77737f; color: #1f1c26; box-shadow: inset 1px 1px 0 #9a96a3, inset -1px -1px 0 #46434e, 0 0 0 1px #24222b; }
+[data-style="core"] .btn:hover { color: var(--accent); background: #4f4b58; text-shadow: 0 0 3px var(--accent-deep); box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 1px #24222b; }
+[data-style="core"] .btn.danger { background: #6b3a34; color: #ffd8d0; }
+[data-style="core"] .field { background: #2a2731; color: var(--calcite); box-shadow: inset 1px 1px 0 #17151c, inset -1px -1px 0 #6a6674; }
+[data-style="core"] .field:focus { box-shadow: inset 0 0 0 1px var(--accent); }
+[data-style="core"] .slot { background: #1a1822; box-shadow: 0 0 0 1px var(--calcite), inset 0 0 0 1px var(--accent), inset 0 0 4px var(--accent-deep); }
+[data-style="core"] .gauge { background: #1a1822; box-shadow: 0 0 0 1px var(--calcite), inset 0 0 0 1px #3a3742; }
+[data-style="core"] .gauge i { box-shadow: 0 0 3px var(--accent); }
+[data-style="core"] .face { box-shadow: 0 0 0 1px var(--calcite); }
+[data-style="core"] .row:hover { background: rgba(140,235,255,.08); }
+[data-style="core"] .popup, [data-style="core"] .modal .box { background: var(--tablet); box-shadow: 0 0 0 1px var(--calcite), 0 0 0 2px #2a2830, inset 0 0 0 1px var(--accent-deep); }
+[data-style="core"] .popup h3 { color: var(--accent); }
+[data-style="core"] .section h4 { color: var(--calcite); }
+[data-style="core"] .danger-zone h4, [data-style="core"] .modal h3 { color: #ff8a78; }
+[data-style="core"] .modal { background: rgba(10,8,14,.72); }
+
+/* ------------------------------------------------------------------ PROJECTION: a spell of light in front of the core */
+[data-style="projection"] .panel { background: color-mix(in srgb, var(--accent) 7%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 8px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 14px color-mix(in srgb, var(--accent) 18%, transparent); }
+[data-style="projection"] .gui { color: #e6fbff; text-shadow: 0 0 3px color-mix(in srgb, var(--accent) 80%, transparent); }
+[data-style="projection"] .tab { color: color-mix(in srgb, var(--accent) 70%, #fff); opacity: .65; box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+[data-style="projection"] .tab[aria-selected="true"] { opacity: 1; background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent); }
+[data-style="projection"] .titlebar { border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+[data-style="projection"] .titlebar .name { color: #fff; }
+[data-style="projection"] .pill { color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent); }
+[data-style="projection"] .label, [data-style="projection"] .hint, [data-style="projection"] .facts dt { color: color-mix(in srgb, var(--accent) 55%, #9aa); }
+[data-style="projection"] .well { background: color-mix(in srgb, var(--accent) 5%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent); }
+[data-style="projection"] .btn { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 65%, transparent); color: #fff; }
+[data-style="projection"] .btn:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+[data-style="projection"] .btn.danger { box-shadow: inset 0 0 0 1px #ff6a5a; color: #ffd0c8; text-shadow: 0 0 3px #ff5a46; }
+[data-style="projection"] .field { background: color-mix(in srgb, var(--accent) 6%, transparent); color: #fff; box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 70%, transparent); }
+[data-style="projection"] .slot { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 5px color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+[data-style="projection"] .gauge { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+[data-style="projection"] .gauge i { opacity: .85; box-shadow: 0 0 4px var(--accent); }
+[data-style="projection"] .face { opacity: .9; box-shadow: 0 0 3px var(--accent); }
+[data-style="projection"] .row:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+[data-style="projection"] .popup, [data-style="projection"] .modal .box { background: rgba(8,20,30,.82); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent), 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent); }
+[data-style="projection"] .modal .box { box-shadow: inset 0 0 0 1px #ff6a5a, 0 0 10px rgba(255,90,70,.4); background: rgba(30,8,8,.85); }
+[data-style="projection"] .popup h3, [data-style="projection"] .section h4 { color: var(--accent); }
+[data-style="projection"] .modal h3, [data-style="projection"] .danger-zone h4 { color: #ff8a78; }
+[data-style="projection"] .modal { background: rgba(0,0,0,.35); }
+
+/* ------------------------------------------------------------------ MIND'S EYE: a vision in the starry void */
+[data-style="mind"] .stage { background: #04040a; }
+[data-style="mind"] .gui { color: #ddd6f6; text-shadow: 0 0 4px rgba(170,150,255,.45); }
+[data-style="mind"] .tabs { justify-content: center; padding-left: 0; gap: 14px; margin-bottom: 4px; }
+[data-style="mind"] .tab { color: #8a82a8; flex-direction: column; height: auto; margin-top: 0; padding: 0 2px; gap: 2px; }
+[data-style="mind"] .tab[aria-selected="true"] { color: #fff; text-shadow: 0 0 4px var(--accent); }
+[data-style="mind"] .tab canvas { width: 7px; height: 7px; }
+[data-style="mind"] .panel { background: radial-gradient(ellipse at 50% 45%, rgba(120,100,220,.10), transparent 70%); padding-top: 6px; }
+[data-style="mind"] .titlebar { justify-content: center; flex-direction: column; gap: 3px; border-bottom: 0; }
+[data-style="mind"] .titlebar .name { color: #fff; letter-spacing: 1px; }
+[data-style="mind"] .pill { color: var(--accent); text-shadow: 0 0 4px var(--accent); }
+[data-style="mind"] .label, [data-style="mind"] .hint, [data-style="mind"] .facts dt { color: #8a82a8; }
+[data-style="mind"] .well { background: radial-gradient(ellipse at 50% 50%, rgba(140,120,255,.08), transparent 75%); box-shadow: 0 -1px 0 rgba(200,190,255,.12), 0 1px 0 rgba(200,190,255,.12); }
+[data-style="mind"] .btn { color: #e8e2ff; box-shadow: inset 0 0 0 1px rgba(200,190,255,.35); }
+[data-style="mind"] .btn:hover { color: #fff; box-shadow: inset 0 0 0 1px var(--accent), 0 0 4px var(--accent); }
+[data-style="mind"] .btn.danger { color: #ffb3a8; box-shadow: inset 0 0 0 1px rgba(255,120,100,.55); }
+[data-style="mind"] .field { background: transparent; color: #fff; box-shadow: inset 0 -1px 0 rgba(200,190,255,.4); }
+[data-style="mind"] .field:focus { box-shadow: inset 0 -1px 0 var(--accent); }
+[data-style="mind"] .slot { border-radius: 50%; box-shadow: 0 0 0 1px rgba(200,190,255,.4), 0 0 6px rgba(140,120,255,.35); }
+[data-style="mind"] .gauge { box-shadow: 0 0 0 1px rgba(200,190,255,.3); border-radius: 5px; }
+[data-style="mind"] .gauge i { border-radius: 3px; box-shadow: 0 0 4px var(--accent); }
+[data-style="mind"] .face { box-shadow: 0 0 4px rgba(170,150,255,.6); }
+[data-style="mind"] .row:hover { background: radial-gradient(ellipse, rgba(170,150,255,.12), transparent 80%); }
+[data-style="mind"] .popup, [data-style="mind"] .modal .box { background: radial-gradient(ellipse at 50% 30%, #1a1530, #08070f 80%); box-shadow: 0 0 12px rgba(120,100,220,.35); }
+[data-style="mind"] .popup h3, [data-style="mind"] .section h4 { color: #fff; }
+[data-style="mind"] .modal h3, [data-style="mind"] .danger-zone h4 { color: #ff9c8c; }
+[data-style="mind"] .modal { background: rgba(2,2,6,.7); }
+[data-style="mind"] .inv { opacity: .9; }
+[data-style="mind"] .inv .slot { border-radius: 0; box-shadow: inset 0 0 0 1px rgba(200,190,255,.18); }
+[data-style="core"] .inv .slot, [data-style="projection"] .inv .slot { box-shadow: inset 1px 1px 0 rgba(0,0,0,.4), inset -1px -1px 0 rgba(255,255,255,.12); background: rgba(255,255,255,.05); }
+@media (prefers-reduced-motion: reduce) { .gui * { transition: none !important; } }
 </style>
 
 <div class="page">
   <header>
     <h1>World Core Interface</h1>
-    <p>A mock of the Geode Heart's screen, opened by crouching and right-clicking the World Core. Click through the tabs; everything here can be drawn with Minecraft's own screen tools, no extra mod.</p>
+    <p>The Geode Heart's screen, opened by crouching and right-clicking the World Core, in three directions: a face of the core itself, a spell of light in front of it, or a vision in your mind's eye. Click through the tabs.</p>
   </header>
 
   <div class="controls">
+    <div class="seg" role="group" aria-label="Style">
+      <span>Style</span>
+      <button data-style-btn="core" aria-pressed="true">Core face</button>
+      <button data-style-btn="projection" aria-pressed="false">Projection</button>
+      <button data-style-btn="mind" aria-pressed="false">Mind's eye</button>
+    </div>
     <div class="seg" role="group" aria-label="View as">
       <span>View as</span>
-      <button id="asOwner" aria-pressed="true">Owner</button>
-      <button id="asManager" aria-pressed="false">Manager</button>
+      <button data-viewer="owner" aria-pressed="true">Owner</button>
+      <button data-viewer="manager" aria-pressed="false">Manager</button>
+      <button data-viewer="visitor" aria-pressed="false">Ordinary player</button>
     </div>
     <div class="seg" role="group" aria-label="Siege state">
       <span>Siege</span>
@@ -151,21 +218,21 @@ canvas.face { image-rendering: pixelated; }
   </div>
 
   <div class="stage-row">
-    <div class="stage">
+    <div class="stage" id="stage">
+      <canvas class="bg" id="bg"></canvas>
       <div class="gui" id="gui">
         <div class="tabs" role="tablist">
-          <button class="tab" role="tab" id="tab-overview" aria-selected="true" aria-controls="p-overview"><i class="gem"></i>Overview</button>
-          <button class="tab" role="tab" id="tab-access" aria-selected="false" aria-controls="p-access"><i class="gem"></i>Access</button>
-          <button class="tab" role="tab" id="tab-manage" aria-selected="false" aria-controls="p-manage"><i class="gem"></i>Manage</button>
+          <button class="tab" role="tab" id="tab-overview" aria-selected="true" aria-controls="p-overview"><canvas data-icon="eye"></canvas>Overview</button>
+          <button class="tab" role="tab" id="tab-access" aria-selected="false" aria-controls="p-access"><canvas data-icon="key"></canvas>Access</button>
+          <button class="tab" role="tab" id="tab-manage" aria-selected="false" aria-controls="p-manage"><canvas data-icon="crown"></canvas>Manage</button>
         </div>
-        <div class="panel">
-          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div class="panel" id="panel">
+          <canvas class="fx" id="fx"></canvas>
           <div class="titlebar">
-            <span class="name" id="realmTitle">Hollowmere</span>
+            <span class="name"><canvas data-icon="rune0" style="width:5px;height:7px"></canvas><span id="realmTitle">Hollowmere</span><canvas data-icon="rune3" style="width:5px;height:7px"></canvas></span>
             <span class="pill" id="statePill">At peace</span>
           </div>
 
-          <!-- OVERVIEW -->
           <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
             <div class="ov">
               <div class="well status">
@@ -180,8 +247,8 @@ canvas.face { image-rendering: pixelated; }
               </div>
               <div class="well fuelbox">
                 <span class="label">Ward</span>
-                <div class="slot" title="Lapis lazuli (drop lapis here)"><canvas id="lapis" width="16" height="16" style="width:16px;height:16px"></canvas><span class="count">24</span></div>
-                <div class="gauge" title="Lapis left: 24, about 4 minutes of warding"><i style="height:38%"></i></div>
+                <div class="slot" id="fuelSlot" title="Lapis lazuli"><canvas id="lapis" width="16" height="16" style="width:16px;height:16px"></canvas><span class="count">24</span></div>
+                <div class="gauge" title="24 lapis, about 4 minutes of warding"><i style="height:38%"></i></div>
                 <span class="hint">4m 0s</span>
               </div>
             </div>
@@ -189,12 +256,10 @@ canvas.face { image-rendering: pixelated; }
               <span class="label">In the realm now </span><span>(3)</span>
               <div class="online-row" id="onlineRow"></div>
             </div>
-            <div class="inv" aria-label="Your inventory">
-              <div id="invGrid" style="display:contents"></div>
-            </div>
+            <div class="hint" id="visitorNote" style="margin-top:4px" hidden>You can add lapis to the ward, but only the owner and managers can take it out.</div>
+            <div class="inv" aria-label="Your inventory" id="invGrid"></div>
           </section>
 
-          <!-- ACCESS -->
           <section id="p-access" role="tabpanel" aria-labelledby="tab-access" hidden>
             <div class="addrow">
               <input class="field" id="nameInput" placeholder="Player name" maxlength="16" autocomplete="off">
@@ -210,7 +275,6 @@ canvas.face { image-rendering: pixelated; }
             </div>
           </section>
 
-          <!-- MANAGE -->
           <section id="p-manage" role="tabpanel" aria-labelledby="tab-manage" hidden>
             <div class="well section">
               <h4>Realm name</h4>
@@ -229,15 +293,13 @@ canvas.face { image-rendering: pixelated; }
               <span class="hint">Start over in a new, untouched place. Everything in this realm is lost.</span>
               <div><button class="btn danger" id="relocateBtn">Relocate</button></div>
             </div>
-            <div class="well section" id="ownerOnly" hidden>
-              <span class="hint">Only the owner can relocate the realm.</span>
-            </div>
+            <div class="well section" id="ownerOnly" hidden><span class="hint">Only the owner can relocate the realm.</span></div>
           </section>
 
           <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
             <div class="box">
               <h3 id="confirmTitle">Relocate Hollowmere?</h3>
-              <span>A new realm is grown somewhere else. This one is lost forever:</span>
+              <span>A new realm grows somewhere else. This one is lost forever:</span>
               <ul>
                 <li>every block built or mined</li>
                 <li>every chest and what is in it</li>
@@ -255,19 +317,13 @@ canvas.face { image-rendering: pixelated; }
     </div>
 
     <aside class="notes">
+      <h2 id="styleTitle">Core face</h2>
+      <ul id="styleNotes"></ul>
       <h2>Who sees what</h2>
       <ul>
         <li><b>Owner</b>: all three tabs, can crown and uncrown managers, can relocate.</li>
-        <li><b>Managers</b>: all three tabs, can add and remove ordinary players and rename the realm. Crowns are read-only for them and they can't remove each other.</li>
-        <li><b>Everyone else</b>: crouch-clicking the core shows the sealed message, as now.</li>
-      </ul>
-      <h2>How it maps to the game</h2>
-      <ul>
-        <li>Panel, tabs and buttons: our own nine-slice sprites, so they stay crisp at every GUI scale.</li>
-        <li>Faces: the player's real skin face, the same one the tab list uses.</li>
-        <li>Your inventory only shows on Overview, where the lapis slot is.</li>
-        <li>The relocate button waits three seconds before it can be pressed.</li>
-        <li>Text uses Minecraft's own font in game.</li>
+        <li><b>Managers</b>: all three tabs, can add and remove ordinary players and rename the realm. Crowns are read-only for them.</li>
+        <li><b>Ordinary players</b> (anyone allowed in): only Overview. They can add lapis to the ward but not take it out.</li>
       </ul>
     </aside>
   </div>
@@ -277,74 +333,95 @@ canvas.face { image-rendering: pixelated; }
 (() => {
   const $ = id => document.getElementById(id);
   const root = document.documentElement;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function hash(x, y, s) { let n = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(s | 0, 1274126177); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967295; }
+  const css = v => getComputedStyle(root).getPropertyValue(v).trim();
 
-  // ---- stone noise and small pixel art (canvas, so nothing is fetched) ----
-  function hash(x, y, s) { let n = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(s, 1274126177); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967295; }
-  const noise = document.createElement('canvas'); noise.width = noise.height = 64;
-  { const g = noise.getContext('2d'); for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) { const h = hash(x, y, 3); if (h > 0.55) { g.fillStyle = h > 0.85 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.14)'; g.fillRect(x, y, 1, 1); } } }
-  root.style.setProperty('--noise', `url(${noise.toDataURL()})`);
+  // The anchors' own rune alphabet (4 x 5 glyphs)
+  const GLYPHS = [['XXXX','X...','XXX.','...X','XXXX'],['.XX.','X..X','.XX.','..X.','XXX.'],['X.X.','XXXX','X.X.','..X.','..XX'],
+                  ['XXX.','..X.','XXXX','.X..','XX..'],['X..X','X.X.','XX..','X.X.','X..X'],['.X..','XXX.','.X.X','...X','..XX']];
 
+  // ---- weathered rock texture, like the Geode Heart's (with lichen) ----
+  const rock = document.createElement('canvas'); rock.width = rock.height = 48;
+  { const g = rock.getContext('2d');
+    for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) {
+      const h = hash(x, y, 5), b = hash(x >> 2, y >> 2, 6);
+      let c = [112, 108, 120].map(v => v * (0.84 + h * 0.18) * (b > 0.82 ? 0.8 : 1));
+      if (hash(x >> 1, y >> 1, 8) > 0.9) c = [104, 120, 88].map(v => v * (0.9 + h * 0.2));      // lichen
+      if (hash(x, y >> 3, 9) > 0.985) c = c.map(v => v * 0.6);                                    // hairline cracks
+      g.fillStyle = `rgb(${c.map(Math.round).join(',')})`; g.fillRect(x, y, 1, 1);
+    } }
+  root.style.setProperty('--rock-tex', `url(${rock.toDataURL()}) 0 0 / 48px 48px`);
+
+  // ---- small pixel icons ----
+  const ICONS = {
+    eye: ['..XXX..', '.X...X.', 'X..X..X', 'X.XXX.X', 'X..X..X', '.X...X.', '..XXX..'],
+    key: ['.XXX...', 'X...X..', 'X...X..', '.XXX...', '..X....', '..XX...', '..XXX..'].map(r => r),
+    crown: ['.......', 'X..X..X', 'XX.X.XX', 'XXXXXXX', 'XXXXXXX', '.......', '.......'],
+  };
+  function drawIcons() {
+    const acc = css('--accent'), gold = css('--gold');
+    document.querySelectorAll('canvas[data-icon]').forEach(c => {
+      const k = c.dataset.icon, rune = k.startsWith('rune');
+      const pat = rune ? GLYPHS[+k.slice(4)] : ICONS[k];
+      c.width = rune ? 4 : 7; c.height = rune ? 5 : 7;
+      const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+      const on = c.closest('.tab')?.getAttribute('aria-selected') === 'true';
+      g.fillStyle = rune ? acc : (k === 'crown' ? gold : (on ? acc : '#9a95a6'));
+      pat.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === 'X') g.fillRect(x, y, 1, 1); }));
+    });
+  }
+
+  // ---- faces and lapis ----
   const SKIN = ['#e0ac80', '#c68a5e', '#8d5a3b', '#f2c9a0', '#6b4128'], HAIR = ['#3b2414', '#1c1410', '#d9b45a', '#a33a22', '#6d6d78', '#f0eee6'], EYE = ['#3f6ad6', '#2f8a4a', '#5a3a20', '#7a3fb0'];
   function face(c, name) {
     let s = 0; for (const ch of name) s = (s * 31 + ch.charCodeAt(0)) | 0;
     const r = k => hash(s, k, 7), pick = (a, k) => a[Math.floor(r(k) * a.length)];
     c.width = c.height = 8; const g = c.getContext('2d');
-    const skin = pick(SKIN, 1), hair = pick(HAIR, 2), eye = pick(EYE, 3), fringe = 2 + Math.floor(r(4) * 2);
-    g.fillStyle = skin; g.fillRect(0, 0, 8, 8);
-    g.fillStyle = hair; g.fillRect(0, 0, 8, fringe); g.fillRect(0, 0, 1, 5); g.fillRect(7, 0, 1, 5);
+    g.fillStyle = pick(SKIN, 1); g.fillRect(0, 0, 8, 8);
+    const hair = pick(HAIR, 2); g.fillStyle = hair; g.fillRect(0, 0, 8, 2 + Math.floor(r(4) * 2)); g.fillRect(0, 0, 1, 5); g.fillRect(7, 0, 1, 5);
     g.fillStyle = '#fff'; g.fillRect(1, 4, 2, 1); g.fillRect(5, 4, 2, 1);
-    g.fillStyle = eye; g.fillRect(2, 4, 1, 1); g.fillRect(5, 4, 1, 1);
-    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(3, 5, 2, 1);
+    g.fillStyle = pick(EYE, 3); g.fillRect(2, 4, 1, 1); g.fillRect(5, 4, 1, 1);
     g.fillStyle = r(5) > 0.6 ? hair : '#7a4a3a'; g.fillRect(2, 6, 4, 1);
   }
-  const lapis = $('lapis').getContext('2d');
-  [[6,3],[7,3],[8,3],[5,4],[6,4],[7,4],[8,4],[9,4],[4,5],[5,5],[6,5],[7,5],[8,5],[9,5],[10,5],[4,6],[5,6],[6,6],[7,6],[8,6],[9,6],[10,6],[5,7],[6,7],[7,7],[8,7],[9,7],[10,7],[11,7],[6,8],[7,8],[8,8],[9,8],[10,8],[11,8],[7,9],[8,9],[9,9],[10,9],[8,10],[9,10]]
-    .forEach(([x, y], i) => { lapis.fillStyle = hash(x, y, 9) > 0.7 ? '#7fa3ff' : (x + y) % 3 ? '#2a52be' : '#1b3a8f'; lapis.fillRect(x, y + 2, 1, 1); });
+  const paintFaces = scope => scope.querySelectorAll('canvas[data-face]').forEach(c => face(c, c.dataset.face));
+  { const g = $('lapis').getContext('2d');
+    [[6,3],[7,3],[8,3],[5,4],[6,4],[7,4],[8,4],[9,4],[4,5],[5,5],[6,5],[7,5],[8,5],[9,5],[10,5],[4,6],[5,6],[6,6],[7,6],[8,6],[9,6],[10,6],[5,7],[6,7],[7,7],[8,7],[9,7],[10,7],[11,7],[6,8],[7,8],[8,8],[9,8],[10,8],[11,8],[7,9],[8,9],[9,9],[10,9],[8,10],[9,10]]
+      .forEach(([x, y]) => { g.fillStyle = hash(x, y, 9) > 0.7 ? '#7fa3ff' : (x + y) % 3 ? '#2a52be' : '#1b3a8f'; g.fillRect(x, y + 2, 1, 1); }); }
 
-  // ---- example realm data ----
+  // ---- example realm ----
   const OWNER = 'Wayfarer';
-  let people = [
-    { name: 'Thornwick', manager: true },
-    { name: 'PixelMara', manager: false },
-    { name: 'Brask', manager: false },
-    { name: 'ivy_lantern', manager: true },
-    { name: 'Oakheart', manager: false },
-  ];
+  let people = [{ name: 'Thornwick', manager: true }, { name: 'PixelMara', manager: false }, { name: 'Brask', manager: false }, { name: 'ivy_lantern', manager: true }, { name: 'Oakheart', manager: false }];
   const ONLINE_SERVER = ['Thornwick', 'Duskfall', 'PixelMara', 'Kettlebrook', 'nyx_09', 'Saltmarsh', 'Brask'];
   const IN_REALM = ['Wayfarer', 'Thornwick', 'Brask'];
-  let viewer = 'owner';
+  let viewer = 'owner', style = 'core', siege = 'peace';
 
   const crownSVG = filled => `<svg viewBox="0 0 11 8" aria-hidden="true" shape-rendering="crispEdges">
-    <path d="M0 2h1v1h1v1h1V1h1v1h1V0h1v2h1V1h1v3h1V3h1V2h1v6H0z" fill="${filled ? 'var(--gold)' : 'none'}" stroke="${filled ? '#7a5512' : '#8a8578'}" stroke-width="1" transform="translate(.5 .5) scale(.91)"/>
+    <path d="M0 2h1v1h1v1h1V1h1v1h1V0h1v2h1V1h1v3h1V3h1V2h1v6H0z" fill="${filled ? 'var(--gold)' : 'none'}" stroke="${filled ? '#7a5512' : '#9a95a6'}" stroke-width="1" transform="translate(.5 .5) scale(.91)"/>
     ${filled ? '<rect x="5" y="4" width="1" height="1" fill="var(--accent)"/>' : ''}</svg>`;
 
-  function renderOnlineInRealm() {
-    $('onlineRow').innerHTML = IN_REALM.map(n => `<span><canvas class="face" data-face="${n}"></canvas>${n}</span>`).join('');
-    paintFaces($('onlineRow'));
-  }
-  function paintFaces(scope) { scope.querySelectorAll('canvas[data-face]').forEach(c => face(c, c.dataset.face)); }
+  $('onlineRow').innerHTML = IN_REALM.map(n => `<span><canvas class="face" data-face="${n}"></canvas>${n}</span>`).join('');
+  $('invGrid').innerHTML = Array.from({ length: 36 }, (_, i) => `<div class="slot${i >= 27 ? ' hot' : ''}"></div>`).join('');
 
   function renderList() {
     const owner = viewer === 'owner';
     const rows = [`<div class="row" role="listitem"><canvas class="face" data-face="${OWNER}"></canvas><span class="who">${OWNER} <span class="role">owner</span></span><span class="crown" title="Owner">${crownSVG(true)}</span><span></span></div>`];
     people.forEach((p, i) => {
-      const canCrown = owner, canRemove = owner || !p.manager;
+      const canRemove = owner || !p.manager;
       rows.push(`<div class="row" role="listitem"><canvas class="face" data-face="${p.name}"></canvas><span class="who">${p.name}</span>
-        <button class="crown" data-crown="${i}" ${canCrown ? '' : 'disabled'} aria-pressed="${p.manager}" title="${p.manager ? 'Manager' + (canCrown ? ': click to make an ordinary player' : '') : (canCrown ? 'Make manager' : 'Player')}">${crownSVG(p.manager)}</button>
+        <button class="crown" data-crown="${i}" ${owner ? '' : 'disabled'} aria-pressed="${p.manager}" title="${p.manager ? 'Manager' : (owner ? 'Make manager' : 'Player')}">${crownSVG(p.manager)}</button>
         ${canRemove ? `<button class="x" data-remove="${i}" title="Remove ${p.name}">x</button>` : '<span></span>'}</div>`);
     });
     $('accessList').innerHTML = rows.join('');
     paintFaces($('accessList'));
-    const n = people.length + 1;
-    $('listCount').textContent = `${n} of unlimited`;
-    $('accessCount').textContent = `${n} players`;
+    $('listCount').textContent = `${people.length + 1} of unlimited`;
+    $('accessCount').textContent = `${people.length + 1} players`;
   }
   $('accessList').addEventListener('click', e => {
     const c = e.target.closest('[data-crown]'), x = e.target.closest('[data-remove]');
     if (c && !c.disabled) { const p = people[+c.dataset.crown]; p.manager = !p.manager; renderList(); }
-    if (x) { people.splice(+x.dataset.remove, 1); renderList(); renderOnlinePicker(); }
+    if (x) { people.splice(+x.dataset.remove, 1); renderList(); renderPicker(); }
   });
-
   function addPlayer(name) {
     name = name.trim();
     if (!name || name === OWNER || people.some(p => p.name.toLowerCase() === name.toLowerCase())) return false;
@@ -352,23 +429,22 @@ canvas.face { image-rendering: pixelated; }
   }
   $('addBtn').addEventListener('click', () => { if (addPlayer($('nameInput').value)) $('nameInput').value = ''; });
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('addBtn').click(); });
-
-  function renderOnlinePicker() {
+  function renderPicker() {
     $('onlineList').innerHTML = ONLINE_SERVER.map(n => {
       const added = n === OWNER || people.some(p => p.name === n);
-      return `<div class="prow"><canvas class="face" data-face="${n}"></canvas><span>${n}</span>${added ? '<span class="done">added</span>' : `<button class="btn" data-pick="${n}">Add</button>`}</div>`;
+      return `<div class="prow"><canvas class="face" data-face="${n}"></canvas><span>${n}</span>${added ? '<span class="hint">added</span>' : `<button class="btn" data-pick="${n}">Add</button>`}</div>`;
     }).join('');
     paintFaces($('onlineList'));
   }
-  $('onlineBtn').addEventListener('click', () => { renderOnlinePicker(); $('onlinePopup').hidden = false; });
+  $('onlineBtn').addEventListener('click', () => { renderPicker(); $('onlinePopup').hidden = false; });
   $('closeOnline').addEventListener('click', () => { $('onlinePopup').hidden = true; });
-  $('onlineList').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) { addPlayer(b.dataset.pick); renderOnlinePicker(); } });
+  $('onlineList').addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) { addPlayer(b.dataset.pick); renderPicker(); } });
 
   // ---- tabs ----
   const tabs = ['overview', 'access', 'manage'];
   function show(t) {
     tabs.forEach(k => { $('tab-' + k).setAttribute('aria-selected', String(k === t)); $('p-' + k).hidden = k !== t; });
-    $('onlinePopup').hidden = true;
+    $('onlinePopup').hidden = true; drawIcons(); roughen();
   }
   tabs.forEach(k => $('tab-' + k).addEventListener('click', () => show(k)));
 
@@ -376,8 +452,8 @@ canvas.face { image-rendering: pixelated; }
   $('saveName').addEventListener('click', () => {
     const v = $('realmName').value.trim() || 'Unnamed realm';
     $('realmTitle').textContent = v; $('confirmTitle').textContent = `Relocate ${v}?`;
-    $('nameHint').textContent = 'Renamed.'; $('nameHint').className = 'saved';
-    setTimeout(() => { $('nameHint').textContent = 'Shown on this screen and on the siege boss bars.'; $('nameHint').className = 'hint'; }, 1600);
+    $('nameHint').textContent = 'Renamed.';
+    setTimeout(() => { $('nameHint').textContent = 'Shown on this screen and on the siege boss bars.'; }, 1600);
   });
   let timer = null;
   $('relocateBtn').addEventListener('click', () => {
@@ -390,38 +466,137 @@ canvas.face { image-rendering: pixelated; }
   $('cancelRelocate').addEventListener('click', closeConfirm);
   $('doRelocate').addEventListener('click', () => { closeConfirm(); $('statePill').textContent = 'Relocated'; setTimeout(applySiege, 1800); });
 
-  // ---- view-as and siege switches ----
+  // ---- switches ----
+  const NOTES = {
+    core: ['Core face', ['The screen is a face of the Geode Heart: its weathered rock and lichen outside, a hollow lined with calcite and glowing crystal inside, the same lining as the real core.', 'Panels are smooth rune tablets set into the hollow, like the tablets under the core\'s openings. Buttons are smaller tablets whose runes light up under your cursor.', 'The fuel slot is a crystal-lined hollow; the crystal glow follows the siege state.', 'In game: the rock frame is one nine-slice texture, the tablets and buttons are sprites.']],
+    projection: ['Projection', ['A spell of light the core throws into the air in front of you. Nothing in the world is dimmed, so you see the realm through it.', 'Edges and panels are drawn in light; runes drift up through it slowly.', 'In game: the screen skips the usual background blur and draws translucent light-coloured layers, with rune sprites rising.']],
+    mind: ['Mind\'s eye', ['No panel at all: the world falls away into the starry dark of the void and the interface floats in it like a vision.', 'The tabs are three stars of a small constellation (eye, key, crown).', 'In game: a full-screen dark layer with slowly twinkling star sprites, the same starfield as the realm\'s rift.']],
+  };
+  function setStyle(s) {
+    style = s; root.dataset.style = s;
+    document.querySelectorAll('[data-style-btn]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.styleBtn === s)));
+    $('styleTitle').textContent = NOTES[s][0];
+    $('styleNotes').innerHTML = NOTES[s][1].map(t => `<li>${t}</li>`).join('');
+    roughen(); drawBg();
+  }
   function setViewer(v) {
     viewer = v;
-    $('asOwner').setAttribute('aria-pressed', String(v === 'owner')); $('asManager').setAttribute('aria-pressed', String(v === 'manager'));
-    $('relocateZone').hidden = v !== 'owner'; $('ownerOnly').hidden = v === 'owner';
-    renderList();
+    document.querySelectorAll('[data-viewer]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.viewer === v)));
+    const staff = v !== 'visitor';
+    $('tab-access').hidden = !staff; $('tab-manage').hidden = !staff;
+    if (!staff) show('overview');
+    $('relocateZone').hidden = v !== 'owner'; $('ownerOnly').hidden = v !== 'manager';
+    $('visitorNote').hidden = staff;
+    renderList(); roughen();
   }
-  $('asOwner').addEventListener('click', () => setViewer('owner'));
-  $('asManager').addEventListener('click', () => setViewer('manager'));
   const SIEGE = {
     peace: ['At peace', 'The realm is at peace', 'No siege block is on your anchor.'],
-    breaching: ['Breaching 42%', 'A World Breacher is on your anchor', 'Opens the realm to anyone in about 9 hours. Lapis in the core slows it.'],
-    breaking: ['Breaking 17%', 'An Anchor Breaker is on your anchor', 'Destroys the anchor for good in about 20 hours. Lapis in the core slows it.'],
+    breaching: ['Breaching 42%', 'A World Breacher is on your anchor', 'Opens the realm to anyone in about 9 hours. Lapis in the ward slows it.'],
+    breaking: ['Breaking 17%', 'An Anchor Breaker is on your anchor', 'Destroys the anchor for good in about 20 hours. Lapis in the ward slows it.'],
   };
-  let siege = 'peace';
   function applySiege() {
     root.dataset.siege = siege;
-    document.querySelectorAll('[data-siege]').forEach(b => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', String(b.dataset.siege === siege)); });
+    document.querySelectorAll('button[data-siege]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.siege === siege)));
     const [pill, big, sub] = SIEGE[siege]; $('statePill').textContent = pill; $('bigState').textContent = big; $('stateSub').textContent = sub;
+    drawIcons();
   }
+  document.querySelectorAll('[data-style-btn]').forEach(b => b.addEventListener('click', () => setStyle(b.dataset.styleBtn)));
+  document.querySelectorAll('[data-viewer]').forEach(b => b.addEventListener('click', () => setViewer(b.dataset.viewer)));
   document.querySelectorAll('button[data-siege]').forEach(b => b.addEventListener('click', () => { siege = b.dataset.siege; applySiege(); }));
 
-  // ---- inventory slots ----
-  $('invGrid').innerHTML = Array.from({ length: 36 }, (_, i) => `<div class="slot${i >= 27 && i < 36 ? ' hot' : ''}"></div>`).join('');
+  // ---- core face: a rough, broken rock outline (pixel steps) ----
+  function roughen() {
+    const p = $('panel');
+    if (style !== 'core') { p.style.removeProperty('--rough'); return; }
+    const w = p.offsetWidth, h = p.offsetHeight, pts = [], step = 4;
+    const j = (i, s) => Math.floor(hash(i, s, 11) * 5);
+    for (let x = 0; x <= w; x += step) pts.push(`${x}px ${j(x, 1)}px`, `${Math.min(w, x + step)}px ${j(x, 1)}px`);
+    for (let y = 0; y <= h; y += step) pts.push(`${w - j(y, 2)}px ${y}px`, `${w - j(y, 2)}px ${Math.min(h, y + step)}px`);
+    for (let x = w; x >= 0; x -= step) pts.push(`${x}px ${h - j(x, 3)}px`, `${Math.max(0, x - step)}px ${h - j(x, 3)}px`);
+    for (let y = h; y >= 0; y -= step) pts.push(`${j(y, 4)}px ${y}px`, `${j(y, 4)}px ${Math.max(0, y - step)}px`);
+    p.style.setProperty('--rough', `polygon(${pts.join(',')})`);
+  }
 
-  // ---- fit: the biggest whole-number zoom that fits the stage ----
+  // ---- stage backgrounds and the panel effect layer ----
+  const bg = $('bg'), fx = $('fx');
+  function drawBg() {
+    const r = bg.getBoundingClientRect(), S = 3, w = Math.ceil(r.width / S), h = Math.ceil(r.height / S);
+    bg.width = w; bg.height = h; const g = bg.getContext('2d');
+    if (style === 'core') {           // the core's rock, out of focus behind the screen
+      g.fillStyle = '#14131a'; g.fillRect(0, 0, w, h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (hash(x >> 1, y >> 1, 21) > 0.7) { g.fillStyle = `rgba(112,108,120,${0.05 + hash(x, y, 22) * 0.06})`; g.fillRect(x, y, 1, 1); }
+    } else if (style === 'projection') {   // the realm at dusk, seen through the spell
+      const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#1b2440'); sky.addColorStop(0.6, '#3a3256'); sky.addColorStop(1, '#58406a');
+      g.fillStyle = sky; g.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x++) {
+        const hill = Math.floor(h * 0.62 + Math.sin(x * 0.05) * 6 + Math.sin(x * 0.13) * 3);
+        g.fillStyle = '#26323a'; g.fillRect(x, hill, 1, h - hill);
+        const grass = Math.floor(h * 0.74 + Math.sin(x * 0.03 + 2) * 4);
+        g.fillStyle = '#2f4a2c'; g.fillRect(x, grass, 1, h - grass);
+        g.fillStyle = '#3d5e34'; g.fillRect(x, grass, 1, 1);
+      }
+      g.fillStyle = 'rgba(112,108,120,.55)'; g.fillRect(Math.floor(w * 0.5) - 6, Math.floor(h * 0.74) - 30, 12, 26);   // the Geode Heart, behind
+      g.fillStyle = 'rgba(140,235,255,.5)'; g.fillRect(Math.floor(w * 0.5) - 1, 0, 2, Math.floor(h * 0.74) - 30);       // its beacon
+      for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(Math.floor(hash(i, 1, 30) * w), Math.floor(hash(i, 2, 30) * h * 0.5), 1, 1); }
+    } else {
+      g.fillStyle = '#04040a'; g.fillRect(0, 0, w, h);
+    }
+  }
+  let stars = [], motes = [];
+  for (let i = 0; i < 160; i++) stars.push({ x: hash(i, 1, 40), y: hash(i, 2, 40), p: hash(i, 3, 40) * 6.28, s: 0.6 + hash(i, 4, 40) * 1.2, c: hash(i, 5, 40) });
+  for (let i = 0; i < 14; i++) motes.push({ x: hash(i, 1, 50), off: hash(i, 2, 50), g: Math.floor(hash(i, 3, 50) * 6), sp: 0.5 + hash(i, 4, 50) * 0.5 });
+  function frame(t) {
+    t /= 1000;
+    const r = bg.getBoundingClientRect(), S = 3;
+    if (style === 'mind') {            // twinkling void, darker at the edges
+      const w = bg.width, h = bg.height, g = bg.getContext('2d');
+      g.fillStyle = '#04040a'; g.fillRect(0, 0, w, h);
+      for (const s of stars) {
+        const a = reduce ? 0.7 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.s + s.p));
+        g.fillStyle = s.c > 0.8 ? `rgba(140,235,255,${a})` : s.c > 0.6 ? `rgba(170,140,255,${a})` : `rgba(235,235,255,${a})`;
+        g.fillRect(Math.floor(s.x * w), Math.floor(s.y * h), 1, 1);
+      }
+      const v = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.25, w / 2, h / 2, Math.max(w, h) * 0.7);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.85)'); g.fillStyle = v; g.fillRect(0, 0, w, h);
+    }
+    // effect layer inside the panel
+    const p = $('panel'), w = p.offsetWidth, h = p.offsetHeight;
+    if (fx.width !== w || fx.height !== h) { fx.width = w; fx.height = h; }
+    const g = fx.getContext('2d'); g.clearRect(0, 0, w, h);
+    const acc = css('--accent');
+    if (style === 'projection') {      // runes drifting up through the light
+      for (const m of motes) {
+        const f = ((reduce ? 0.5 : t * 0.05 * m.sp) + m.off) % 1, x = Math.floor(m.x * (w - 8)) + 2, y = Math.floor(h - 6 - f * (h - 10));
+        g.globalAlpha = Math.min(1, f * 4) * Math.min(1, (1 - f) * 3) * 0.35; g.fillStyle = acc;
+        GLYPHS[m.g].forEach((row, yy) => [...row].forEach((ch, xx) => { if (ch === 'X') g.fillRect(x + xx, y + yy, 1, 1); }));
+      }
+      g.globalAlpha = 0.9; g.fillStyle = acc;                       // light corners
+      [[0, 0, 1, 1], [w, 0, -1, 1], [0, h, 1, -1], [w, h, -1, -1]].forEach(([x, y, dx, dy]) => { g.fillRect(x - (dx < 0 ? 7 : 0), y - (dy < 0 ? 1 : 0), 7, 1); g.fillRect(x - (dx < 0 ? 1 : 0), y - (dy < 0 ? 7 : 0), 1, 7); });
+      g.globalAlpha = 1;
+    } else if (style === 'core') {     // crystal pixels glinting in the lining
+      for (let i = 0; i < 18; i++) {
+        const side = i % 4, k = hash(i, 7, 60), tw = reduce ? 1 : 0.5 + 0.5 * Math.sin(t * 0.8 + i * 1.7);
+        const x = side < 2 ? 10 + Math.floor(k * (w - 20)) : (side === 2 ? 9 : w - 10), y = side >= 2 ? 10 + Math.floor(k * (h - 20)) : (side === 0 ? 9 : h - 10);
+        g.globalAlpha = 0.35 + 0.65 * tw; g.fillStyle = acc; g.fillRect(x, y, 1, 1);
+      }
+      g.globalAlpha = 1;
+    } else {                           // the eye above the vision
+      g.globalAlpha = 0.18; g.strokeStyle = 'rgba(200,190,255,1)';
+      const cx = Math.floor(w / 2), cy = 14;
+      for (let x = -14; x <= 14; x++) { const yy = Math.round(Math.sqrt(Math.max(0, 1 - (x / 14) ** 2)) * 4); g.fillStyle = '#cfc8ff'; g.fillRect(cx + x, cy - yy, 1, 1); g.fillRect(cx + x, cy + yy, 1, 1); }
+      g.globalAlpha = 1;
+    }
+    requestAnimationFrame(frame);
+  }
+
   function fit() {
-    const w = $('gui').parentElement.clientWidth - 24;
+    const w = $('stage').clientWidth - 24;
     $('gui').style.setProperty('--z', String(Math.max(1, Math.min(3, Math.floor(w / 248)))));
+    drawBg(); roughen();
   }
   addEventListener('resize', fit);
 
-  paintFaces(document); renderOnlineInRealm(); renderList(); applySiege(); fit();
+  paintFaces(document); renderList(); applySiege(); setStyle('core'); setViewer('owner'); fit();
+  requestAnimationFrame(frame);
 })();
 </script>
