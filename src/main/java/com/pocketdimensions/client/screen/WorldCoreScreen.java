@@ -250,16 +250,16 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         inlay(g, "Add a player", x + 20, y + 63);
         channel(g, x + 19, y + 73, 120, 14);
 
-        polished(g, x + 14, y + 98, 224, 166);
+        polished(g, x + 14, y + 98, 224, 156);
         inlay(g, "Who may enter", x + 20, y + 103);
-        recess(g, x + 20, y + 113, 212, 130);
+        recess(g, x + 20, y + 113, 212, 122);
         List<Row> rows = rows();
-        g.enableScissor(x + 21, y + 114, x + 231, y + 242);
+        g.enableScissor(x + 21, y + 114, x + 231, y + 234);
         for (int i = 0; i < rows.size(); i++) {
             Row r = rows.get(i);
             int ry = y + 114 + i * 14 - ledgerScroll;
-            if (ry < y + 100 || ry > y + 244) continue;
-            boolean hot = mx >= x + 21 && mx < x + 231 && my >= ry && my < ry + 14 && my >= y + 114 && my < y + 242;
+            if (ry < y + 100 || ry > y + 236) continue;
+            boolean hot = mx >= x + 21 && mx < x + 231 && my >= ry && my < ry + 14 && my >= y + 114 && my < y + 234;
             g.fill(x + 22, ry + 12, x + 230, ry + 13, 0x40000000);            // carved rule under each line
             g.fill(x + 22, ry + 13, x + 230, ry + 14, 0x30FFFFFF);
             face(g, r.uuid, x + 23, ry + 2);
@@ -270,9 +270,9 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         }
         g.disableScissor();
         int max = PocketDimensionsConfig.MAX_ALLOWED_PLAYERS.get();
-        label(g, rows.size() + " of " + (max > 0 ? String.valueOf(max + 1) : "unlimited"), x + 20, y + 249);
+        label(g, rows.size() + " of " + (max > 0 ? String.valueOf(max + 1) : "unlimited"), x + 20, y + 241);
         String key = "Crown: manager";
-        label(g, key, x + 232 - font.width(key), y + 249);
+        label(g, key, x + 232 - font.width(key), y + 241);
     }
 
     private void drawManage(GuiGraphics g, int x, int y) {
@@ -426,7 +426,7 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
                 if (tab.ordinal() != i) { click(); setTab(Tab.values()[i]); }
                 return true;
             }
-            if (tab == Tab.ACCESS && mx >= leftPos + 21 && mx < leftPos + 231 && my >= topPos + 114 && my < topPos + 242) {
+            if (tab == Tab.ACCESS && mx >= leftPos + 21 && mx < leftPos + 231 && my >= topPos + 114 && my < topPos + 234) {
                 int i = (int) ((my - topPos - 114 + ledgerScroll) / 14);
                 List<Row> rows = rows();
                 if (i >= 0 && i < rows.size() && !rows.get(i).owner) {
@@ -447,8 +447,8 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
             pickScroll = (int) Math.max(0, Math.min(max, pickScroll - sy * 16));
             return true;
         }
-        if (tab == Tab.ACCESS && my >= topPos + 114 && my < topPos + 242) {
-            int max = Math.max(0, rows().size() * 14 - 128);
+        if (tab == Tab.ACCESS && my >= topPos + 114 && my < topPos + 234) {
+            int max = Math.max(0, rows().size() * 14 - 120);
             ledgerScroll = (int) Math.max(0, Math.min(max, ledgerScroll - sy * 14));
             return true;
         }
