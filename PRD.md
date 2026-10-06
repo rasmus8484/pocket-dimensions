@@ -22,6 +22,8 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | PR-011 | TODO | BoundaryBlock right-click exit | Design doc specifies right-click boundary wall as exit trigger; not implemented |
 | PR-012 | PARTIAL | Anchor break warning | Miner gets an action-bar warning when breaking an occupied anchor; no particles/sounds, occupants not warned |
 | PR-013 | DONE | Chorus fruit blocking | Chorus fruit teleport cancelled inside pocket rooms |
+| PR-014 | DONE | Safe arrival | Entering a room searches for the nearest free spot (SpawnSearch/SafeSpot) so blocks built over the spawn never trap you |
+| PR-015 | DONE | Occupied anchor | Server sets `OCCUPIED` from online occupants; the Tumbling Cube glows brighter (light 9 vs 6) while someone is inside |
 
 ---
 
@@ -45,6 +47,9 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | RL-014 | TODO | Passive mob spawn control | Config option to suppress passive spawns in realm dimension |
 | RL-015 | DONE | Realm access list | Owner adds/removes players in WorldCore GUI; custom packets (ModNetworking); `max_allowed_players` cap |
 | RL-016 | DONE | Two-block World Anchor | Lower/upper halves (DOUBLE_BLOCK_HALF); BE on lower half; custom model + textures |
+| RL-017 | DONE | Safe arrival in realms | Realm entry searches around the World Core for free space within the plot, so you never land inside blocks |
+| RL-018 | DONE | World Core screen | Carved-stone screen with Overview / Access / Manage; roles owner, manager, visitor (RealmRules); managers (crown), realm names, online-player picker; visitors see Overview only and can add but never take lapis |
+| RL-019 | DONE | Realm relocation | Owner-only, behind a warning: the realm is regenerated in a new plot; everything in the old one is lost; access list, managers and name are kept |
 
 ---
 
@@ -63,6 +68,8 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | SG-009 | DONE | One siege block per anchor | Enforced by geometry: siege blocks must sit directly on the anchor's upper half, which has room for one |
 | SG-010 | DONE | Siege bars | Themed bars within `siege_bossbar_range` (Rift Eye outside the realm, Aurora Stones inside), drawn by a HUD layer from `SiegeBarS2C`; cross-dimension chunk force-loading keeps both sides ticking |
 | SG-011 | DONE | Siege visuals on the World Anchor | While a siege block is active, World Breacher done: anchor `INFLUENCE` 0..4 drives EMBER rings, a top-down pink rune gradient with breach progress, pink/gold rune particles and drain particles. Anchor Breaker (Unmaker) done: anchor `DAMAGE` 0..4 drives EMBER rings, cracks, heated runes and the sigil; breaker `CHARGE` 0..4 fills the coils and adds frozen lightning sets at 25/50/75 %, with siphon stream, red motes and the `reality_crack` sound |
+| SG-012 | DONE | Server config | Per-world `serverconfig/pocketdimensions-server.toml`, synced to clients: mining times for the Pocket Anchor and both siege blocks, siege lapis caps (1-64), `siege_blocks_drop` |
+| SG-013 | DONE | Siege block mining | World Breacher and Anchor Breaker need a diamond-tier pickaxe and take a fixed, configured time; they vanish when mined unless `siege_blocks_drop` is on |
 
 ---
 
@@ -85,14 +92,14 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
-| CP-001 | TODO | Crafting recipes | All blocks/items currently creative-only; need survival crafting path |
-| CP-002 | TODO | Loot tables | No loot tables exist: siege blocks drop nothing when mined or when their anchor is removed |
-| CP-003 | TODO | Advancements | Progression milestones (first room, first realm, first siege, etc.) |
-| CP-004 | PARTIAL | Custom textures | World Anchor uses generated Runebound Monolith textures (`tools/anchor/`); all other blocks use vanilla placeholders |
-| CP-005 | PARTIAL | Mining/tool tags | pickaxe.json and needs_diamond_tool.json only list pocket_anchor; siege blocks (hardness 50) mine slowly with any tool |
+| CP-001 | DONE | Crafting recipes | Pocket Anchor, World Seed, World Anchor, World Breacher, Anchor Breaker; nothing from the End. All five unlock on first entering the Nether |
+| CP-002 | DONE | Drops | By design: siege blocks vanish unless `siege_blocks_drop` (then they drop themselves and their lapis, in code, no loot tables); a mined Pocket Anchor destroys its room and drops nothing; World Anchor and World Core are indestructible |
+| CP-003 | TODO | Advancements | Progression milestones (first room, first realm, first siege, etc.); only a hidden recipe-unlock advancement exists |
+| CP-004 | PARTIAL | Custom textures | Every block and item has its own generated design (`tools/anchor/`) except the BoundaryBlock (pocket room wall), still vanilla white concrete |
+| CP-005 | DONE | Mining/tool tags | Pocket Anchor, World Breacher and Anchor Breaker in `mineable/pickaxe` and `needs_diamond_tool`; mining times from the server config |
 | CP-006 | TODO | Anchor break warning FX | Particles and sounds when anchor is being mined/destroyed |
-| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker), World Core (Geode Heart, two blocks, model per siege state) Pocket Anchor (Tumbling Cube: renderer-drawn cube, end portal windows, three rune bands, OCCUPIED state) and the World Seed item (Starseed sprite): generated models (`tools/anchor/`), renderers and particles; other blocks use cube_all |
-| CP-008 | TODO | Siege progress visual feedback | Particles, sounds, or block state changes during siege progression |
+| CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker), World Core (Geode Heart, two blocks, model per siege state), Pocket Anchor (Tumbling Cube: renderer-drawn cube, end portal windows, three rune bands, OCCUPIED state) and the World Seed item (Starseed sprite): generated models (`tools/anchor/`), renderers and particles; only the BoundaryBlock is still a plain cube |
+| CP-008 | DONE | Siege progress visual feedback | Anchor influence/damage states, particles and sound (SG-011), core beacon colour and siege states (SG-006), themed siege bars (SG-010) |
 | CP-009 | TODO | In-game documentation | Tooltips, guide book, or advancement hints explaining mechanics |
 
 ---
@@ -107,8 +114,9 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | 4 — Siege | SG-001 through SG-007, SG-009, SG-010 | DONE |
 | 4.5 — GUIs | (WorldCore + siege block screens) | DONE |
 | 4.6 — Access list & anchor model | RL-015, RL-016 | DONE |
+| 4.7 — Visual rework, safe arrival, config | CP-007, SG-010 to SG-013, PR-014, PR-015, RL-017 to RL-019 | DONE |
 | 5 — Anti-exploit | AE-001 through AE-008 | PARTIAL |
-| 6 — Content | CP-001 through CP-009 | TODO |
+| 6 — Content | CP-001 through CP-009 | PARTIAL (CP-003, CP-004 boundary, CP-006, CP-009 left) |
 
 ---
 
