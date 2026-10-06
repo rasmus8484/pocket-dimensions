@@ -80,8 +80,8 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | AE-002 | PARTIAL | Explosion protection | Blast resistance ≥1200 stops TNT/creepers; the Wither can still break Pocket Anchors and siege blocks (not in `wither_immune`) |
 | AE-003 | DONE | Ender pearl blocking | Covered by border enforcement (RL-007): landing outside your realm's bounds pulls you back in |
 | AE-004 | DONE | Chorus fruit blocking | Cancelled in pocket rooms (PR-013); in realms, border enforcement pulls you back |
-| AE-005 | PARTIAL | Command teleport restriction | Out of the realm: cross-dimension teleports are cancelled (only the World Core and Pocket Anchors let you leave). Into it: no entry record means you are ejected. Gap: the entry record is never cleared on exit, so a later /tp or /home into the realm dimension pulls you into the last realm you visited, even if your access was revoked, at whatever height you arrive |
-| AE-006 | PARTIAL | Teleport bypass prevention | Same coverage and the same gap as AE-005 for /back, /home and modded teleports that go through vanilla teleport |
+| AE-005 | DONE | Command teleport restriction | Out of the realm: cross-dimension teleports are cancelled (only the World Core and Pocket Anchors let you leave). Into it, by any route: you need a record of entering through an anchor and must still be allowed in (owner, access list or an open breach), or you are sent back out. Leaving clears the record |
+| AE-006 | DONE | Teleport bypass prevention | Same arrival check as AE-005 for /back, /home and modded teleports; the border's pull-back lands you on a free spot |
 | AE-007 | TODO | Chunk unload duplication | Prevent item/block duplication via chunk boundary exploits |
 | AE-008 | TODO | Hopper/dispenser anchor interaction | Prevent automation from extracting/placing anchors |
 

@@ -4,6 +4,7 @@ import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.init.ModBlocks;
 import com.pocketdimensions.init.ModItems;
 import com.pocketdimensions.manager.RealmManager;
+import com.pocketdimensions.manager.SafeSpot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -84,6 +85,7 @@ public class RealmEventHandler {
         MobSpawnEvent.FinalizeSpawn.BUS.addListener(this::onFinalizeSpawn);
         PlayerInteractEvent.RightClickBlock.BUS.addListener(this::onRightClickWorldAnchor);
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onPlayerLoggedIn);
+        PlayerEvent.PlayerChangedDimensionEvent.BUS.addListener(this::onChangedDimension);
         SleepFinishedTimeEvent.BUS.addListener(this::onRealmSleepFinished);
     }
 
@@ -119,14 +121,40 @@ public class RealmEventHandler {
         RealmManager mgr = RealmManager.get(server);
         RealmManager.PlayerRealmInfo info = mgr.getPlayerRealmInfo(uuid);
 
-        if (info == null) {
-            mgr.teleportToEntryOrSpawn(serverPlayer, server);
-            return;
-        }
+        if (!mayStay(serverPlayer, server, info)) return;
 
         int cx = ((int) Math.floor(serverPlayer.getX())) >> 4;
         int cz = ((int) Math.floor(serverPlayer.getZ())) >> 4;
         runtimeStates.put(uuid, new RuntimeRealmState(cx, cz, serverPlayer.level().getGameTime()));
+    }
+
+    // -------------------------------------------------------------------------
+    // Any arrival in the realm: through an anchor, out of a pocket room, or by /tp, /home, /back or another mod
+    // -------------------------------------------------------------------------
+
+    private void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer sp) || !event.getTo().equals(PocketDimensionsMod.REALM_DIM)) return;
+        MinecraftServer server = ((ServerLevel) sp.level()).getServer();
+        if (server != null) mayStay(sp, server, RealmManager.get(server).getPlayerRealmInfo(sp.getUUID()));
+    }
+
+    /**
+     * Whether someone who has just arrived in the realm dimension may stay: they need a record of entering through an
+     * anchor, and must still be allowed into that realm (RealmRules.mayEnter). Otherwise they are sent back out.
+     */
+    private static boolean mayStay(ServerPlayer sp, MinecraftServer server, RealmManager.PlayerRealmInfo info) {
+        if (info == null) { eject(sp, null); return false; }
+        if (!RealmManager.get(server).mayEnter(server, info.realmOwner, sp.getUUID())) {
+            eject(sp, "The realm's wards do not know you, and cast you out.");
+            return false;
+        }
+        return true;
+    }
+
+    /** Sends a player out of the realm on their next tick, through the queued exit our travel guard lets pass. */
+    private static void eject(ServerPlayer sp, String message) {
+        if (message != null) sp.displayClientMessage(Component.literal(message), false);
+        queueRealmExit(sp.getUUID());
     }
 
     // -------------------------------------------------------------------------
@@ -190,7 +218,7 @@ public class RealmEventHandler {
         // Persistent bounds check - eject if no info (e.g. never recorded, data corrupted)
         RealmManager.PlayerRealmInfo info = mgr.getPlayerRealmInfo(playerUUID);
         if (info == null) {
-            mgr.teleportToEntryOrSpawn(serverPlayer, server);
+            eject(serverPlayer, null);
             return;
         }
 
@@ -218,6 +246,15 @@ public class RealmEventHandler {
                 double M = 2.5;
                 double clampedX = Math.max(info.minX + M, Math.min(info.maxX - M, x));
                 double clampedZ = Math.max(info.minZ + M, Math.min(info.maxZ - M, z));
+                // Land on a free spot near the border rather than at the arrival height, which may be inside rock
+                ServerLevel realm = (ServerLevel) serverPlayer.level();
+                BlockPos at = BlockPos.containing(clampedX, y, clampedZ);
+                if (!SafeSpot.isFreeToStandIn(realm, at) || !SafeSpot.isFreeToStandIn(realm, at.above())) {
+                    BlockPos min = new BlockPos(Math.max(info.minX + 1, at.getX() - 8), realm.getMinY() + 1, Math.max(info.minZ + 1, at.getZ() - 8));
+                    BlockPos max = new BlockPos(Math.min(info.maxX - 2, at.getX() + 8), realm.getMaxY() - 2, Math.min(info.maxZ - 2, at.getZ() + 8));
+                    BlockPos safe = SafeSpot.nearest(realm, at, min, max, q -> false);
+                    if (safe != null) { clampedX = safe.getX() + 0.5; y = safe.getY(); clampedZ = safe.getZ() + 0.5; }
+                }
                 serverPlayer.displayClientMessage(Component.literal(
                         "An unseen force grips you and pulls you back within the border."), true);
                 // Use connection.teleport() directly - serverPlayer.teleport(TeleportTransition) fires

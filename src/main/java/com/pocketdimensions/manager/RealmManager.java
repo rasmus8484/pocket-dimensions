@@ -549,7 +549,27 @@ public class RealmManager extends SavedData {
         return entryLocations.get(playerUUID);
     }
 
+    /**
+     * Whether this player may be in this owner's realm right now (see {@link RealmRules#mayEnter}): the owner, the access
+     * list, or anyone while a fuelled, completed World Breacher stands on the realm's anchor.
+     */
+    public boolean mayEnter(MinecraftServer server, UUID ownerUUID, UUID playerUUID) {
+        return RealmRules.mayEnter(ownerUUID.equals(playerUUID), isAllowed(ownerUUID, playerUUID), breachOpen(server, ownerUUID));
+    }
+
+    private boolean breachOpen(MinecraftServer server, UUID ownerUUID) {
+        var anchor = getAnchorLocation(ownerUUID);
+        if (anchor.isEmpty()) return false;
+        ServerLevel level = server.getLevel(anchor.get().getKey());
+        if (level == null) return false;
+        BlockPos siegePos = anchor.get().getValue().above(2);           // a siege block sits on the anchor's upper half
+        return level.getBlockEntity(siegePos) instanceof com.pocketdimensions.blockentity.WorldBreacherBlockEntity b
+                && b.isBreachComplete() && b.hasFuel();
+    }
+
+    /** Sends the player back where they entered from (or to world spawn), and forgets which realm they were in. */
     public void teleportToEntryOrSpawn(ServerPlayer player, MinecraftServer server) {
+        clearPlayerRealmInfo(player.getUUID());
         EntryLocation entry = entryLocations.get(player.getUUID());
         if (entry != null) {
             ServerLevel target = server.getLevel(entry.dimension);

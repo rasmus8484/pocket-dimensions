@@ -8,6 +8,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class RealmRulesTest {
 
     @Test
+    void onlyTheOwnerTheAccessListOrAnOpenBreachMayBeInARealm() {
+        assertTrue(RealmRules.mayEnter(true, false, false), "the owner");
+        assertTrue(RealmRules.mayEnter(false, true, false), "a player on the access list");
+        assertTrue(RealmRules.mayEnter(false, false, true), "anyone while a fuelled, completed breach stands");
+        assertFalse(RealmRules.mayEnter(false, false, false), "anyone else, however they arrived");
+    }
+
+    @Test
     void onlyOwnersAndManagersSeeAccessAndManage() {
         assertTrue(RealmRules.canManage(OWNER));
         assertTrue(RealmRules.canManage(MANAGER));
