@@ -19,7 +19,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The indestructible shell around each pocket room. From inside, the room is the Tumbling Cube seen from within:
  * each wall, floor and ceiling a window into the void (drawn over the VOID blocks by the room's renderer), ringed by
- * netherite EDGE blocks with gold CORNER blocks. All full-bright, nothing casts a shadow on them. One floor corner,
+ * netherite EDGE blocks with gold CORNER blocks. All full-bright, nothing casts a shadow on them, and the sky's light
+ * passes through them so the room is fully lit for crops. One floor corner,
  * the HEART, carries the block entity whose renderer draws the void for the whole room. Players can never obtain it;
  * the room generator places it ({@link RoomShell} decides each block's part).
  */
@@ -63,4 +64,14 @@ public class BoundaryBlock extends BaseEntityBlock {
 
     @Override
     public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
+
+    /**
+     * The shell lets the sky's light through while staying solid, so every spot in the room has full light: seeds can
+     * be planted and grow anywhere, and nothing hostile spawns in the dark.
+     */
+    @Override
+    protected int getLightBlock(BlockState state) { return 0; }
+
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state) { return true; }
 }
