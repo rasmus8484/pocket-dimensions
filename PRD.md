@@ -85,7 +85,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | AE-005 | DONE | Command teleport restriction | Out of the realm: cross-dimension teleports are cancelled (only the World Core and Pocket Anchors let you leave). Into it, by any other route: you need a record of entering through an anchor and must still be allowed in (owner, access list or an open breach), or you are sent back out. Leaving clears the record. Pocket rooms are the deliberate exception (RL-020) |
 | AE-006 | DONE | Teleport bypass prevention | Same arrival check as AE-005 for /back, /home and modded teleports; the border's pull-back lands you on a free spot |
 | AE-007 | TODO | Chunk unload duplication | Prevent item/block duplication via chunk boundary exploits |
-| AE-008 | TODO | Hopper/dispenser anchor interaction | Prevent automation from extracting/placing anchors |
+| AE-008 | DONE | Hopper/dispenser anchor interaction | Nothing to block: no mod block entity is a `Container` or exposes an item handler, so hoppers (and hopper minecarts) can't move lapis in or out of the World Core or siege blocks; dispensers only drop the anchor items, never place them; pistons can't push blocks with block entities |
 | AE-009 | DONE | Unbesiegeable anchor placement | A World Anchor can't be placed where the siege spot above it (two above its foot) is unbreakable (hardness below zero: the Nether's bedrock ceiling, modded walls) or outside the world |
 
 ---
