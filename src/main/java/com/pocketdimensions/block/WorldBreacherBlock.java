@@ -127,7 +127,7 @@ public class WorldBreacherBlock extends BaseEntityBlock {
                 || anchor.getOwnerUUID() == null) return state;
         if (com.pocketdimensions.manager.RealmManager.get(sl.getServer()).defenderInside(sl.getServer(), anchor.getOwnerUUID())) return state;
         if (ctx.getPlayer() != null) ctx.getPlayer().displayClientMessage(Component.literal(
-                "The realm beyond lies empty. A breach can only begin while someone who belongs there stands inside."), true);
+                "The realm lies empty. A breach needs one of its own inside."), true);
         return null;
     }
 

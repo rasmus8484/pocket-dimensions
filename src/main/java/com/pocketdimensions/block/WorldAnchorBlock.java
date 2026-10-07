@@ -143,7 +143,7 @@ public class WorldAnchorBlock extends BaseEntityBlock {
         if (!com.pocketdimensions.manager.RealmRules.roomForSiege(siege.getY(), level.getMaxY(),
                 level.getBlockState(siege).getDestroySpeed(level, siege))) {
             if (!level.isClientSide() && ctx.getPlayer() != null) ctx.getPlayer().displayClientMessage(Component.literal(
-                    "The anchor will not settle here. Whatever sits above it could never be broken, and no anchor may stand beyond the reach of a siege."), true);
+                    "The anchor will not settle beneath what can never be broken."), true);
             return null;
         }
         return defaultBlockState().setValue(HALF, DoubleBlockHalf.LOWER);
