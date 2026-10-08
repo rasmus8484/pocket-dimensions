@@ -83,7 +83,7 @@ The World Anchor is indestructible by normal mining: it can only be removed thro
 Two siege blocks can be placed on top of a World Anchor (on its upper half; **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
 
 **World Breacher** (`world_breacher`, the "Mandible": an iron head whose mandibles hook under the anchor's gold band)
-- Can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it
+- Can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it; the owner can place one on their own anchor at any time (to open the realm to the public, say)
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks (1 Minecraft day) while fueled
@@ -93,7 +93,7 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half; **cr
 - Destroying the breacher resets all progress
 
 **Anchor Breaker** (`anchor_breaker`, the "Unmaker": clamps with gold turnbuckles grip the anchor's corners, a chamfered iron housing with lapis cells, an inverted funnel over the seed and four red charge coils around a dark spire)
-- Like the breacher, can only be placed while someone who belongs to the realm is inside it
+- Like the breacher, can only be placed while someone who belongs to the realm is inside it, or by the realm's owner
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks while fueled

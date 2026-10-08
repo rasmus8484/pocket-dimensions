@@ -146,6 +146,7 @@ World Breacher is a malicious add-on structure that must be placed **on top of**
 Placement is allowed only if:
 
 - Someone who belongs to the realm (its owner or anyone on its access list) is **inside** it **at the moment of placement**. Players in through a breach or smuggled through a pocket room don't count.
+- Or the placer is the realm's **owner**: they may place one on their own anchor at any time (voluntary public access).
 
 After placement:
 
@@ -227,7 +228,7 @@ Anchor Breaker is a separate siege block placed on top of a WorldAnchor.
 
 Rules:
 
-- Like the World Breacher, it can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it
+- Like the World Breacher, it can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it, or by the realm's owner
 - It uses lapis as fuel
 - It progresses only while correctly placed and fueled
 - It can be slowed by WorldCore defensive fuel in the same way as the World Breacher

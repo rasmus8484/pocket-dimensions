@@ -26,6 +26,16 @@ class RealmRulesTest {
     }
 
     @Test
+    void theOwnerMaySetASiegeBlockOnTheirOwnAnchorEvenWithTheRealmEmpty() {
+        java.util.UUID owner = new java.util.UUID(0, 1), friend = new java.util.UUID(0, 2), stranger = new java.util.UUID(0, 3);
+        assertTrue(RealmRules.maySetSiege(owner, owner, false), "the owner, opening their own realm to the public");
+        assertFalse(RealmRules.maySetSiege(friend, owner, false), "someone on the access list gets no exemption");
+        assertFalse(RealmRules.maySetSiege(stranger, owner, false), "an attacker at an empty realm");
+        assertTrue(RealmRules.maySetSiege(stranger, owner, true), "an attacker while one of the realm's own is inside");
+        assertFalse(RealmRules.maySetSiege(null, owner, false), "placed by no player at all");
+    }
+
+    @Test
     void anAnchorMustLeaveRoomAboveItForASiegeBlock() {
         assertTrue(RealmRules.roomForSiege(70, 319, 0f), "open air above");
         assertTrue(RealmRules.roomForSiege(70, 319, 50f), "obsidian above: slow, but a siege can clear it");

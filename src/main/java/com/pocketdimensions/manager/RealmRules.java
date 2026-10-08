@@ -25,6 +25,15 @@ public final class RealmRules {
      * A World Breacher may only be set on an anchor while the realm has a defender inside: its owner or someone on its
      * access list. Players in through a breach or smuggled through a pocket room don't count.
      */
+    /**
+     * Whether a siege block (World Breacher or Anchor Breaker) may be set on a realm's anchor: always by its owner (to
+     * open their own realm to the public, say), by anyone else only while one of the realm's own is inside.
+     */
+    public static boolean maySetSiege(@org.jetbrains.annotations.Nullable java.util.UUID placer, java.util.UUID owner,
+                                      boolean defenderInside) {
+        return owner.equals(placer) || defenderInside;
+    }
+
     public static boolean defenderInside(java.util.UUID owner, java.util.Collection<java.util.UUID> allowed,
                                          java.util.Collection<java.util.UUID> inside) {
         for (java.util.UUID p : inside) if (p.equals(owner) || allowed.contains(p)) return true;
