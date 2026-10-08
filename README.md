@@ -86,7 +86,7 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 
 ### Siege System
 
-Two siege blocks can be placed on top of a World Anchor (on its upper half; **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
+Two siege blocks can be placed on top of a linked World Anchor (never an empty one; on its upper half; **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
 
 **World Breacher** (`world_breacher`, the "Mandible": an iron head whose mandibles hook under the anchor's gold band)
 - Can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it; the owner can place one on their own anchor at any time (to open the realm to the public, say)
