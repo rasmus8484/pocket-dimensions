@@ -105,6 +105,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker), World Core (Geode Heart, two blocks, model per siege state), Pocket Anchor (Tumbling Cube: renderer-drawn cube, end portal windows, three rune bands, OCCUPIED state) and the World Seed item (Starseed sprite): generated models (`tools/anchor/`), renderers and particles; the BoundaryBlock is the inside of the Tumbling Cube: void faces (end-portal effect from one RoomVoidRenderer per room), netherite edges, gold corners, all full-bright |
 | CP-008 | DONE | Siege progress visual feedback | Anchor influence/damage states, particles and sound (SG-011), core beacon colour and siege states (SG-006), themed siege bars (SG-010) |
 | CP-009 | DONE | In-game documentation | Item tooltips: a short summary on every mod item, the full rules while Shift is held (lang keys `tooltip.pocketdimensions.<item>.N` / `.more.N`, read by `client/ItemTooltips`). No guide book (decided); advancement hints come with CP-003 |
+| CP-010 | PARTIAL | Testing commands | `/pd test <name>` (ops) for solo testing. `mineAnchor [seconds]`: an invisible miner breaks the anchor of the room you're in (`AnchorMiningHandler.startTestMiner`). More to come |
 
 ---
 

@@ -50,8 +50,12 @@ public final class AnchorMiningHandler {
 
     private final AnchorMining<Spot> mining = new AnchorMining<>();
     private final Map<Spot, Watch> watched = new HashMap<>();
+    /** Invisible test miners (/pd test mineAnchor): progress per tick, keyed by their made-up miner id. */
+    private final Map<UUID, Float> testMiners = new HashMap<>();
+    private static AnchorMiningHandler instance;
 
     public AnchorMiningHandler() {
+        instance = this;
         PlayerInteractEvent.LeftClickBlock.BUS.addListener(this::onLeftClick);
         PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(e -> mining.stop(e.getEntity().getUUID()));
         TickEvent.ServerTickEvent.Post.BUS.addListener(this::onServerTick);
@@ -81,6 +85,8 @@ public final class AnchorMiningHandler {
         Map<Spot, Float> progress = new HashMap<>();
         for (var e : new ArrayList<>(mining.digs().entrySet())) {
             Spot spot = e.getValue().anchor();
+            Float testPerTick = testMiners.get(e.getKey());
+            if (testPerTick != null) { testDig(server, e.getKey(), e.getValue(), testPerTick, progress); continue; }
             ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
             ServerLevel level = server.getLevel(spot.dim());
             if (p == null || level == null || p.level() != level || !level.getBlockState(spot.pos()).is(ModBlocks.POCKET_ANCHOR.get())) {
@@ -120,6 +126,48 @@ public final class AnchorMiningHandler {
             if (tick % 5 == 0) motesAtAnchor(level, spot.pos());
             if (tick % 20 == 0) shudder(server, w.pocketId);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Test miner (/pd test mineAnchor)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Sets an invisible miner to work on the anchor at {@code pos}, finishing in {@code seconds}; at 100 % the anchor
+     * breaks as if a player had mined it (the room and everything in it is gone). Returns false when it isn't an anchor.
+     */
+    public static boolean startTestMiner(UUID requester, ServerLevel level, BlockPos pos, double seconds) {
+        if (instance == null || !level.getBlockState(pos).is(ModBlocks.POCKET_ANCHOR.get())) return false;
+        UUID id = UUID.nameUUIDFromBytes(("pd-test-miner:" + requester).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        instance.testMiners.put(id, seconds <= 0 ? 1f : (float) (1 / (seconds * 20)));
+        instance.mining.start(id, new Spot(level.dimension(), pos.immutable()), level.getGameTime());
+        keepLoaded(level, pos);
+        return true;
+    }
+
+    private void testDig(MinecraftServer server, UUID id, AnchorMining.Dig<Spot> dig, float perTick, Map<Spot, Float> progress) {
+        Spot spot = dig.anchor();
+        ServerLevel level = server.getLevel(spot.dim());
+        if (level == null || !level.getBlockState(spot.pos()).is(ModBlocks.POCKET_ANCHOR.get())) {
+            mining.stop(id); testMiners.remove(id);                         // stolen or gone: nothing left to mine
+            return;
+        }
+        if ((level.getGameTime() - dig.startTick()) % 100 == 0) keepLoaded(level, spot.pos());
+        float p = AnchorMining.progress(perTick, dig.startTick(), level.getGameTime());
+        if (p >= 1f) {                                                       // broken, exactly as a player's mining ends
+            UUID room = roomOf(level, spot.pos());
+            if (room != null) PocketRoomManager.get(server).destroyRoom(room, server);
+            level.destroyBlock(spot.pos(), false);
+            mining.stop(id); testMiners.remove(id);
+            return;
+        }
+        progress.merge(spot, p, Math::max);
+    }
+
+    /** Nobody may be near the anchor while its room is tested from inside: hold its chunk for the next 15 s. */
+    private static void keepLoaded(ServerLevel level, BlockPos pos) {
+        level.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.PORTAL,
+                new net.minecraft.world.level.ChunkPos(pos), 2);
     }
 
     // -------------------------------------------------------------------------

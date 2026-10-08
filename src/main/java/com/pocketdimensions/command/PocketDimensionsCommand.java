@@ -1,6 +1,7 @@
 package com.pocketdimensions.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -33,6 +34,8 @@ import java.util.UUID;
  * Syntax:
  *   /pd owner <name>                               - resolve by player name
  *   /pd owner 550e8400-e29b-41d4-a716-446655440000 - resolve by raw UUID
+ *   /pd test mineAnchor [seconds]                  - testing: mine the anchor of the room you're in, start to finish
+ *                                                    (default: pocket_anchor_mine_seconds from the server config)
  *
  * The argument is auto-detected: if it parses as a UUID it is used directly;
  * otherwise it is treated as a player name and resolved via:
@@ -52,7 +55,48 @@ public class PocketDimensionsCommand {
                 .then(Commands.literal("owner")
                     .then(Commands.argument("player", StringArgumentType.word())
                         .executes(PocketDimensionsCommand::executeSetOwner)))
+                .then(Commands.literal("test")
+                    .then(Commands.literal("mineAnchor")
+                        .executes(ctx -> executeTestMineAnchor(ctx,
+                                com.pocketdimensions.PocketDimensionsServerConfig.POCKET_ANCHOR_MINE_SECONDS.get()))
+                        .then(Commands.argument("seconds", DoubleArgumentType.doubleArg(0, 3600))
+                            .executes(ctx -> executeTestMineAnchor(ctx, DoubleArgumentType.getDouble(ctx, "seconds"))))))
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // /pd test mineAnchor [seconds]
+    // -------------------------------------------------------------------------
+
+    /**
+     * An invisible miner works the placed anchor of the room you're standing in, at the configured mining speed, so the
+     * warnings and cracks can be seen from inside without a second player. At 100 % it breaks: the room is gone.
+     * {@code seconds} is how long the whole mining takes (the server config's mining time unless given).
+     */
+    private static int executeTestMineAnchor(CommandContext<CommandSourceStack> ctx, double seconds)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer player = src.getPlayerOrException();
+        MinecraftServer server = src.getServer();
+        var mgr = com.pocketdimensions.manager.PocketRoomManager.get(server);
+        UUID room = player.level().dimension().equals(PocketDimensionsMod.POCKET_DIM)
+                ? mgr.findRoomForOccupant(player.getUUID()) : null;
+        if (room == null) {
+            src.sendFailure(Component.literal("Stand inside a pocket room to test its anchor."));
+            return 0;
+        }
+        var anchor = mgr.getAnchorLocation(room).orElse(null);
+        ServerLevel level = anchor == null ? null : server.getLevel(anchor.getKey());
+        if (level == null || !com.pocketdimensions.event.AnchorMiningHandler.startTestMiner(
+                player.getUUID(), level, anchor.getValue(), seconds)) {
+            src.sendFailure(Component.literal("This room's anchor isn't placed anywhere (it is being carried)."));
+            return 0;
+        }
+        BlockPos pos = anchor.getValue();
+        src.sendSuccess(() -> Component.literal(String.format(
+                "Test: mining this room's anchor at %d %d %d in %s. It breaks in %.1f s and the room is lost.",
+                pos.getX(), pos.getY(), pos.getZ(), anchor.getKey().identifier(), seconds)), false);
+        return 1;
     }
 
     // -------------------------------------------------------------------------

@@ -66,6 +66,8 @@ The World Anchor is indestructible by normal mining — it can only be removed t
 
 **Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor to transfer the realm to another player.
 
+**Testing tools** (ops): `/pd test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost.
+
 ### Siege System
 
 Two siege blocks can be placed on top of a World Anchor (on its upper half — **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
