@@ -52,6 +52,11 @@ All portals are disallowed in the realm dimension:
 
 Entry and exit must be via anchor/core teleport mechanics only.
 
+### Day and sleep
+
+- The realm shares the overworld's day: same time, same nights.
+- It shares the overworld's sleep count too. Realm sleepers count with the overworld's players (and with everyone in pocket rooms anchored in either), so "1/5 players sleeping" is one count, and the realm can't skip the overworld's night on its own.
+
 ### Border enforcement
 
 Players in the realm must not cross into other players' regions via:

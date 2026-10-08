@@ -3,8 +3,11 @@
     "attributes": {
         "minecraft:gameplay/bed_rule": {
             "can_set_spawn": "never",
-            "can_sleep": "never",
-            "explodes": false
+            "can_sleep": "when_dark",
+            "explodes": false,
+            "error_message": {
+                "translate": "block.minecraft.bed.no_sleep"
+            }
         },
         "minecraft:gameplay/can_start_raid": false,
         "minecraft:gameplay/respawn_anchor_works": false,
