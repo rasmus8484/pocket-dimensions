@@ -82,6 +82,8 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 
 **A broken core:** `/pd regenCore` rebuilds the World Core where it stood, for the realm you're standing in or the World Anchor you're looking at (say, after it was broken by accident in creative).
 
+**A lost anchor:** `/pd regenAnchor <player>` puts their World Anchor back, linked, where it last stood (after an Anchor Breaker took it, or if it was broken in creative). Whatever is in those two blocks now is replaced. The owner can also link any new anchor with a World Seed, as always.
+
 **Testing tools** (ops): `/pd test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost.
 
 ### Siege System

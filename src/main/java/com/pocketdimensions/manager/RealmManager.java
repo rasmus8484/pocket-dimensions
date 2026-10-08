@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.pocketdimensions.PocketDimensionsConfig;
 import com.pocketdimensions.block.WorldCoreBlock;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
+import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import com.pocketdimensions.init.ModBlocks;
@@ -73,6 +74,9 @@ public class RealmManager extends SavedData {
         public @Nullable String   anchorDimKey  = null;
         public @Nullable BlockPos anchorPos     = null;
         public @Nullable BlockPos worldCorePos  = null;
+        /** Where the anchor stood before it was lost (kept for /pd regenAnchor). */
+        public @Nullable String   lastAnchorDimKey = null;
+        public @Nullable BlockPos lastAnchorPos    = null;
         public long createdGameTime = 0;
         public final List<UUID> allowedPlayers = new ArrayList<>();
         /** Allowed players the owner crowned: they can use the core's Access and Manage tabs. */
@@ -128,7 +132,9 @@ public class RealmManager extends SavedData {
                               long createdGameTime,
                               List<UUID> allowedPlayers,
                               List<UUID> managers,
-                              String name) {
+                              String name,
+                              Optional<String> lastAnchorDimKey,
+                              Optional<Long> lastAnchorPosLong) {
 
         static final Codec<RealmEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 UUIDUtil.CODEC.fieldOf("ownerUUID").forGetter(RealmEntry::ownerUUID),
@@ -140,7 +146,9 @@ public class RealmManager extends SavedData {
                 Codec.LONG.optionalFieldOf("createdGameTime", 0L).forGetter(RealmEntry::createdGameTime),
                 UUIDUtil.CODEC.listOf().optionalFieldOf("allowedPlayers", List.of()).forGetter(RealmEntry::allowedPlayers),
                 UUIDUtil.CODEC.listOf().optionalFieldOf("managers", List.of()).forGetter(RealmEntry::managers),
-                Codec.STRING.optionalFieldOf("name", "").forGetter(RealmEntry::name)
+                Codec.STRING.optionalFieldOf("name", "").forGetter(RealmEntry::name),
+                Codec.STRING.optionalFieldOf("lastAnchorDimKey").forGetter(RealmEntry::lastAnchorDimKey),
+                Codec.LONG.optionalFieldOf("lastAnchorPosLong").forGetter(RealmEntry::lastAnchorPosLong)
         ).apply(instance, RealmEntry::new));
 
         static RealmEntry from(UUID ownerUUID, RealmData data) {
@@ -152,7 +160,9 @@ public class RealmManager extends SavedData {
                     data.createdGameTime,
                     List.copyOf(data.allowedPlayers),
                     List.copyOf(data.managers),
-                    data.name);
+                    data.name,
+                    Optional.ofNullable(data.lastAnchorDimKey),
+                    Optional.ofNullable(data.lastAnchorPos).map(BlockPos::asLong));
         }
 
         RealmData toData() {
@@ -165,6 +175,8 @@ public class RealmManager extends SavedData {
             d.allowedPlayers.addAll(allowedPlayers);
             d.managers.addAll(managers);
             d.name = name;
+            d.lastAnchorDimKey = lastAnchorDimKey.orElse(null);
+            d.lastAnchorPos    = lastAnchorPosLong.map(BlockPos::of).orElse(null);
             return d;
         }
     }
@@ -538,6 +550,10 @@ public class RealmManager extends SavedData {
     public void clearAnchorLocation(UUID ownerUUID) {
         RealmData data = realms.get(ownerUUID);
         if (data == null) return;
+        if (data.anchorPos != null) {                 // remembered, so /pd regenAnchor can put it back
+            data.lastAnchorDimKey = data.anchorDimKey;
+            data.lastAnchorPos    = data.anchorPos;
+        }
         data.anchorDimKey = null;
         data.anchorPos = null;
         setDirty();
@@ -646,6 +662,8 @@ public class RealmManager extends SavedData {
         fresh.generated       = old.generated;
         fresh.anchorDimKey    = old.anchorDimKey;
         fresh.anchorPos       = old.anchorPos;
+        fresh.lastAnchorDimKey = old.lastAnchorDimKey;
+        fresh.lastAnchorPos    = old.lastAnchorPos;
         fresh.worldCorePos    = old.worldCorePos;
         fresh.createdGameTime = old.createdGameTime;
         fresh.allowedPlayers.addAll(old.allowedPlayers);
@@ -754,6 +772,8 @@ public class RealmManager extends SavedData {
         RealmData fresh = new RealmData(index, ownerUUID);
         fresh.anchorDimKey    = old.anchorDimKey;
         fresh.anchorPos       = old.anchorPos;
+        fresh.lastAnchorDimKey = old.lastAnchorDimKey;
+        fresh.lastAnchorPos    = old.lastAnchorPos;
         fresh.createdGameTime = server.overworld().getGameTime();
         fresh.allowedPlayers.addAll(old.allowedPlayers);
         fresh.managers.addAll(old.managers);
@@ -809,6 +829,40 @@ public class RealmManager extends SavedData {
         }
         placeCore(realmLevel, data.worldCorePos, ownerUUID);
         return CoreRegen.REBUILT;
+    }
+
+    public record AnchorRegen(Result result, @Nullable ResourceKey<Level> dimension, @Nullable BlockPos pos) {
+        public enum Result { NO_REALM, NO_RECORD, STILL_STANDS, REBUILT }
+    }
+
+    /**
+     * /pd regenAnchor: puts ownerUUID's World Anchor back, linked, where it stood: where the realm still thinks it is
+     * (broken some other way, say in creative), or else where it was when an Anchor Breaker took it. Whatever stands in
+     * those two blocks now is replaced. If the realm's anchor stands, nothing changes.
+     */
+    public AnchorRegen regenerateAnchor(UUID ownerUUID, MinecraftServer server) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null) return new AnchorRegen(AnchorRegen.Result.NO_REALM, null, null);
+        String dimKey = data.anchorPos != null ? data.anchorDimKey : data.lastAnchorDimKey;
+        BlockPos pos = data.anchorPos != null ? data.anchorPos : data.lastAnchorPos;
+        Identifier dimId = dimKey == null ? null : Identifier.tryParse(dimKey);
+        if (pos == null || dimId == null) return new AnchorRegen(AnchorRegen.Result.NO_RECORD, null, null);
+        ResourceKey<Level> dim = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, dimId);
+        ServerLevel level = server.getLevel(dim);
+        if (level == null) return new AnchorRegen(AnchorRegen.Result.NO_RECORD, dim, pos);
+
+        if (level.getBlockEntity(pos) instanceof WorldAnchorBlockEntity a && a.isLinked() && ownerUUID.equals(a.getOwnerUUID()))
+            return new AnchorRegen(AnchorRegen.Result.STILL_STANDS, dim, pos);
+
+        BlockState lower = ModBlocks.WORLD_ANCHOR.get().defaultBlockState().setValue(WorldAnchorBlock.LINKED, true);
+        level.setBlock(pos, lower, 3);
+        level.setBlock(pos.above(), lower.setValue(WorldAnchorBlock.HALF, DoubleBlockHalf.UPPER), 3);
+        if (level.getBlockEntity(pos) instanceof WorldAnchorBlockEntity a) {
+            a.setOwnerUUID(ownerUUID);
+            a.setLinked(true);
+        }
+        setAnchorLocation(ownerUUID, dim, pos);
+        return new AnchorRegen(AnchorRegen.Result.REBUILT, dim, pos);
     }
 
     /** Sends everyone in ownerUUID's realm back to where they entered from, now or when they next log in. */

@@ -47,6 +47,7 @@ import java.util.UUID;
  *                                                    core is removed, its anchor unlinked and its plot retired
  *   /pd regenCore                                  - rebuild the World Core of the realm you're standing in, or of
  *                                                    the World Anchor you're looking at
+ *   /pd regenAnchor <name>                         - put the player's World Anchor back, linked, where it last stood
  *   /pd allow <name> [man]                         - look at a World Anchor or World Core: put a player on the
  *                                                    realm's access list (with man: also make them a manager)
  *   /pd deny <name> [man]                          - take a player off the access list (with man: only take away
@@ -78,6 +79,9 @@ public class PocketDimensionsCommand {
                         .executes(PocketDimensionsCommand::executeDisown)))
                 .then(Commands.literal("regenCore")
                     .executes(PocketDimensionsCommand::executeRegenCore))
+                .then(Commands.literal("regenAnchor")
+                    .then(Commands.argument("player", StringArgumentType.word())
+                        .executes(PocketDimensionsCommand::executeRegenAnchor)))
                 .then(Commands.literal("allow")
                     .then(Commands.argument("player", StringArgumentType.word())
                         .executes(ctx -> executeAccess(ctx, true, false))
@@ -240,6 +244,33 @@ public class PocketDimensionsCommand {
                 yield 1;
             }
         };
+    }
+
+    /** The owner's World Anchor, back where it last stood (RealmManager.regenerateAnchor). */
+    private static int executeRegenAnchor(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        NewOwner who = resolveNewOwner(ctx, server);
+        if (who == null) return 0;
+        RealmManager.AnchorRegen r = RealmManager.get(server).regenerateAnchor(who.id(), server);
+        String where = r.pos() == null ? "" : String.format(" at %d %d %d in %s", r.pos().getX(), r.pos().getY(),
+                r.pos().getZ(), r.dimension().identifier());
+        switch (r.result()) {
+            case NO_REALM -> { src.sendFailure(Component.literal(who.name() + " holds no realm.")); return 0; }
+            case NO_RECORD -> {
+                src.sendFailure(Component.literal("No one remembers where " + who.name() + "'s anchor stood" + where + "."));
+                return 0;
+            }
+            case STILL_STANDS -> {
+                src.sendFailure(Component.literal(who.name() + "'s anchor still stands" + where + "."));
+                return 0;
+            }
+            default -> {
+                src.sendSuccess(() -> Component.literal(who.name() + "'s anchor rises again" + where
+                        + ", bound to their realm as if it had never fallen."), true);
+                return 1;
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
