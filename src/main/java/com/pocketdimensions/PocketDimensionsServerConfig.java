@@ -136,6 +136,7 @@ public class PocketDimensionsServerConfig {
                     .defineInList(c.getSerializedName(), "group", List.of("group", "true", "false")));
         }
         builder.pop();
+        builder.comment("Exceptions, applied last.").push("exceptions");
         MOB_WHITELIST = builder
                 .comment("Mobs that spawn even when their category or group is off.",
                          "Example: [\"minecraft:slime\", \"minecraft:enderman\", \"#minecraft:skeletons\"]")
@@ -144,6 +145,7 @@ public class PocketDimensionsServerConfig {
                 .comment("Mobs that never spawn, even when their category or group is on.",
                          "Example: [\"minecraft:bat\", \"minecraft:glow_squid\", \"minecraft:pufferfish\"]")
                 .defineListAllowEmpty("mob_blacklist", List.of(), RealmGenRules::validEntry);
+        builder.pop();
         builder.pop();
 
         builder.pop();

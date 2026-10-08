@@ -156,7 +156,7 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 | `realm.mobs.spawn_monsters` | false | Whether monsters spawn naturally in realms |
 | `realm.mobs.spawn_friendly_mobs` | true | Whether every other kind spawns naturally (animals, bats, fish, ...) |
 | `realm.mobs.categories.<category>` | "group" | Per mob category: "group" follows the switch above, "true" / "false" overrides it |
-| `realm.mobs.mob_whitelist` / `mob_blacklist` | [] | Single mobs or tags that always / never spawn naturally |
+| `realm.mobs.exceptions.mob_whitelist` / `mob_blacklist` | [] | Single mobs or tags that always / never spawn naturally |
 
 Mining times are fixed: enchantments, Haste and mining fatigue don't change them. 0 means the block breaks instantly.
 
