@@ -70,7 +70,7 @@ Each player can own one realm: a region of overworld-like terrain inside the sha
 
 **Day and sleep:** the realm shares the overworld's day, and its sleep count: realm sleepers count with the overworld's players.
 
-The World Anchor is indestructible by normal mining: it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. Anyone arriving some other way (another mod's teleport, `/home`) without having come in through an anchor is sent back out. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
+A linked World Anchor is indestructible by normal mining: it can only be removed through the siege system. An unlinked one (no World Seed in it) can be mined with a diamond-tier pickaxe in 3 seconds (`world_anchor_mine_seconds`) and drops itself. Players inside a realm are confined to their region boundaries. Portals are blocked. Anyone arriving some other way (another mod's teleport, `/home`) without having come in through an anchor is sent back out. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 

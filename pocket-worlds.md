@@ -187,7 +187,8 @@ If the anchor is destroyed:
 
 Destruction requirements:
 
-- The WorldAnchor **cannot be mined** at all (hardness -1); only a completed Anchor Breaker removes it
+- A linked WorldAnchor **cannot be mined** at all (hardness -1); only a completed Anchor Breaker removes it
+- An unlinked WorldAnchor (no World Seed in it) is mined with a diamond-tier pickaxe in a fixed time (`world_anchor_mine_seconds`, 3 seconds by default) and drops itself
 - World Breacher and Anchor Breaker need a diamond-tier pickaxe and take a fixed time (`world_breacher_mine_seconds` / `anchor_breaker_mine_seconds`, 250 seconds by default); mining is interruptible
 - A mined siege block vanishes with its lapis unless `siege_blocks_drop` is on (then it drops itself and the lapis)
 

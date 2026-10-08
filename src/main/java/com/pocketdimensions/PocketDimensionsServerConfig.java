@@ -22,6 +22,7 @@ public class PocketDimensionsServerConfig {
     public static final ForgeConfigSpec.DoubleValue POCKET_ANCHOR_MINE_SECONDS;
     public static final ForgeConfigSpec.DoubleValue WORLD_BREACHER_MINE_SECONDS;
     public static final ForgeConfigSpec.DoubleValue ANCHOR_BREAKER_MINE_SECONDS;
+    public static final ForgeConfigSpec.DoubleValue WORLD_ANCHOR_MINE_SECONDS;
     public static final ForgeConfigSpec.BooleanValue SIEGE_BLOCKS_DROP;
 
     public static final ForgeConfigSpec.IntValue WORLD_BREACHER_MAX_LAPIS;
@@ -58,6 +59,11 @@ public class PocketDimensionsServerConfig {
         ANCHOR_BREAKER_MINE_SECONDS = builder
                 .comment("Anchor Breaker. Needs a diamond-tier pickaxe or better. Default: 250 (the time it took before this setting existed).")
                 .defineInRange("anchor_breaker_mine_seconds", 250.0, 0.0, 3600.0);
+
+        WORLD_ANCHOR_MINE_SECONDS = builder
+                .comment("An unlinked World Anchor (no World Seed in it): needs a diamond-tier pickaxe or better and drops",
+                         "itself. A linked anchor can never be mined; only an Anchor Breaker removes it. Default: 3.")
+                .defineInRange("world_anchor_mine_seconds", 3.0, 0.0, 3600.0);
 
         SIEGE_BLOCKS_DROP = builder
                 .comment("Whether a mined World Breacher or Anchor Breaker drops itself and the lapis inside it.",

@@ -128,7 +128,7 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     }
 
     // -------------------------------------------------------------------------
-    // Placement — two-block-tall (door pattern)
+    // Placement: two-block-tall (door pattern)
     // -------------------------------------------------------------------------
 
     @Nullable
@@ -156,7 +156,7 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     }
 
     // -------------------------------------------------------------------------
-    // Breaking — remove partner half (handles creative mode)
+    // Breaking: remove partner half (handles creative mode)
     // -------------------------------------------------------------------------
 
     @Override
@@ -171,6 +171,26 @@ public class WorldAnchorBlock extends BaseEntityBlock {
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    /**
+     * A linked anchor can't be mined at all (only an Anchor Breaker removes it). An unlinked one comes up with a
+     * diamond-tier pickaxe or better in a fixed time (world_anchor_mine_seconds). Hardness stays -1, so pistons,
+     * explosions and other mods still treat it as unbreakable.
+     */
+    @Override
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
+        if (state.getValue(LINKED)) return 0f;
+        return DiamondPickaxeMining.progressPerTick(player, state,
+                com.pocketdimensions.PocketDimensionsServerConfig.WORLD_ANCHOR_MINE_SECONDS.get());
+    }
+
+    /** Mined (only possible unlinked, outside creative): it drops itself, once for both halves. */
+    @Override
+    public void playerDestroy(Level level, Player player, BlockPos pos, BlockState state,
+                              @Nullable BlockEntity blockEntity, ItemStack tool) {
+        super.playerDestroy(level, player, pos, state, blockEntity, tool);
+        if (!level.isClientSide() && !state.getValue(LINKED)) popResource(level, pos, new ItemStack(this));
     }
 
     /** UPPER half self-destructs if LOWER is missing (enables AnchorBreaker cascade). */
@@ -195,7 +215,7 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     }
 
     // -------------------------------------------------------------------------
-    // Block entity — LOWER half only
+    // Block entity: LOWER half only
     // -------------------------------------------------------------------------
 
     @Nullable
@@ -211,7 +231,7 @@ public class WorldAnchorBlock extends BaseEntityBlock {
     }
 
     // -------------------------------------------------------------------------
-    // Interactions — resolve UPPER clicks to LOWER BE
+    // Interactions: resolve UPPER clicks to LOWER BE
     // -------------------------------------------------------------------------
 
     /**

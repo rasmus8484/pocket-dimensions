@@ -66,7 +66,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | SG-004 | DONE | Config-driven durations | breach/breaker duration, core_slow_factor, core_fuel_burn_ticks in config |
 | SG-005 | DONE | WorldCore defensive fuel | Anyone may add lapis to the WorldCore (owner and managers can take it out); slows attacker progress by core_slow_factor |
 | SG-006 | DONE | Dynamic beacon colour | WorldCore beam: blue=normal, pink=breacher present, red=breaker active+fueled; anchor destroyed = core inert (no beam) |
-| SG-007 | DONE | WorldAnchor indestructible | Hardness -1; only removable by AnchorBreaker via level.setBlock() (upper half follows) |
+| SG-007 | DONE | WorldAnchor indestructible | Linked: hardness -1, only removable by AnchorBreaker via level.setBlock() (upper half follows). Unlinked: diamond-tier pickaxe, `world_anchor_mine_seconds` (3), drops itself |
 | SG-008 | DONE | Siege placement gating | A World Breacher or Anchor Breaker can only be placed while the realm's owner or someone on its access list is inside the realm (breach visitors and smuggled players don't count). The realm's owner may place either on their own anchor at any time. `block/SiegePlacement`, pure `RealmRules.maySetSiege` |
 | SG-009 | DONE | One siege block per anchor | Enforced by geometry: siege blocks must sit directly on the anchor's upper half, which has room for one |
 | SG-010 | DONE | Siege bars | Themed bars within `siege_bossbar_range` (Rift Eye outside the realm, Aurora Stones inside), drawn by a HUD layer from `SiegeBarS2C`; cross-dimension chunk force-loading keeps both sides ticking |
@@ -97,7 +97,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
 | CP-001 | DONE | Crafting recipes | Pocket Anchor, World Seed, World Anchor, World Breacher, Anchor Breaker; nothing from the End. All five unlock on first entering the Nether |
-| CP-002 | DONE | Drops | By design: siege blocks vanish unless `siege_blocks_drop` (then they drop themselves and their lapis, in code, no loot tables); a mined Pocket Anchor destroys its room and drops nothing; World Anchor and World Core are indestructible |
+| CP-002 | DONE | Drops | By design: siege blocks vanish unless `siege_blocks_drop` (then they drop themselves and their lapis, in code, no loot tables); a mined Pocket Anchor destroys its room and drops nothing; a linked World Anchor and the World Core are indestructible (an unlinked anchor drops itself) |
 | CP-003 | DONE | Advancements | Tab "Folded Space" (unlocks on entering the Nether): pocket rooms (A Room of One's Own, Bigger on the Inside, Dreaming Within, hidden Light Fingers / Echoes in the Walls / Unmade), realms (A Seed of Worlds, Dominion, Heart of the Realm, Kept Company, Hold the Line) and sieges (Gatecrasher, Open Gates, The Unmaker, Severed). Vanilla triggers plus one custom `pocketdimensions:event` trigger (`advancement/PocketEventTrigger`, events in `advancement/Milestones`); files in `data/pocketdimensions/advancement/main`, checked by `AdvancementsTest` |
 | CP-004 | DONE | Custom textures | Every block and item has its own design (`tools/anchor/`); the pocket room walls borrow vanilla's gold and netherite blocks around the end-portal void |
 | CP-005 | DONE | Mining/tool tags | Pocket Anchor, World Breacher and Anchor Breaker in `mineable/pickaxe` and `needs_diamond_tool`; mining times from the server config |
