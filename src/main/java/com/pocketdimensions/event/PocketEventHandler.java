@@ -185,7 +185,7 @@ public class PocketEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // BlockEvent.BreakEvent - anchor break warning
+    // BlockEvent.BreakEvent - a mined anchor takes its room with it
     // -------------------------------------------------------------------------
 
     private void onBlockBreak(BlockEvent.BreakEvent event) {
@@ -201,12 +201,7 @@ public class PocketEventHandler {
             UUID pocketId = be.getPocketId();
             if (pocketId == null) return;
 
-            if (!mgr.getOccupants(pocketId).isEmpty()) {
-                player.displayClientMessage(
-                        Component.literal("Voices still echo from within - someone is inside!"),
-                        true);
-            }
-
+            // (The miner was told at the first hit if anyone is inside: AnchorMiningHandler.)
             // Destroy room here so it works in both survival and creative.
             // (In creative, Forge bypasses onDestroyedByPlayer and calls removeBlock directly.)
             mgr.destroyRoom(pocketId, server);

@@ -225,6 +225,15 @@ public class PocketRoomManager extends SavedData {
         return new BlockPos(px * PLOT_STRIDE, PLOT_BASE_Y, pz * PLOT_STRIDE);
     }
 
+    /** The floor-corner block whose block entity draws the room (RoomVoidBlockEntity), or null for an unknown room. */
+    public @Nullable BlockPos heartPos(UUID pocketId) {
+        RoomData data = rooms.get(pocketId);
+        if (data == null) return null;
+        BlockPos origin = plotOrigin(data.plotIndex);
+        return new BlockPos(origin.getX() + SHELL_OFFSET_XZ + RoomShell.HEART_X,
+                origin.getY() + SHELL_OFFSET_Y + RoomShell.HEART_Y, origin.getZ() + SHELL_OFFSET_XZ + RoomShell.HEART_Z);
+    }
+
     public BlockPos getSpawnPos(UUID pocketId) {
         RoomData data = rooms.get(pocketId);
         if (data == null) return new BlockPos(0, PLOT_BASE_Y + SHELL_OFFSET_Y + SPAWN_OFFSET_Y, 0);

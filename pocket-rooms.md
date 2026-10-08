@@ -131,10 +131,10 @@ This is a stealth theft mechanic.
 Mining behaves as a high-hardness block.
 
 While being mined:
-- Both the miner and the players inside are warned via:
-  - Particles
-  - Sounds
-  - (Optional) action bar warning
+- Outside: red motes are pulled out of the cube and reality cracks (a sound) at the first hit and at 25 / 50 / 75 %. Every anchor does this, occupied or not, so mining never gives away whether anyone is inside
+- The miner is told at the first hit if someone is inside ("Voices echo from within")
+- Inside: the same crack at the same volume, a warning on the action bar, motes shaken off the walls, and the Anchor Breaker's lightning, enlarged, tearing in from every wall: one set at 25 %, another at 50 %, another at 75 %
+- When the mining stops, the cracks are gone (the next attempt starts over, as mining does)
 
 If fully mined (broken):
 - The player(s) inside are force-ejected
@@ -151,7 +151,7 @@ Chorus fruit teleportation is cancelled inside pocket rooms.
 Tool gating:
 - Requires a **diamond-tier or better** pickaxe; the break time is set by `pocket_anchor_mine_seconds` in the server config
 
-*Implementation note: only the miner gets a warning (an action-bar message if players are inside). Particles, sounds and occupant warnings are not implemented.*
+*Implementation: `event/AnchorMiningHandler` (left-click events, progress counted as the server counts it), pure `manager/AnchorMining` and `manager/RoomCracks`; the room's `RoomVoidBlockEntity` carries the crack count (synced, never saved) and `client/RoomVoidRenderer` draws them.*
 
 ---
 
