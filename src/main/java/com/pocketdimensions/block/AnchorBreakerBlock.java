@@ -127,6 +127,14 @@ public class AnchorBreakerBlock extends BaseEntityBlock {
                 AnchorBreakerBlockEntity::serverTick);
     }
 
+    /** The anchor can only be set upon while the realm has one of its own inside, as with the breacher (SiegePlacement). */
+    @Override
+    public @Nullable BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext ctx) {
+        BlockState state = super.getStateForPlacement(ctx);
+        if (state == null) return null;
+        return SiegePlacement.defenderInside(ctx, "The realm lies empty. Unmaking needs one of its own inside.") ? state : null;
+    }
+
     /** Only survives when placed on the UPPER half of a WorldAnchor. */
     @Override
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {

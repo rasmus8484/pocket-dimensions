@@ -227,6 +227,7 @@ Anchor Breaker is a separate siege block placed on top of a WorldAnchor.
 
 Rules:
 
+- Like the World Breacher, it can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it
 - It uses lapis as fuel
 - It progresses only while correctly placed and fueled
 - It can be slowed by WorldCore defensive fuel in the same way as the World Breacher
