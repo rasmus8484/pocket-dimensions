@@ -26,6 +26,7 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -33,7 +34,7 @@ import java.util.UUID;
  * A Pocket Anchor being mined is felt from both sides. Outside, the cube bleeds red motes and reality cracks (sound).
  * Inside, the room shudders: the same crack at the same volume, a warning on the action bar, motes off the walls, and
  * the Anchor Breaker's lightning, enlarged, tearing in from every wall, one more set at 25, 50 and 75 % (drawn by the
- * room's RoomVoidBlockEntity). Stop mining and the cracks are gone. The miner is told at the first hit when someone is
+ * room's RoomVoidBlockEntity), and once more as it breaks. Stop mining and the cracks are gone. The miner is told at the first hit when someone is
  * inside. Every anchor shows its outside signs, occupied or not, so mining never gives away whether anyone is home.
  * Silent theft (crouch + right-click) stays silent.
  */
@@ -156,7 +157,7 @@ public final class AnchorMiningHandler {
         float p = AnchorMining.progress(perTick, dig.startTick(), level.getGameTime());
         if (p >= 1f) {                                                       // broken, exactly as a player's mining ends
             UUID room = roomOf(level, spot.pos());
-            if (room != null) PocketRoomManager.get(server).destroyRoom(room, server);
+            if (room != null) destroyRoom(server, level, spot.pos(), room);
             level.destroyBlock(spot.pos(), false);
             mining.stop(id); testMiners.remove(id);
             return;
@@ -174,13 +175,29 @@ public final class AnchorMiningHandler {
     // Effects
     // -------------------------------------------------------------------------
 
+    /**
+     * At 100 %: the room is torn down (everyone inside thrown out) and reality cracks one last time, at the anchor and for
+     * each of them wherever they land. Called for a player's mining (PocketEventHandler) and for the test miner.
+     */
+    public static void destroyRoom(MinecraftServer server, ServerLevel level, BlockPos pos, UUID room) {
+        List<ServerPlayer> inside = occupants(server, room);
+        PocketRoomManager.get(server).destroyRoom(room, server);
+        level.playSound(null, pos, ModSounds.REALITY_CRACK.get(), SoundSource.BLOCKS, 1f, 1f);
+        for (ServerPlayer p : inside)
+            if (p.level() != level || p.distanceToSqr(pos.getCenter()) > 32 * 32) crackFor(p);   // out of earshot of the anchor
+    }
+
     /** The crack, at the anchor and for everyone inside, at the same volume. */
     private static void crack(MinecraftServer server, ServerLevel level, BlockPos pos, UUID room) {
         level.playSound(null, pos, ModSounds.REALITY_CRACK.get(), SoundSource.BLOCKS, 1f, 1f);
+        for (ServerPlayer p : occupants(server, room)) crackFor(p);
+    }
+
+    /** The crack for one player, where they stand. */
+    private static void crackFor(ServerPlayer p) {
         var sound = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ModSounds.REALITY_CRACK.get());
-        for (ServerPlayer p : occupants(server, room))
-            p.connection.send(new ClientboundSoundPacket(sound, SoundSource.BLOCKS, p.getX(), p.getEyeY(), p.getZ(),
-                    1f, 1f, p.getRandom().nextLong()));
+        p.connection.send(new ClientboundSoundPacket(sound, SoundSource.BLOCKS, p.getX(), p.getEyeY(), p.getZ(),
+                1f, 1f, p.getRandom().nextLong()));
     }
 
     /** Red motes pulled out of the cube in every direction. */
@@ -217,8 +234,8 @@ public final class AnchorMiningHandler {
         return be.getPocketId();
     }
 
-    private static java.util.List<ServerPlayer> occupants(MinecraftServer server, UUID room) {
-        java.util.List<ServerPlayer> out = new ArrayList<>();
+    private static List<ServerPlayer> occupants(MinecraftServer server, UUID room) {
+        List<ServerPlayer> out = new ArrayList<>();
         for (UUID id : PocketRoomManager.get(server).getOccupants(room)) {
             ServerPlayer p = server.getPlayerList().getPlayer(id);
             if (p != null && p.level().dimension().equals(PocketDimensionsMod.POCKET_DIM)) out.add(p);

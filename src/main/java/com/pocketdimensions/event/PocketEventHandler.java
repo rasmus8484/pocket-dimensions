@@ -204,7 +204,7 @@ public class PocketEventHandler {
             // (The miner was told at the first hit if anyone is inside: AnchorMiningHandler.)
             // Destroy room here so it works in both survival and creative.
             // (In creative, Forge bypasses onDestroyedByPlayer and calls removeBlock directly.)
-            mgr.destroyRoom(pocketId, server);
+            AnchorMiningHandler.destroyRoom(server, serverLevel, event.getPos(), pocketId);
         }
     }
 

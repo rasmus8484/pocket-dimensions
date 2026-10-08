@@ -145,7 +145,7 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `mining.pocket_anchor_mine_seconds` | 9.4 | Seconds to mine a Pocket Anchor (still needs a diamond-tier pickaxe) |
+| `mining.pocket_anchor_mine_seconds` | 15 | Seconds to mine a Pocket Anchor (still needs a diamond-tier pickaxe) |
 | `mining.world_breacher_mine_seconds` | 250 | Seconds to mine a World Breacher (needs a diamond-tier pickaxe) |
 | `mining.anchor_breaker_mine_seconds` | 250 | Seconds to mine an Anchor Breaker (needs a diamond-tier pickaxe) |
 | `mining.siege_blocks_drop` | false | Whether a mined World Breacher or Anchor Breaker drops itself and its lapis (false: destroyed with its fuel) |
