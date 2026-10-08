@@ -33,4 +33,12 @@ public final class TravelRules {
     public static boolean leashedFollows(boolean monster, boolean alreadyAboard) {
         return !monster && !alreadyAboard;
     }
+
+    /**
+     * Right-clicking a pocket room's wall takes a rider out, mount and all: they can't crouch + jump (crouching sets them
+     * down). On foot a wall is just a wall, so a stray click never throws anyone out.
+     */
+    public static boolean wallLetsYouOut(boolean riding) {
+        return riding;
+    }
 }

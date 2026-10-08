@@ -41,6 +41,11 @@ public class PocketEventHandler {
     /** Exit cooldown - prevents double-trigger on the same jump. */
     private static final Map<UUID, Integer> exitCooldownExpiry = new HashMap<>();
 
+    /** Riders who clicked a wall to leave (BoundaryBlock); they go on their next tick, never mid-click. */
+    private static final java.util.Set<UUID> pendingWallExits = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static void queueWallExit(UUID player) { pendingWallExits.add(player); }
+
     public PocketEventHandler() {
         TickEvent.PlayerTickEvent.Post.BUS.addListener(this::onPlayerTick);
         PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(this::onPlayerLogout);
@@ -88,6 +93,13 @@ public class PocketEventHandler {
             // This happens if they respawned here (e.g. /spawnpoint set inside a room
             // that was later destroyed). Eject immediately to prevent a void death loop.
             mgr.teleportToEntryOrSpawn(serverPlayer, server, com.pocketdimensions.manager.TravelRules.Journey.FORCED);
+            return;
+        }
+
+        // -- A rider clicked a wall: out, mount and all --
+        if (pendingWallExits.remove(uuid)) {
+            exitCooldownExpiry.put(uuid, now + 40);
+            performExit(serverPlayer, pocketId, mgr, server);
             return;
         }
 

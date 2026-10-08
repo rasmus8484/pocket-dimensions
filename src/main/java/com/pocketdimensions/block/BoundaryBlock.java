@@ -51,6 +51,32 @@ public class BoundaryBlock extends BaseEntityBlock {
         builder.add(PART, HEART);
     }
 
+    /**
+     * A rider right-clicking a wall leaves the room, mount and all (TravelRules.wallLetsYouOut): crouching would set
+     * them down, so they can't use crouch + jump. On foot, the wall does nothing.
+     */
+    @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, net.minecraft.world.level.Level level,
+                                                                   BlockPos pos, net.minecraft.world.entity.player.Player player,
+                                                                   net.minecraft.world.phys.BlockHitResult hit) {
+        if (!com.pocketdimensions.manager.TravelRules.wallLetsYouOut(player.isPassenger()))
+            return net.minecraft.world.InteractionResult.PASS;
+        if (!level.isClientSide()) com.pocketdimensions.event.PocketEventHandler.queueWallExit(player.getUUID());
+        return net.minecraft.world.InteractionResult.SUCCESS;
+    }
+
+    /** With something in hand, the same: a rider goes out (nothing is placed or used against the wall). */
+    @Override
+    protected net.minecraft.world.InteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state,
+                                                              net.minecraft.world.level.Level level, BlockPos pos,
+                                                              net.minecraft.world.entity.player.Player player,
+                                                              net.minecraft.world.InteractionHand hand,
+                                                              net.minecraft.world.phys.BlockHitResult hit) {
+        if (!com.pocketdimensions.manager.TravelRules.wallLetsYouOut(player.isPassenger()))
+            return net.minecraft.world.InteractionResult.TRY_WITH_EMPTY_HAND;
+        return useWithoutItem(state, level, pos, player, hit);
+    }
+
     /** The shell block for a local position in the room's 20-block shell. */
     public BlockState stateAt(int x, int y, int z) {
         RoomShell.Part part = RoomShell.partAt(x, y, z);

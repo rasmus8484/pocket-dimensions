@@ -93,6 +93,8 @@ Going into or out of a pocket room or a realm by choice (an anchor, the World Co
 - **Your mount** comes with you, still ridden, if there is room for it where you arrive; so does everything aboard it (a creature in your boat, whatever it is), except other players, who are set down first. If another player is steering, you get off and it stays.
 - **Animals on your lead** within lead range follow, still on the lead. Monsters on a lead stay behind.
 
+Riding, you can't crouch + jump out of a pocket room (crouching sets you down), so instead **right-click any wall of the room** while mounted to leave together. On foot the walls do nothing.
+
 Thrown out (sent out of a realm, or a room whose anchor was mined), you go alone. Ride past a realm's border and you are pushed back together with your mount.
 
 ### Siege System

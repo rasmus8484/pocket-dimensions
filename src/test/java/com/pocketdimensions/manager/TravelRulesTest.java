@@ -28,6 +28,12 @@ class TravelRulesTest {
     }
 
     @Test
+    void aRiderLeavesARoomByTheWallsAndSomeoneOnFootByCrouchAndJump() {
+        assertTrue(TravelRules.wallLetsYouOut(true), "crouching would set you down, so a rider uses the walls");
+        assertFalse(TravelRules.wallLetsYouOut(false), "on foot a wall is just a wall: no exits by a stray click");
+    }
+
+    @Test
     void onlyAJourneyYouChoseBringsCompany() {
         assertTrue(TravelRules.bringsCompany(TravelRules.Journey.CHOSEN));
         assertFalse(TravelRules.bringsCompany(TravelRules.Journey.FORCED), "thrown out: you go alone");
