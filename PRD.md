@@ -24,6 +24,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | PR-014 | DONE | Safe arrival | Entering a room searches for the nearest free spot (SpawnSearch/SafeSpot) so blocks built over the spawn never trap you |
 | PR-015 | DONE | Occupied anchor | Server sets `OCCUPIED` from online occupants; the Tumbling Cube glows brighter (light 9 vs 6) while someone is inside |
 | PR-016 | DONE | Lit rooms | The shell lets sky light through (`getLightBlock` 0, `propagatesSkylightDown`), so every spot in a room has light 15: crops plant and grow anywhere, hostile mobs never spawn naturally. Rooms made before this keep their old darkness until relit |
+| PR-017 | DONE | Liquid-proof anchor | The Pocket Anchor is forced solid, so flowing water or lava can't wash it away (its 10 px cube is too small to count as solid on its own, and fluids destroy non-solid blocks). Entering refuses, keeping the item, when there is no spot at your feet or beside you for the anchor |
 
 ---
 

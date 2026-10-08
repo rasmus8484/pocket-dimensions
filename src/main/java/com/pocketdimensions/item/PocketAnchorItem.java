@@ -137,18 +137,20 @@ public class PocketAnchorItem extends BlockItem {
             setPocketId(stack, pocketId);
         }
 
-        // Place anchor at feet if no anchor is currently registered
+        // Place anchor at feet if no anchor is currently registered. Without a spot for it there would be no way back
+        // out and the room would be lost, so refuse before the item is used up.
         if (mgr.getAnchorLocation(pocketId).isEmpty()) {
-            BlockPos feet = player.blockPosition();
-            BlockPos placePos = findReplaceable(level, feet);
-            if (placePos != null) {
-                level.setBlock(placePos, ModBlocks.POCKET_ANCHOR.get().defaultBlockState(), 3);
-                if (level.getBlockEntity(placePos) instanceof PocketAnchorBlockEntity be) {
-                    be.setPocketId(pocketId);
-                    be.setOwnerUUID(player.getUUID());
-                }
-                mgr.setAnchorLocation(pocketId, level.dimension(), placePos);
+            BlockPos placePos = findReplaceable(level, player.blockPosition());
+            if (placePos == null) {
+                player.displayClientMessage(Component.literal("There is no room here for the anchor to rest."), true);
+                return InteractionResult.FAIL;
             }
+            level.setBlock(placePos, ModBlocks.POCKET_ANCHOR.get().defaultBlockState(), 3);
+            if (level.getBlockEntity(placePos) instanceof PocketAnchorBlockEntity be) {
+                be.setPocketId(pocketId);
+                be.setOwnerUUID(player.getUUID());
+            }
+            mgr.setAnchorLocation(pocketId, level.dimension(), placePos);
         }
 
         // Consume item and teleport player in via block entity logic

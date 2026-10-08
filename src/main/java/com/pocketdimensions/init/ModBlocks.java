@@ -28,7 +28,10 @@ public class ModBlocks {
                     .lightLevel(state -> state.getValue(PocketAnchorBlock.OCCUPIED) ? 9 : 6)
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops()
-                    .noOcclusion()));
+                    .noOcclusion()
+                    // its 10 px cube is too small to count as solid, and flowing liquid washes non-solid blocks away
+                    // (losing the room): forced solid, water and lava treat it like stone
+                    .forceSolidOn()));
 
     public static final RegistryObject<Block> WORLD_ANCHOR = BLOCKS.register("world_anchor",
             () -> new WorldAnchorBlock(BlockBehaviour.Properties.of()
