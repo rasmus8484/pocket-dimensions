@@ -30,16 +30,22 @@ Players must not be able to cross into other players' regions.
 
 ## 3. Realm dimension rules
 
+A realm is meant to be a safe, untouched place for a base: never found by a village, raided from an outpost or dug into by a dungeon's spawner. Server owners decide what else they want in the `[realm]` section of the per-world server config (`serverconfig/pocketdimensions-server.toml`). Every part has a switch, then exceptions: the whitelist lets things through whatever the switch says, the blacklist keeps things out whatever else says (it beats the whitelist). Entries are ids (`minecraft:igloo`) or tags (`#minecraft:village`).
+
 ### World generation
 
-- Custom terrain or flat baseline (configurable)
-- **No structure generation** of any kind
+- Overworld-style terrain from the realm's own noise settings
+- **Structures**: `generate_structures` (default **false**) plus `structure_whitelist` / `structure_blacklist`. Structures that are off don't show up in `/locate` or on explorer maps
+- **Features** (ores, trees, lakes, dungeons, geodes, fossils, ...): `generate_features` (default **true**) plus `feature_whitelist` / `feature_blacklist`; the blacklist starts with dungeons (`minecraft:monster_room`, `minecraft:monster_room_deep`)
+- Changes apply to land generated afterwards; structure changes need a restart
 
 ### Mob spawning
 
-- **No natural hostile mob spawning**
-- (Optional) no natural passive mob spawning
-- **Spawner blocks must still function normally**
+- Natural spawning only (in the dark, or when new land generates): **spawner blocks always work**, and so do eggs and commands
+- `spawn_monsters` (default **false**) and `spawn_friendly_mobs` (default **true**, everything that isn't a monster: animals, bats, fish, squid, axolotls)
+- Per category (`monster`, `creature`, `ambient`, `axolotls`, `underground_water_creature`, `water_creature`, `water_ambient`): `"group"` follows the switch above, `"true"` / `"false"` decides for that category
+- Then `mob_whitelist` / `mob_blacklist` for single mobs or tags
+- A jockey's mount isn't judged on its own: if the rider may not spawn, neither does the ride
 
 ### Portals
 

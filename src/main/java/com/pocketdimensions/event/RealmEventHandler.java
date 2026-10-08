@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.portal.TeleportTransition;
@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Handles server-side Forge events for the Realm system:
  *   - Border enforcement: clamp players to their realm bounds if they stray outside
  *   - Portal blocking: cancel any dimension travel originating from inside the realm
- *   - Mob spawn blocking: suppress natural Monster spawns in the realm dimension
+ *   - Natural spawns: only the mobs the server config's [realm.mobs] rules allow
  *
  * Realm entry is queued here (pendingRealmEntries) so the actual teleport fires from
  * PlayerTickEvent, not from inside a block interaction handler. This avoids the
@@ -319,15 +319,21 @@ public class RealmEventHandler {
     }
 
     // -------------------------------------------------------------------------
-    // MobSpawnEvent.FinalizeSpawn - no natural Monster spawns in realm
+    // MobSpawnEvent.FinalizeSpawn - natural spawns follow the server config's [realm.mobs] rules
     // -------------------------------------------------------------------------
 
+    /**
+     * Mobs appearing on their own (in the dark, or with new land) only when the realm rules allow their kind
+     * (RealmWorldRules: by category, then the whitelist / blacklist). Spawners, eggs and commands are untouched. A
+     * jockey's mount isn't judged on its own: if the rider may not spawn, neither does the ride.
+     */
     private void onFinalizeSpawn(MobSpawnEvent.FinalizeSpawn event) {
-        if (!(event.getLevel() instanceof ServerLevel serverLevel)) return;
-        if (!serverLevel.dimension().equals(PocketDimensionsMod.REALM_DIM)) return;
-        if (event.getSpawnReason() != EntitySpawnReason.NATURAL) return;
-        if (!(event.getEntity() instanceof Monster)) return;
-        event.setSpawnCancelled(true);
+        if (!(event.getLevel() instanceof ServerLevelAccessor accessor)) return;
+        if (!accessor.getLevel().dimension().equals(PocketDimensionsMod.REALM_DIM)) return;
+        EntitySpawnReason reason = event.getSpawnReason();
+        if (reason != EntitySpawnReason.NATURAL && reason != EntitySpawnReason.CHUNK_GENERATION) return;
+        if (!com.pocketdimensions.worldgen.RealmWorldRules.mobAllowed(event.getEntity().getType()))
+            event.setSpawnCancelled(true);
     }
 
     // -------------------------------------------------------------------------
