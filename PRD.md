@@ -19,7 +19,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | PR-008 | DONE | Disconnect handling | Player logs off holding stolen item while others inside: anchor auto-placed at feet |
 | PR-009 | DONE | Multi-player occupancy | Multiple players can be in the same room simultaneously |
 | PR-010 | DONE | Exit to thief location | Exiting player appears next to the online player carrying the anchor; falls back to entry location / spawn |
-| PR-012 | PARTIAL | Anchor break warning | Miner gets an action-bar warning when breaking an occupied anchor; no particles/sounds, occupants not warned |
+| PR-012 | DONE | Anchor break warning | While a Pocket Anchor is mined: the miner is told at the first hit if anyone is inside; occupants get an action-bar warning and the reality-crack sound at the same volume as outside (`event/AnchorMiningHandler`, pure `manager/AnchorMining`) |
 | PR-013 | DONE | Chorus fruit blocking | Chorus fruit teleport cancelled inside pocket rooms |
 | PR-014 | DONE | Safe arrival | Entering a room searches for the nearest free spot (SpawnSearch/SafeSpot) so blocks built over the spawn never trap you |
 | PR-015 | DONE | Occupied anchor | Server sets `OCCUPIED` from online occupants; the Tumbling Cube glows brighter (light 9 vs 6) while someone is inside |
@@ -101,10 +101,11 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | CP-003 | TODO | Advancements | Progression milestones (first room, first realm, first siege, etc.); only a hidden recipe-unlock advancement exists |
 | CP-004 | DONE | Custom textures | Every block and item has its own design (`tools/anchor/`); the pocket room walls borrow vanilla's gold and netherite blocks around the end-portal void |
 | CP-005 | DONE | Mining/tool tags | Pocket Anchor, World Breacher and Anchor Breaker in `mineable/pickaxe` and `needs_diamond_tool`; mining times from the server config |
-| CP-006 | TODO | Anchor break warning FX | Particles and sounds when anchor is being mined/destroyed |
+| CP-006 | DONE | Anchor break warning FX | Red motes and the crack sound at any anchor being mined; inside, the Anchor Breaker's lightning, enlarged, tears in from the walls at 25 / 50 / 75 % and vanishes when the mining stops (pure `manager/RoomCracks`, `client/RoomVoidRenderer`) |
 | CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker), World Core (Geode Heart, two blocks, model per siege state), Pocket Anchor (Tumbling Cube: renderer-drawn cube, end portal windows, three rune bands, OCCUPIED state) and the World Seed item (Starseed sprite): generated models (`tools/anchor/`), renderers and particles; the BoundaryBlock is the inside of the Tumbling Cube: void faces (end-portal effect from one RoomVoidRenderer per room), netherite edges, gold corners, all full-bright |
 | CP-008 | DONE | Siege progress visual feedback | Anchor influence/damage states, particles and sound (SG-011), core beacon colour and siege states (SG-006), themed siege bars (SG-010) |
 | CP-009 | DONE | In-game documentation | Item tooltips: a short summary on every mod item, the full rules while Shift is held (lang keys `tooltip.pocketdimensions.<item>.N` / `.more.N`, read by `client/ItemTooltips`). No guide book (decided); advancement hints come with CP-003 |
+| CP-010 | PARTIAL | Testing commands | `/pd test <name>` (ops) for solo testing. `mineAnchor [seconds]`: an invisible miner breaks the anchor of the room you're in (`AnchorMiningHandler.startTestMiner`). More to come |
 
 ---
 
@@ -120,7 +121,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | 4.6 — Access list & anchor model | RL-015, RL-016 | DONE |
 | 4.7 — Visual rework, safe arrival, config | CP-007, SG-010 to SG-013, PR-014, PR-015, RL-017 to RL-019 | DONE |
 | 5 — Anti-exploit | AE-001 through AE-008 | PARTIAL |
-| 6 — Content | CP-001 through CP-009 | PARTIAL (CP-003, CP-006 left) |
+| 6 — Content | CP-001 through CP-009 | PARTIAL (CP-003 left) |
 
 ---
 
@@ -130,4 +131,4 @@ These are features described in design docs that differ from current implementat
 
 | PRD ID | Mismatch |
 |--------|----------|
-| PR-012 | Docs say miner and occupants are warned with particles/sounds; code only sends the miner an action-bar message |
+| (none) | Every documented feature matches the code |

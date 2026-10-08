@@ -29,8 +29,8 @@ public class PocketDimensionsServerConfig {
 
         POCKET_ANCHOR_MINE_SECONDS = builder
                 .comment("Pocket Anchor. Still needs a diamond-tier pickaxe or better; any other tool can't break it.",
-                         "Default: 9.4 (what a plain diamond pickaxe took before this setting existed).")
-                .defineInRange("pocket_anchor_mine_seconds", 9.4, 0.0, 3600.0);
+                         "Default: 15 (time for the people inside to hear the warnings and see the cracks coming).")
+                .defineInRange("pocket_anchor_mine_seconds", 15.0, 0.0, 3600.0);
 
         WORLD_BREACHER_MINE_SECONDS = builder
                 .comment("World Breacher. Needs a diamond-tier pickaxe or better. Default: 250 (the time it took before this setting existed).")

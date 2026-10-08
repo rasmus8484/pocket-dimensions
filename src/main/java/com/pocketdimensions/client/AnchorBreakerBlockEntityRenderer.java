@@ -104,23 +104,42 @@ public class AnchorBreakerBlockEntityRenderer implements BlockEntityRenderer<Anc
 
     /** One jagged bolt: a white core and a wide faint blue glow along the same static zig-zag. */
     private static void bolt(VertexConsumer vc, Matrix4f m, float[] a, float[] b, long seed, int id) {
-        float[][] pts = new float[SEGS + 1][];
+        bolt(vc, m, a, b, seed, id, 1f, SEGS);
+    }
+
+    /**
+     * The same bolt at {@code scale} times the breaker's thickness and jag, in {@code segs} segments (pixels, relative
+     * to the pose). The pocket room draws its cracks with this, enlarged.
+     */
+    public static void bolt(VertexConsumer vc, Matrix4f m, float[] a, float[] b, long seed, int id, float scale, int segs) {
+        float[][] pts = new float[segs + 1][];
         float[] dir = {b[0] - a[0], b[1] - a[1], b[2] - a[2]};
         float[][] uv = perpendiculars(dir);
-        for (int i = 0; i <= SEGS; i++) {
-            float t = (float) i / SEGS;
+        for (int i = 0; i <= segs; i++) {
+            float t = (float) i / segs;
             float ou = 0, ov = 0;
-            if (i > 0 && i < SEGS) {
-                ou = (hash(seed, id, i, 0, 7) - 0.5f) * 2 * AMP;
-                ov = (hash(seed, id, i, 1, 7) - 0.5f) * 2 * AMP;
+            if (i > 0 && i < segs) {
+                ou = (hash(seed, id, i, 0, 7) - 0.5f) * 2 * AMP * scale;
+                ov = (hash(seed, id, i, 1, 7) - 0.5f) * 2 * AMP * scale;
             }
             pts[i] = new float[3];
             for (int c = 0; c < 3; c++) pts[i][c] = a[c] + dir[c] * t + uv[0][c] * ou + uv[1][c] * ov;
         }
-        for (int i = 0; i < SEGS; i++) {
-            prism(vc, m, pts[i], pts[i + 1], 0.8f, BOLT_GLOW, 0.35f);
-            prism(vc, m, pts[i], pts[i + 1], 0.15f, BOLT, 1f);
+        for (int i = 0; i < segs; i++) {
+            prism(vc, m, pts[i], pts[i + 1], 0.8f * scale, BOLT_GLOW, 0.35f);
+            prism(vc, m, pts[i], pts[i + 1], 0.15f * scale, BOLT, 1f);
         }
+    }
+
+    /** A side branch off a bolt from a to b: from {@code f} of the way along, bent off by the seed. */
+    public static float[][] branch(float[] a, float[] b, float f, float len, long seed, int id, int k) {
+        float[] d = {b[0] - a[0], b[1] - a[1], b[2] - a[2]}, from = new float[3], dir = new float[3];
+        float l = (float) Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+        for (int c = 0; c < 3; c++) {
+            from[c] = a[c] + d[c] * f;
+            dir[c] = d[c] / l + (hash(seed, id, k, c, 99) - 0.5f) * 0.9f;
+        }
+        return new float[][]{from, at(from, dir, len)};
     }
 
     /** Two unit vectors perpendicular to d (and to each other). */
