@@ -108,7 +108,7 @@ Two siege blocks can be placed on top of a linked World Anchor (never an empty o
 - Progresses over 12,000 ticks (half a Minecraft day, 10 minutes) while fueled; a full day while the World Core wards
 - When complete, any player can use the anchor to enter the realm for as long as the breacher stands (it needs no more lapis), and a pink beacon beam rises from the breacher's eye
 - While attached, the anchor visibly falls under its influence: its black hole turns ember, its runes turn pink from the top down as the breach progresses (all pink when complete), and pink motes drain from the mandibles into the black hole
-- If fuel runs out after breach, access reverts to owner-only
+- Mining or otherwise removing a completed breacher closes the realm again (owner and access list only)
 - Destroying the breacher resets all progress
 
 **Anchor Breaker** (`anchor_breaker`, the "Unmaker": clamps with gold turnbuckles grip the anchor's corners, a chamfered iron housing with lapis cells, an inverted funnel over the seed and four red charge coils around a dark spire)

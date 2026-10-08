@@ -30,6 +30,6 @@ Realms: a World Anchor and a World Seed bind a piece of a shared world to you, g
 [[dependencies.pocketdimensions]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.21.11,1.22,)"
+    versionRange="[1.21.11,1.22)"
     ordering="NONE"
     side="BOTH"
