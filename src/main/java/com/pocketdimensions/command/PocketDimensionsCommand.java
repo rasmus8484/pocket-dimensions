@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
@@ -22,6 +23,7 @@ import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.players.StoredUserEntry;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -127,6 +129,11 @@ public class PocketDimensionsCommand {
         }
 
         BlockPos targetPos = hit.getBlockPos();
+        // A World Anchor keeps its block entity on the lower half; looking at the upper half means the same anchor.
+        var targetState = level.getBlockState(targetPos);
+        if (targetState.getBlock() instanceof WorldAnchorBlock
+                && targetState.getValue(WorldAnchorBlock.HALF) == DoubleBlockHalf.UPPER)
+            targetPos = targetPos.below();
         if (level.getBlockEntity(targetPos) instanceof PocketAnchorBlockEntity pocketAnchor)
             return setPocketOwner(ctx, server, pocketAnchor);
         if (!(level.getBlockEntity(targetPos) instanceof WorldAnchorBlockEntity anchor)) {
