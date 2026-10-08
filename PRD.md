@@ -25,7 +25,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | PR-015 | DONE | Occupied anchor | Server sets `OCCUPIED` from online occupants; the Tumbling Cube glows brighter (light 9 vs 6) while someone is inside |
 | PR-016 | DONE | Lit rooms | The shell lets sky light through (`getLightBlock` 0, `propagatesSkylightDown`), so every spot in a room has light 15: crops plant and grow anywhere, hostile mobs never spawn naturally. Rooms made before this keep their old darkness until relit |
 | PR-017 | DONE | Liquid-proof anchor | The Pocket Anchor is forced solid, so flowing water or lava can't wash it away (its 10 px cube is too small to count as solid on its own, and fluids destroy non-solid blocks). Entering refuses, keeping the item, when there is no spot at your feet or beside you for the anchor |
-| PR-018 | DONE | Sleep where the anchor is | A pocket room is folded space inside the world around its anchor (`RoomHost`: the anchor's dimension, else where its occupant came in, else the overworld). Its beds follow that world's bed rule (night in the overworld or a realm; never in the Nether or End) and never set spawn. Its sleepers join that world's sleep pool: one "1/5 players sleeping" count with that world's players, and the night passes once enough of them have slept (`playersSleepingPercentage`). `event/PocketSleepHandler` + pure `manager/SleepPool` |
+| PR-018 | DONE | Sleep where the anchor is | A pocket room is folded space inside the world around its anchor (`RoomHost`: the anchor's dimension, else where its occupant came in, else the overworld). Its beds follow that world's bed rule (night in the overworld or a realm; never in the Nether or End) and never set spawn. Its sleepers join that world's sleep pool: one "1/5 players sleeping" count with that world's players (the overworld and the realm share one pool, as they share one clock), and the night passes once enough of them have slept (`playersSleepingPercentage`). `event/PocketSleepHandler` + pure `manager/SleepPool` |
 
 ---
 
@@ -45,7 +45,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | RL-010 | DONE | Ownership transfer | `/pd owner <player|uuid>` command transfers realm, anchor, and core |
 | RL-011 | DONE | Realm relinking | WorldSeed on new anchor rekeys realm; refused while the old anchor stands |
 | RL-012 | DONE | Login restoration | PlayerLoggedInEvent restores runtime bounds or ejects player if no info |
-| RL-013 | DONE | Sleep time advancement | SleepFinishedTimeEvent advances overworld day time from realm |
+| RL-013 | DONE | Sleep time advancement | The realm shares the overworld's clock and its sleep pool: realm sleepers count with the overworld's players (`PocketSleepHandler`, `RoomHost.poolHost`), so the realm can't skip the overworld's night alone |
 | RL-014 | TODO | Passive mob spawn control | Config option to suppress passive spawns in realm dimension |
 | RL-015 | DONE | Realm access list | Owner adds/removes players in WorldCore GUI; custom packets (ModNetworking); `max_allowed_players` cap |
 | RL-016 | DONE | Two-block World Anchor | Lower/upper halves (DOUBLE_BLOCK_HALF); BE on lower half; custom model + textures |
@@ -104,7 +104,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | CP-006 | TODO | Anchor break warning FX | Particles and sounds when anchor is being mined/destroyed |
 | CP-007 | PARTIAL | Custom block models | World Anchor (Runebound), World Breacher (Mandible), Anchor Breaker (Unmaker), World Core (Geode Heart, two blocks, model per siege state), Pocket Anchor (Tumbling Cube: renderer-drawn cube, end portal windows, three rune bands, OCCUPIED state) and the World Seed item (Starseed sprite): generated models (`tools/anchor/`), renderers and particles; the BoundaryBlock is the inside of the Tumbling Cube: void faces (end-portal effect from one RoomVoidRenderer per room), netherite edges, gold corners, all full-bright |
 | CP-008 | DONE | Siege progress visual feedback | Anchor influence/damage states, particles and sound (SG-011), core beacon colour and siege states (SG-006), themed siege bars (SG-010) |
-| CP-009 | PARTIAL | In-game documentation | Item tooltips: a short summary on every mod item, the full rules while Shift is held (lang keys `tooltip.pocketdimensions.<item>.N` / `.more.N`, read by `client/ItemTooltips`). A guide book or advancement hints could follow |
+| CP-009 | DONE | In-game documentation | Item tooltips: a short summary on every mod item, the full rules while Shift is held (lang keys `tooltip.pocketdimensions.<item>.N` / `.more.N`, read by `client/ItemTooltips`). No guide book (decided); advancement hints come with CP-003 |
 
 ---
 
@@ -120,7 +120,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | 4.6 — Access list & anchor model | RL-015, RL-016 | DONE |
 | 4.7 — Visual rework, safe arrival, config | CP-007, SG-010 to SG-013, PR-014, PR-015, RL-017 to RL-019 | DONE |
 | 5 — Anti-exploit | AE-001 through AE-008 | PARTIAL |
-| 6 — Content | CP-001 through CP-009 | PARTIAL (CP-003, CP-006, CP-009 left) |
+| 6 — Content | CP-001 through CP-009 | PARTIAL (CP-003, CP-006 left) |
 
 ---
 

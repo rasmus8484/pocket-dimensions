@@ -15,4 +15,12 @@ public final class RoomHost {
         if (anchorDimension != null) return anchorDimension;
         return entryDimension != null ? entryDimension : fallback;
     }
+
+    /**
+     * Whose sleep pool a world's beds count in. The realm borrows the overworld's clock, so its nights are the
+     * overworld's nights and its sleepers are counted with the overworld's; every other world counts on its own.
+     */
+    public static <T> T poolHost(T dimension, T realm, T overworld) {
+        return dimension.equals(realm) ? overworld : dimension;
+    }
 }

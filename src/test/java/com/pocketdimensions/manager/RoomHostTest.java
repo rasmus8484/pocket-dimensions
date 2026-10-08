@@ -21,4 +21,11 @@ class RoomHostTest {
     void withNeitherItFallsBackToTheOverworld() {
         assertEquals("overworld", RoomHost.pick(null, null, "overworld"));
     }
+
+    @Test
+    void theRealmSleepsWithTheOverworldItsClockBelongsTo() {
+        assertEquals("overworld", RoomHost.poolHost("realm", "realm", "overworld"));
+        assertEquals("overworld", RoomHost.poolHost("overworld", "realm", "overworld"));
+        assertEquals("the_nether", RoomHost.poolHost("the_nether", "realm", "overworld"), "other worlds keep their own");
+    }
 }

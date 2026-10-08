@@ -33,14 +33,16 @@ import java.util.UUID;
 /**
  * Pocket rooms sleep with the world their anchor is in ({@link RoomHost}): the room is folded space inside that world,
  * not a world of its own. A bed in a pocket room follows the host's bed rule (night in the overworld or a realm, never in
- * the Nether or the End), and its sleeper joins the host's sleep pool: "1/5 players sleeping" counts the host's players
- * and everyone in pocket rooms anchored there, and the night passes once enough of them have slept (the
+ * the Nether or the End), and its sleeper joins the host's sleep pool. The realm borrows the overworld's clock, so it
+ * sleeps in the overworld's pool too: "1/5 players sleeping" counts the overworld's and the realm's players and everyone
+ * in pocket rooms anchored in either, and the night passes once enough of them have slept (the
  * playersSleepingPercentage gamerule).
  * <p>
  * Vanilla counts sleepers per dimension. At the start of each host's tick this writes the pooled count into its
  * SleepStatus, so vanilla's own check never skips the night early, and then skips the night itself when the pool is
- * ready, the way ServerLevel.tick does (pocket sleepers aren't in the host's player list, so vanilla's "slept long
- * enough" check can't see them). The pocket dimension's own count is emptied every tick so it never wakes anyone alone.
+ * ready, the way ServerLevel.tick does (pocket and realm sleepers aren't in the host's player list, so vanilla's "slept
+ * long enough" check can't see them). The pocket's and the realm's own counts are emptied every tick so neither wakes
+ * anyone alone.
  */
 public final class PocketSleepHandler {
 
@@ -87,22 +89,27 @@ public final class PocketSleepHandler {
 
     private void onLevelTick(TickEvent.LevelTickEvent.Pre event) {
         if (!(event.level() instanceof ServerLevel level)) return;
-        if (level.dimension().equals(PocketDimensionsMod.POCKET_DIM)) {         // never counts on its own
-            SleepStatus status = sleepStatus(level);
+        ResourceKey<Level> dim = level.dimension();
+        if (dim.equals(PocketDimensionsMod.POCKET_DIM) || !poolHost(dim).equals(dim)) {
+            SleepStatus status = sleepStatus(level);              // the pocket and the realm never count on their own
             if (status != null) status.removeAllSleepers();
             return;
         }
         MinecraftServer server = level.getServer();
+        List<ServerPlayer> guests = new ArrayList<>();            // the realm's players, then pocket rooms anchored here
+        for (ServerLevel other : server.getAllLevels())
+            if (other != level && !other.dimension().equals(PocketDimensionsMod.POCKET_DIM)
+                    && poolHost(other.dimension()).equals(dim)) guests.addAll(other.players());
         ServerLevel pocket = server.getLevel(PocketDimensionsMod.POCKET_DIM);
-        List<ServerPlayer> hosted = new ArrayList<>();
-        if (pocket != null) for (ServerPlayer p : pocket.players()) if (hostOf(p).level() == level) hosted.add(p);
+        if (pocket != null)
+            for (ServerPlayer p : pocket.players()) if (poolHost(hostOf(p).level().dimension()).equals(dim)) guests.add(p);
 
-        if (hosted.isEmpty()) {                     // no pocket rooms here: plain vanilla (undo any pooled count once)
-            if (shown.remove(level.dimension()) != null) syncVanilla(level, level.players());
+        if (guests.isEmpty()) {                     // nobody from elsewhere: plain vanilla (undo any pooled count once)
+            if (shown.remove(dim) != null) syncVanilla(level, level.players());
             return;
         }
         List<ServerPlayer> everyone = new ArrayList<>(level.players());
-        everyone.addAll(hosted);
+        everyone.addAll(guests);
         int percent = level.getGameRules().get(GameRules.PLAYERS_SLEEPING_PERCENTAGE);
         SleepPool pool = SleepPool.of(everyone.stream()
                 .map(p -> new SleepPool.Sleeper(p.isSpectator(), p.isSleeping(), p.isSleepingLongEnough())).toList());
@@ -110,6 +117,10 @@ public final class PocketSleepHandler {
         syncVanilla(level, everyone);
         announce(level, everyone, pool, percent);
         if (percent <= 100 && pool.skipNight(percent)) morning(level, everyone);
+    }
+
+    private static ResourceKey<Level> poolHost(ResourceKey<Level> dim) {
+        return RoomHost.poolHost(dim, PocketDimensionsMod.REALM_DIM, Level.OVERWORLD);
     }
 
     /** Vanilla's message, to the whole pool, whenever the count changes (as ServerLevel.announceSleepStatus). */
