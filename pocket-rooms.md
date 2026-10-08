@@ -27,6 +27,7 @@ Boundary is a **custom mod block** with:
 - Pure white texture
 - Looks like the **inside of the Tumbling Cube** you entered (bigger on the inside): every wall, the floor and the ceiling are windows into the end-portal void, ringed by netherite edges with gold corners. Full-bright, nothing casts a shadow on them. One renderer per room draws the void (from a block entity in one floor corner)
 - The shell lets the sky's light through, so the whole room is fully lit: seeds can be planted and grow anywhere, and no hostile mob spawns inside
+- Beds work whenever the overworld's do (night or a thunderstorm), but never set your spawn. Sleepers in pocket rooms count with the overworld's: everyone in both shares one "players sleeping" count, and enough of them sleeping skips the night for all
 - Unbreakable / extremely high hardness
 - High blast resistance
 - Not movable by pistons
