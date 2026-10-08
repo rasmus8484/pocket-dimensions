@@ -106,7 +106,8 @@ public class PocketAnchorItem extends BlockItem {
             level.setBlock(placePos, ModBlocks.POCKET_ANCHOR.get().defaultBlockState(), 3);
             if (level.getBlockEntity(placePos) instanceof PocketAnchorBlockEntity be) {
                 be.setPocketId(pocketId);
-                be.setOwnerUUID(player.getUUID());
+                be.setOwnerUUID(PocketRoomManager.get(((net.minecraft.server.level.ServerLevel) level).getServer())
+                        .anchorOwner(pocketId, player.getUUID()));
             }
 
             PocketRoomManager mgr = PocketRoomManager.get(((net.minecraft.server.level.ServerLevel) level).getServer());
@@ -148,7 +149,8 @@ public class PocketAnchorItem extends BlockItem {
             level.setBlock(placePos, ModBlocks.POCKET_ANCHOR.get().defaultBlockState(), 3);
             if (level.getBlockEntity(placePos) instanceof PocketAnchorBlockEntity be) {
                 be.setPocketId(pocketId);
-                be.setOwnerUUID(player.getUUID());
+                be.setOwnerUUID(PocketRoomManager.get(((net.minecraft.server.level.ServerLevel) level).getServer())
+                        .anchorOwner(pocketId, player.getUUID()));
             }
             mgr.setAnchorLocation(pocketId, level.dimension(), placePos);
         }

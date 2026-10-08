@@ -104,7 +104,7 @@ A player never enters while still carrying the anchor — entering always leaves
 
 The anchor stores:
 - `pocket_id`
-- Owner UUID (for reference / logging)
+- Owner UUID: always the room's owner (who made it, or who `/pd owner` gave it to), whoever places it, so a stolen anchor stays its owner's
 - Timestamp (optional)
 
 ---

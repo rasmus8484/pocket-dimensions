@@ -338,6 +338,15 @@ public class PocketRoomManager extends SavedData {
         return data == null ? null : data.ownerUUID;
     }
 
+    /**
+     * Who a placed anchor of this room belongs to: the room's owner, whoever puts it down (so a stolen anchor stays
+     * its owner's). {@code fallback} only for a room with no record.
+     */
+    public UUID anchorOwner(UUID pocketId, UUID fallback) {
+        UUID owner = getRoomOwner(pocketId);
+        return owner != null ? owner : fallback;
+    }
+
     /** /pd owner: the room is recorded as someone else's. */
     public void setRoomOwner(UUID pocketId, UUID owner) {
         RoomData data = rooms.get(pocketId);

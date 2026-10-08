@@ -176,7 +176,7 @@ public class PocketEventHandler {
             level.setBlock(placePos, ModBlocks.POCKET_ANCHOR.get().defaultBlockState(), 3);
             if (level.getBlockEntity(placePos) instanceof com.pocketdimensions.blockentity.PocketAnchorBlockEntity be) {
                 be.setPocketId(pocketId);
-                be.setOwnerUUID(serverPlayer.getUUID());
+                be.setOwnerUUID(mgr.anchorOwner(pocketId, serverPlayer.getUUID()));
             }
             mgr.setAnchorLocation(pocketId, level.dimension(), placePos);
             stack.shrink(1);
