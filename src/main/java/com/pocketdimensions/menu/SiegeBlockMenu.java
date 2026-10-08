@@ -31,6 +31,19 @@ public class SiegeBlockMenu extends AbstractContainerMenu {
     private final ContainerData data;
     private final @Nullable BlockEntity blockEntity;
     private final BlockPos pos;
+    private int ticksOpen = 0;
+
+    /**
+     * Server side: send every slot and value once more shortly after opening. Forge opens the screen with its own
+     * packet, so the first updates can arrive before the screen exists and be dropped; unchanged values (like the
+     * defended flag) would then never be resent.
+     */
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        if (blockEntity != null && blockEntity.getLevel() != null && !blockEntity.getLevel().isClientSide()
+                && ++ticksOpen == 10) sendAllDataToRemote();
+    }
 
     /** Server-side constructor for WorldBreacher. */
     public SiegeBlockMenu(int containerId, Inventory playerInv, WorldBreacherBlockEntity be) {

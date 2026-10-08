@@ -572,10 +572,11 @@ public class RealmManager extends SavedData {
      * list, or anyone while a fuelled, completed World Breacher stands on the realm's anchor.
      */
     public boolean mayEnter(MinecraftServer server, UUID ownerUUID, UUID playerUUID) {
-        return RealmRules.mayEnter(ownerUUID.equals(playerUUID), isAllowed(ownerUUID, playerUUID), breachOpen(server, ownerUUID));
+        return RealmRules.mayEnter(ownerUUID.equals(playerUUID), isAllowed(ownerUUID, playerUUID), isBreachOpen(server, ownerUUID));
     }
 
-    private boolean breachOpen(MinecraftServer server, UUID ownerUUID) {
+    /** Whether a completed World Breacher stands on ownerUUID's anchor, holding the realm open to anyone. */
+    public boolean isBreachOpen(MinecraftServer server, UUID ownerUUID) {
         var anchor = getAnchorLocation(ownerUUID);
         if (anchor.isEmpty()) return false;
         ServerLevel level = server.getLevel(anchor.get().getKey());

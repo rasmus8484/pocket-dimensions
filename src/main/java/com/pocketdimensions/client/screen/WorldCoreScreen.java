@@ -50,9 +50,10 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
 
     private static final String[][] SIEGE_TEXT = {
         {"at peace", "The realm is at peace", "No siege block is on your anchor."},
-        {"breaching", "A World Breacher is on your anchor", "It will open the realm to anyone. Lapis in the ward slows it."},
-        {"breaking", "An Anchor Breaker is on your anchor", "It will destroy the anchor for good. Lapis in the ward slows it."},
+        {"breaching", "A Breacher is at your anchor", "It will open the realm to anyone. Lapis in the ward slows it."},
+        {"breaking", "A Breaker is at your anchor", "It will destroy the anchor for good. Lapis in the ward slows it."},
         {"anchor lost", "The anchor is lost", "The realm's anchor was destroyed. Nothing new can enter."},
+        {"breached", "The realm lies open", "A World Breacher holds it open to anyone until it is mined."},
     };
     private static final String[][] GLYPHS = {{"XXXX", "X...", "XXX.", "...X", "XXXX"}, {".XX.", "X..X", ".XX.", "..X.", "XXX."},
         {"X.X.", "XXXX", "X.X.", "..X.", "..XX"}, {"XXX.", "..X.", "XXXX", ".X..", "XX.."}, {"X..X", "X.X.", "XX..", "X.X.", "X..X"}, {".X..", "XXX.", ".X.X", "...X", "..XX"}};
@@ -116,6 +117,8 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
     private int accent() { return ACCENT[siege()][0]; }
     private int accentDeep() { return ACCENT[siege()][1]; }
     private int siege() { return Math.max(0, Math.min(3, menu.getSiegeState())); }
+    /** Which status text to show: the siege state, or "breached" once a World Breacher holds the realm open. */
+    private int status() { return siege() == 1 && menu.sync().breachOpen() ? 4 : siege(); }
 
     private void setTab(Tab t) {
         if (t != Tab.OVERVIEW && !RealmRules.canManage(role())) t = Tab.OVERVIEW;
@@ -190,7 +193,7 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         g.pose().scale(2f, 2f);
         glow(g, name, -font.width(name) / 2, 0);                       // level 1: the realm's name
         g.pose().popMatrix();
-        glowCentered(g, SIEGE_TEXT[siege()][0], x + W / 2, y + 48);
+        glowCentered(g, SIEGE_TEXT[status()][0], x + W / 2, y + 48);
 
         switch (tab) {
             case OVERVIEW -> drawOverview(g, x, y, t);
@@ -205,9 +208,9 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         // Status
         polished(g, x + 14, y + 58, 170, 86);
         inlay(g, "Status", x + 20, y + 63);
-        glow(g, SIEGE_TEXT[siege()][1], x + 20, y + 75);
+        glow(g, SIEGE_TEXT[status()][1], x + 20, y + 75);
         int ly = y + 86;
-        for (FormattedCharSequence line : font.split(FormattedText.of(SIEGE_TEXT[siege()][2]), 158)) { carved(g, line, x + 20, ly); ly += 10; }
+        for (FormattedCharSequence line : font.split(FormattedText.of(SIEGE_TEXT[status()][2]), 158)) { carved(g, line, x + 20, ly); ly += 10; }
         ly = y + 108;
         UUID owner = menu.core() != null ? menu.core().getOwnerUUID() : null;
         label(g, "Owner", x + 20, ly);

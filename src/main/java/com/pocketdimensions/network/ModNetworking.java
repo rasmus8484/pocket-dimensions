@@ -142,11 +142,17 @@ public class ModNetworking {
     // S2C: everything the core's screen shows
     // -------------------------------------------------------------------------
 
+    /**
+     * {@code siege} is the core's siege state (WorldCoreBlockEntity.STATE_*), and {@code breachOpen} whether a completed
+     * World Breacher holds the realm open. They ride here as well as in the menu's ContainerData: a data slot is only
+     * resent when it changes, so one that reached the client before its screen existed would be lost for good.
+     */
     public record CoreSyncS2C(int role, String name, String ownerName, List<AccessEntry> allowed,
-                              List<PlayerEntry> online, List<PlayerEntry> inRealm) {
+                              List<PlayerEntry> online, List<PlayerEntry> inRealm, int siege, boolean breachOpen) {
 
         public static void encode(CoreSyncS2C m, FriendlyByteBuf buf) {
             buf.writeVarInt(m.role); buf.writeUtf(m.name, 64); buf.writeUtf(m.ownerName, 64);
+            buf.writeVarInt(m.siege); buf.writeBoolean(m.breachOpen);
             buf.writeVarInt(m.allowed.size());
             for (AccessEntry e : m.allowed) { buf.writeUUID(e.uuid()); buf.writeUtf(e.name(), 64); buf.writeBoolean(e.manager()); }
             writePlayers(buf, m.online);
@@ -155,10 +161,11 @@ public class ModNetworking {
 
         public static CoreSyncS2C decode(FriendlyByteBuf buf) {
             int role = buf.readVarInt(); String name = buf.readUtf(64), ownerName = buf.readUtf(64);
+            int siege = buf.readVarInt(); boolean breachOpen = buf.readBoolean();
             int n = buf.readVarInt();
             List<AccessEntry> allowed = new ArrayList<>(n);
             for (int i = 0; i < n; i++) allowed.add(new AccessEntry(buf.readUUID(), buf.readUtf(64), buf.readBoolean()));
-            return new CoreSyncS2C(role, name, ownerName, allowed, readPlayers(buf), readPlayers(buf));
+            return new CoreSyncS2C(role, name, ownerName, allowed, readPlayers(buf), readPlayers(buf), siege, breachOpen);
         }
 
         public static void handle(CoreSyncS2C m, CustomPayloadEvent.Context ctx) {
@@ -188,7 +195,8 @@ public class ModNetworking {
         MinecraftServer server = ((ServerLevel) player.level()).getServer();
         RealmManager mgr = RealmManager.get(server);
         UUID owner = core.getOwnerUUID();
-        if (owner == null) return new CoreSyncS2C(RealmRules.Role.VISITOR.ordinal(), "", "", List.of(), List.of(), List.of());
+        if (owner == null) return new CoreSyncS2C(RealmRules.Role.VISITOR.ordinal(), "", "", List.of(), List.of(), List.of(),
+                core.getSiegeState(), false);
         RealmRules.Role role = mgr.roleOf(owner, player.getUUID());
 
         List<UUID> allowedIds = mgr.getAllowedPlayers(owner);
@@ -205,7 +213,8 @@ public class ModNetworking {
         if (realm != null) for (ServerPlayer sp : realm.players()) {
             if (mgr.isWithinRealm(owner, sp.getX(), sp.getZ())) inRealm.add(new PlayerEntry(sp.getUUID(), sp.getGameProfile().name()));
         }
-        return new CoreSyncS2C(role.ordinal(), mgr.getName(owner), resolveName(owner, server), allowed, online, inRealm);
+        return new CoreSyncS2C(role.ordinal(), mgr.getName(owner), resolveName(owner, server), allowed, online, inRealm,
+                core.getSiegeState(), mgr.isBreachOpen(server, owner));
     }
 
     public static void sendSync(ServerPlayer player, WorldCoreBlockEntity core) {

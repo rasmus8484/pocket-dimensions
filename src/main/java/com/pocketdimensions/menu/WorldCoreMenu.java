@@ -49,10 +49,11 @@ public class WorldCoreMenu extends AbstractContainerMenu {
     private final Player player;
 
     /** Latest sync from the server (client side), or what the server last sent (server side). */
-    private ModNetworking.CoreSyncS2C sync = new ModNetworking.CoreSyncS2C(RealmRules.Role.VISITOR.ordinal(), "", "", List.of(), List.of(), List.of());
+    private ModNetworking.CoreSyncS2C sync = new ModNetworking.CoreSyncS2C(RealmRules.Role.VISITOR.ordinal(), "", "", List.of(), List.of(), List.of(), 0, false);
     /** Client side: the screen hides the inventory (and the ward slot) on tabs other than Overview. */
     private boolean overviewOpen = true;
     private int syncTimer = 0;
+    private int ticksOpen = 0;
 
     /** Server-side constructor (from MenuProvider). */
     public WorldCoreMenu(int containerId, Inventory playerInv, WorldCoreBlockEntity be) {
@@ -112,6 +113,9 @@ public class WorldCoreMenu extends AbstractContainerMenu {
             syncTimer = 0;
             ModNetworking.sendSync(sp, blockEntity);
         }
+        // Forge opens the screen with its own packet; the first slot and data packets can reach the client before the
+        // screen exists and be dropped, and unchanged values are never resent. So send everything once more.
+        if (player instanceof ServerPlayer && ++ticksOpen == 10) sendAllDataToRemote();
     }
 
     @Override
@@ -155,7 +159,8 @@ public class WorldCoreMenu extends AbstractContainerMenu {
     // -------------------------------------------------------------------------
 
     public BlockPos getBlockPos() { return pos; }
-    public int getSiegeState() { return data.get(0); }
+    /** The siege state from the last sync (a data slot alone can be lost when the screen opens; see CoreSyncS2C). */
+    public int getSiegeState() { return sync.siege(); }
     public long getCreatedGameTime() { return Integer.toUnsignedLong(data.get(1)) | (Integer.toUnsignedLong(data.get(2)) << 32); }
     public long getCurrentGameTime() { return Integer.toUnsignedLong(data.get(3)) | (Integer.toUnsignedLong(data.get(4)) << 32); }
     public ModNetworking.CoreSyncS2C sync() { return sync; }
