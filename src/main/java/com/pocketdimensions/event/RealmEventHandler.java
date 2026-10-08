@@ -168,9 +168,14 @@ public class RealmEventHandler {
         return true;
     }
 
-    /** Sends a player out of the realm on their next tick, through the queued exit our travel guard lets pass. */
+    /**
+     * Sends a player out of the realm on their next tick, through the queued exit our travel guard lets pass. Without a
+     * reason of its own, they arrived some way the realm doesn't know (another mod's teleport, a retired plot), and are
+     * told so.
+     */
     private static void eject(ServerPlayer sp, String message) {
-        if (message != null) sp.displayClientMessage(Component.literal(message), false);
+        sp.displayClientMessage(Component.literal(message != null ? message
+                : "The realm does not know how you came here, and casts you out."), false);
         queueRealmExit(sp.getUUID());
     }
 
