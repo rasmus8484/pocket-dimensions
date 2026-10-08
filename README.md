@@ -8,8 +8,8 @@ This mod is heavily written by **Claude** (Anthropic's AI coding assistant), wit
 
 Pocket Dimensions adds two spatial systems to Minecraft, both designed around PvP risk:
 
-- **Pocket Rooms** — small sealed rooms inside a shared void dimension. Anyone can enter through your anchor, steal it, or destroy it. Nothing is truly safe.
-- **Realms** — persistent player-owned regions inside a shared overworld-like dimension. Protected by an indestructible WorldCore, but vulnerable to siege through lapis-fueled attack blocks.
+- **Pocket Rooms**: small sealed rooms inside a shared void dimension. Anyone can enter through your anchor, steal it, or destroy it. Nothing is truly safe.
+- **Realms**: persistent player-owned regions inside a shared overworld-like dimension. Protected by an indestructible WorldCore, but vulnerable to siege through lapis-fueled attack blocks.
 
 The mod uses only two shared dimensions (`pocketdimensions:pocket` and `pocketdimensions:realm`) rather than creating dimensions per player, so it scales with active players and loaded chunks.
 
@@ -19,16 +19,16 @@ The mod uses only two shared dimensions (`pocketdimensions:pocket` and `pocketdi
 
 ### Pocket Rooms
 
-A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, surrounded by unbreakable boundary blocks. It is one object with two forms — an item in your inventory and a block when placed — and every room has exactly one.
+A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, surrounded by unbreakable boundary blocks. It is one object with two forms (an item in your inventory and a block when placed), and every room has exactly one.
 
 **How to use:**
-1. Get a **Pocket Anchor** (creative tab: Pocket Dimensions)
-2. **Right-click** to enter your room — the mod allocates a room, places the anchor at your feet, and teleports you in
+1. Craft a **Pocket Anchor** (see Recipes), or take one from the Pocket Dimensions creative tab
+2. **Right-click** to enter your room: the mod allocates a room, places the anchor at your feet, and teleports you in
 3. **Crouch + right-click** a block face to place the anchor without entering
 4. **Crouch + jump** inside the room to exit back to the anchor (or next to whoever is carrying it, if it was stolen)
 5. Anyone can **right-click** your placed Pocket Anchor to enter your room
 6. Anyone can **crouch + right-click** your anchor to steal it (folds it back into item form)
-7. If the anchor is mined and destroyed, the room is permanently deleted and all occupants are ejected
+7. If the anchor is mined (a diamond-tier pickaxe, 15 seconds by default), the room is permanently deleted and all occupants are ejected
 
 **Look:** the placed anchor is the Tumbling Cube. A head-sized cube hovers in the block, with gold corner knobs, set-back basalt edges, and a window on each side looking into end portal light. A glowing rune is drawn on its top and bottom. It turns slowly on several axes at once inside three bands of runes, whose axes swing round too, so together they sweep out a sphere. While anyone is in the room, the bands brighten and everything turns half again as fast. The anchor gives off light 6, or 9 while the room is occupied. The hitbox is a still, head-sized box around the cube.
 
@@ -36,20 +36,28 @@ A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, sur
 
 **Safe arrival:** you arrive at the room's spawn, or if blocks have been built there, at the nearest spot with room to stand. If the room is packed completely full, the two blocks at the spawn are broken open and drop as items, so nobody can be trapped.
 
+**Whose anchor:** a placed anchor always belongs to its room's owner, whoever puts it down, so a stolen anchor stays yours.
+
+**Being mined:** the people inside feel it. Reality cracks (a sound) at the first hit and at 25 / 50 / 75 %, a warning shows on their screen, red motes shake off the walls, and the Anchor Breaker's lightning tears in from every wall, reaching further each quarter. Outside, the cube bleeds red motes, whether anyone is home or not; the miner is told if someone is inside. Stop mining and the cracks are gone.
+
+**Living there:** the walls let the sky's light through, so crops grow anywhere and no monster spawns inside. Beds work like a bed beside the anchor would: at night in the overworld or a realm (sleepers count towards that world's "players sleeping"), never with the anchor in the Nether or the End. They never set your spawn.
+
+**Liquids:** a placed anchor can't be washed away, and you can enter while standing in water or lava (the anchor goes at your feet).
+
 **Disconnect safety:** If a player logs off while holding a stolen Pocket Anchor and others are still inside that room, the mod auto-places an anchor at their feet so occupants aren't trapped.
 
 Chorus fruit teleportation is blocked inside pocket rooms.
 
 ### Realms
 
-Each player can own one realm — a region of overworld-like terrain (no structures, no natural hostile spawns) inside the shared realm dimension.
+Each player can own one realm: a region of overworld-like terrain inside the shared realm dimension. By default it is quiet and untouched (no structures, no dungeons, no monsters spawning); server owners can change that (see Configuration).
 
 **How to use:**
-1. Place a **World Anchor** (two blocks tall — needs headroom). It can't be used from inside a pocket room or the realm itself
-2. Use a **World Seed** on the anchor — the seed crumbles into the anchor and condenses a dimensional tunnel to your realm
-3. **Right-click** the linked anchor to enter your realm — the owner always has access, players on the realm's access list too, and anyone else only after a successful breach
+1. Place a **World Anchor** (two blocks tall, so it needs headroom; the block above that must be breakable, where a siege block would go). It can't be used from inside a pocket room or the realm itself
+2. Use a **World Seed** on the anchor: the seed crumbles into the anchor and condenses a dimensional tunnel to your realm
+3. **Right-click** the linked anchor to enter your realm: the owner always has access, players on the realm's access list too, and anyone else only after a successful breach
 4. **Right-click** the **World Core** (indestructible block at your realm's center) to exit back to where you entered
-5. As the owner, **crouch + right-click** the World Core to open its GUI — shows realm info (owner, age, siege status), a lapis fuel slot for defense, an Exit Realm button, and the **realm access list**
+5. **Crouch + right-click** the World Core to open its screen (anyone can; what you may do there depends on who you are, see below)
 
 **Safe arrival:** you arrive next to the World Core, or if a slope or something built there is in the way, at the nearest spot around the core with room to stand (never on the core itself, never outside the realm).
 
@@ -58,9 +66,11 @@ Each player can own one realm — a region of overworld-like terrain (no structu
 - **Access** (owner and managers): add players by name or pick them from everyone online; each player in the list has a carved **crown** (the owner fills it with gold to make them a **manager**) and a red cross to remove them. Managers can remove ordinary players but not other managers.
 - **Manage** (owner and managers): name the realm. The owner can also **relocate** it: after a warning, the realm is grown again in a fresh place and everything in the old one is lost (the access list, managers and name are kept).
 
-**Access list:** In the World Core GUI the owner can type a player name and click **Add** to let them through the anchor, or click **x** next to a name to remove them. The list size is capped by `access.max_allowed_players` (0 = unlimited).
+**Access list:** capped by `access.max_allowed_players` (0 = unlimited).
 
-The World Anchor is indestructible by normal mining — it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
+**Day and sleep:** the realm shares the overworld's day, and its sleep count: realm sleepers count with the overworld's players.
+
+The World Anchor is indestructible by normal mining: it can only be removed through the siege system. Players inside a realm are confined to their region boundaries. Portals are blocked. Anyone arriving some other way (another mod's teleport, `/home`) without having come in through an anchor is sent back out. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
@@ -70,7 +80,7 @@ The World Anchor is indestructible by normal mining — it can only be removed t
 
 ### Siege System
 
-Two siege blocks can be placed on top of a World Anchor (on its upper half — **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
+Two siege blocks can be placed on top of a World Anchor (on its upper half; **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
 
 **World Breacher** (`world_breacher`, the "Mandible": an iron head whose mandibles hook under the anchor's gold band)
 - Can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it
@@ -93,17 +103,17 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half — *
 - The Anchor Breaker breaks when the anchor disappears
 - Destroying the breaker resets all progress
 
-**Defense:** The realm owner can insert lapis into the World Core to slow siege progress by 3x (`core_slow_factor`). While a siege block is progressing, one attacker lapis and one defender lapis are consumed every `core_fuel_burn_ticks`, creating a resource war. Defender lapis is only used while a siege is actually running.
+**Defense:** Anyone can put lapis into the World Core (only the owner and managers can take it out); while it holds lapis, siege progress is slowed by 3x (`core_slow_factor`). While a siege block is progressing, one attacker lapis and one defender lapis are consumed every `core_fuel_burn_ticks`, creating a resource war. Defender lapis is only used while a siege is actually running.
 
 **The World Core (the Geode Heart):** a two-block boulder of weathered stone floating at the realm's centre, split open on four sides around a crystal-lined hollow that holds the realm's black hole (the same one as the anchor's). A shaft is bored straight down through it; the beacon rises from the black hole up the shaft, runes climb the beam in a slow double helix, crystal shards circle the black hole and drift down the shaft, faceted aurora crystals are driven through its crown and a layer of aurora crystal hangs beneath it, slowly shifting colour. A rune tablet below each opening marks where it answers you.
 
 **Beacon indicator:** the core's colours show the realm's state from anywhere inside it:
-- **Blue** — no active siege
-- **Pink** — World Breacher is present on the anchor (the crystal, runes and beam turn pink, the black hole burns ember)
-- **Red** — Anchor Breaker is active and fueled (everything runs hot red, the black hole burns ember)
-- **Dark** — the anchor has been destroyed: the black hole collapses, the beam goes out, nothing glows or moves, and the boulder falls to the ground
+- **Blue**: no active siege
+- **Pink**: World Breacher is present on the anchor (the crystal, runes and beam turn pink, the black hole burns ember)
+- **Red**: Anchor Breaker is active and fueled (everything runs hot red, the black hole burns ember)
+- **Dark**: the anchor has been destroyed: the black hole collapses, the beam goes out, nothing glows or moves, and the boulder falls to the ground
 
-Both siege blocks require placement directly on top of a World Anchor and break if the anchor is removed. There are no loot tables yet, so siege blocks drop nothing when broken or mined.
+Both siege blocks require placement directly on top of a World Anchor and break if the anchor is removed. Mining one takes a diamond-tier pickaxe and a fixed time (250 seconds by default); it vanishes with its lapis unless the server turns on `siege_blocks_drop`.
 
 **Siege bars:** Players within `siege_bossbar_range` blocks of an active siege block, and everyone inside the besieged realm, see the siege on a themed bar at the top of the screen: its progress, the time left and the lapis. Attackers and anyone outside the realm see **Rift Eye** (a slice of the anchor's rift in gold, counting the siege block's lapis); the realm's people see **Aurora Stones** (the World Core's rock with aurora crystals and its black hole beneath, counting the core's own lapis). While the core holds lapis, a veined blue ward covers the progress line and the time counts the slowed pace.
 
@@ -124,6 +134,10 @@ Everything can be gathered once you reach the Nether; nothing needs the End. The
 All five appear in the recipe book the first time you enter the Nether. They can be crafted before that if you know them.
 
 The World Core and Boundary Block have no recipe: the realm places its core, and the mod builds the room walls.
+
+### Advancements
+
+A **Folded Space** tab opens the first time you enter the Nether. Its steps double as hints: crafting an anchor, stepping into a room, sleeping there, growing a realm, naming it, letting a friend in, and both sides of a siege, with a few hidden ones for thieves and burglars.
 
 ### Configuration
 
@@ -166,19 +180,8 @@ In every whitelist / blacklist, the blacklist wins; entries are ids (`minecraft:
 
 ## Planned Features
 
-These are not yet implemented:
-
-**Anti-Exploit (Phase 5)**
-- Wither protection for Pocket Anchors and siege blocks (TNT/creepers already can't break them; pistons can't move any of the mod's blocks)
-- Hopper/dispenser interaction prevention with anchors
-
-**Content & Polish (Phase 6)**
-- Advancements and progression milestones
-- Warning particles and sounds when an occupied Pocket Anchor is being mined, and a warning for the people inside
-- In-game explanations (tooltips or a guide)
-
-**Gameplay Refinements**
-- Optional passive mob spawn control in realms
+- A check for item duplication around chunk unloading (a precaution; nothing is known)
+- More `/pd test` tools for testing alone
 
 ---
 

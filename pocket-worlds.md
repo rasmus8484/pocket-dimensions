@@ -22,7 +22,7 @@ Realm areas are bound to **Player UUID**, not to the key item.
 
 Server stores authoritative mapping:
 
-- `player_uuid -> RealmData (region coords, size tier, timestamps, etc.)`
+- `player_uuid -> RealmData (plot, World Core and anchor positions, access list, managers, name, timestamps)`
 
 Players must not be able to cross into other players' regions.
 
@@ -187,8 +187,8 @@ If the anchor is destroyed:
 Destruction requirements:
 
 - The WorldAnchor **cannot be mined** at all (hardness -1); only a completed Anchor Breaker removes it
-- World Breacher and Anchor Breaker can be mined (hardness 50, slow with any tool); breaking takes a long time and is interruptible
-- No loot tables exist yet, so broken siege blocks drop nothing
+- World Breacher and Anchor Breaker need a diamond-tier pickaxe and take a fixed time (`world_breacher_mine_seconds` / `anchor_breaker_mine_seconds`, 250 seconds by default); mining is interruptible
+- A mined siege block vanishes with its lapis unless `siege_blocks_drop` is on (then it drops itself and the lapis)
 
 ---
 
@@ -238,19 +238,19 @@ Anchor destruction should not eject players from the realm.
 
 # Defensive mechanic: WorldCore fueling
 
-## 11. Fuel the WorldCore to slow breaches
+## 11. Fuel the WorldCore to slow sieges
 
-The realm owner can fuel the WorldCore with **lapis** as a defensive measure.
+The WorldCore can be fed **lapis** as a defensive measure.
 
 Effect:
 
-- While the WorldCore has fuel, breach progress speed is slowed by **3x** (progress rate becomes 1/3 normal)
+- While the WorldCore has fuel, siege progress (World Breacher or Anchor Breaker) is slowed by **3x** (`core_slow_factor`)
 
 Rules:
 
-- Only the realm owner may insert fuel into the WorldCore
-- Fuel is consumed **only while an active breach attempt is running**
-- If fuel runs out mid-breach, progress speed immediately returns to normal
+- Anyone may put lapis into the WorldCore; only the owner and managers can take it out
+- Fuel is consumed **only while a siege is actually running**
+- If fuel runs out mid-siege, progress speed immediately returns to normal
 - No stacking beyond 3x slowdown
 
 This creates a resource-vs-resource siege loop:
@@ -276,7 +276,7 @@ If the WorldAnchor is destroyed:
 
 The realm owner manages a list of players who may always enter through the WorldAnchor, independent of any siege.
 
-- Managed in the WorldCore GUI (owner only): type a player name and click **Add**, or click **x** to remove
+- Managed on the World Core screen's Access seal (owner and managers): type a name and click **Add**, or pick from everyone online; the red cross removes. The owner crowns managers; managers can remove ordinary players but not each other
 - Only players who have joined the server before can be added
 - Size capped by config `access.max_allowed_players` (0 = unlimited)
 - Checked only at interaction time, like all other access rules

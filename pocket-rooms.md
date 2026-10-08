@@ -24,7 +24,6 @@ No room is its own dimension.
 ### Boundary shell
 Boundary is a **custom mod block** with:
 
-- Pure white texture
 - Looks like the **inside of the Tumbling Cube** you entered (bigger on the inside): every wall, the floor and the ceiling are windows into the end-portal void, ringed by netherite edges with gold corners. Full-bright, nothing casts a shadow on them. One renderer per room draws the void (from a block entity in one floor corner)
 - The shell lets the sky's light through, so the whole room is fully lit: seeds can be planted and grow anywhere, and no hostile mob spawns inside
 - The room is folded space inside the world around its anchor, so it sleeps with that world: beds work whenever a bed at the anchor would (night in the overworld or a realm, never in the Nether or the End) but never set your spawn, and sleepers count with that world's players (one shared "players sleeping" count; enough of them sleeping skips the night). The overworld and the realms share one day, so they share one count too. While the anchor is being carried, the room belongs to wherever its occupant came in from
@@ -62,8 +61,8 @@ This is required because the room is larger than a single chunk footprint (it st
 
 The **Pocket Anchor** is a single object with two forms:
 
-- **Item form** — carried in an inventory (`pocketdimensions:pocket_anchor` item)
-- **Placed form** — the anchor block in the world (`pocketdimensions:pocket_anchor` block)
+- **Item form**: carried in an inventory (`pocketdimensions:pocket_anchor` item)
+- **Placed form**: the anchor block in the world (`pocketdimensions:pocket_anchor` block)
 
 Each room has exactly one anchor, and it is always in one of the two forms.
 Placing it, entering with it, or stealing it simply toggles between them.
@@ -98,14 +97,13 @@ When a player right-clicks while holding the anchor (in the air or on a block):
 - It is **placed at the player's feet** (or an adjacent free spot)
 - Player is teleported into the linked pocket room
 
-A player never enters while still carrying the anchor — entering always leaves the placed anchor behind as the way back out.
+A player never enters while still carrying the anchor: entering always leaves the placed anchor behind as the way back out.
 - The anchor goes at the player's feet even under water or lava (the liquid is displaced), or beside them; if there is no spot at all, entering is refused and the item is kept
 - Liquids can't wash a placed anchor away (it is forced solid)
 
 The anchor stores:
 - `pocket_id`
 - Owner UUID: always the room's owner (who made it, or who `/pd owner` gave it to), whoever places it, so a stolen anchor stays its owner's
-- Timestamp (optional)
 
 ---
 
@@ -128,7 +126,7 @@ Crouch-right-clicking the Pocket Anchor:
 This is a stealth theft mechanic.
 
 ### C) Mining the anchor (siege destruction)
-Mining behaves as a high-hardness block.
+Mining takes a fixed time (`pocket_anchor_mine_seconds`, 15 seconds by default) with a diamond-tier pickaxe or better.
 
 While being mined:
 - Outside: red motes are pulled out of the cube and reality cracks (a sound) at the first hit and at 25 / 50 / 75 %. Every anchor does this, occupied or not, so mining never gives away whether anyone is inside

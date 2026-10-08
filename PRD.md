@@ -1,16 +1,16 @@
-# Product Requirements Document — Pocket Dimensions
+# Product Requirements Document: Pocket Dimensions
 
 Reference ID format: `{SYSTEM}-{NNN}`
 Status: `DONE` | `PARTIAL` | `TODO`
 
 ---
 
-## PR — Pocket Rooms
+## PR: Pocket Rooms
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
 | PR-001 | DONE | Room allocation & generation | 20x20x20 boundary shell, 3x3 chunk plots, PocketRoomManager SavedData |
-| PR-002 | DONE | Pocket Anchor binding | Single object with item + placed forms; pocket_id UUID stored in item data and block entity; server resolves coords via PocketRoomManager |
+| PR-002 | DONE | Pocket Anchor binding | Single object with item + placed forms; pocket_id UUID stored in item data and block entity; server resolves coords via PocketRoomManager. A placed anchor always belongs to its room's owner, whoever places it |
 | PR-003 | DONE | Anchor placement | Crouch+right-click block face places anchor without entering; anchor leaves inventory |
 | PR-004 | DONE | Room entry via anchor | Right-click anchor teleports player in; no ownership restriction |
 | PR-005 | DONE | Room exit | Crouch + upward movement detected server-side; teleport to anchor location |
@@ -29,25 +29,25 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 ---
 
-## RL — Realms
+## RL: Realms
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
 | RL-001 | DONE | Realm allocation | Chunk-aligned plots; config-driven radius/padding; dry-land search for WorldCore |
 | RL-002 | DONE | WorldAnchor + WorldSeed linking | WorldSeed binds anchor to realm; rekey only once the linked anchor is destroyed (by design: no dodging a siege) |
-| RL-003 | DONE | Realm terrain generation | RealmChunkGenerator: overworld-like noise, no structures, legacy_random_source |
+| RL-003 | DONE | Realm terrain generation | RealmChunkGenerator: overworld-like noise, legacy_random_source; structures and features per the server config (RL-014; none and no dungeons by default) |
 | RL-004 | DONE | WorldCore placement | Searches for dry land near plot center; clears column above; sets owner UUID |
 | RL-005 | DONE | Realm entry | Right-click linked anchor; owner and access-list players always, others only if breached+fueled |
 | RL-006 | DONE | Realm exit via WorldCore | Right-click WorldCore; queued teleport to entry location or world spawn |
 | RL-007 | DONE | Border enforcement | Chunk-change + 200-tick timer checks; connection.teleport() snap-back |
 | RL-008 | DONE | Portal blocking | EntityTravelToDimensionEvent cancelled for all non-queued exits from realm |
-| RL-009 | DONE | Hostile mob spawn blocking | MobSpawnEvent.FinalizeSpawn cancelled for natural Monster spawns in realm |
+| RL-009 | DONE | Hostile mob spawn blocking | No natural monster spawns by default; now part of the configurable spawn rules (RL-014, by mob category) |
 | RL-010 | DONE | Ownership transfer | `/pd owner <player|uuid>`: looking at a World Anchor transfers realm, anchor and core; at a placed Pocket Anchor, the room's recorded owner and the anchor's owner |
 | RL-011 | DONE | Realm relinking | WorldSeed on new anchor rekeys realm; refused while the old anchor stands |
 | RL-012 | DONE | Login restoration | PlayerLoggedInEvent restores runtime bounds or ejects player if no info |
 | RL-013 | DONE | Sleep time advancement | The realm shares the overworld's clock and its sleep pool: realm sleepers count with the overworld's players (`PocketSleepHandler`, `RoomHost.poolHost`), so the realm can't skip the overworld's night alone |
 | RL-014 | DONE | Realm spawn and generation rules | Server config `[realm]`: `generate_structures` (false) and `generate_features` (true) with whitelist / blacklist (default feature blacklist: dungeons); `spawn_monsters` (false), `spawn_friendly_mobs` (true), per-category overrides (group / true / false), mob whitelist / blacklist (`[realm.mobs.exceptions]`). Ids or #tags; blacklist wins. Pure `worldgen/RealmGenRules`, `RealmWorldRules`, `RealmChunkGenerator` (filtered structure starts and feature decoration), `RealmEventHandler.onFinalizeSpawn` (natural and chunk-generation spawns, by category) |
-| RL-015 | DONE | Realm access list | Owner adds/removes players in WorldCore GUI; custom packets (ModNetworking); `max_allowed_players` cap |
+| RL-015 | DONE | Realm access list | Owner and managers add/remove players on the World Core screen; custom packets (ModNetworking); `max_allowed_players` cap |
 | RL-016 | DONE | Two-block World Anchor | Lower/upper halves (DOUBLE_BLOCK_HALF); BE on lower half; custom model + textures |
 | RL-017 | DONE | Safe arrival in realms | Realm entry searches around the World Core for free space within the plot, so you never land inside blocks |
 | RL-018 | DONE | World Core screen | Carved-stone screen with Overview / Access / Manage; roles owner, manager, visitor (RealmRules); managers (crown), realm names, online-player picker; visitors see Overview only and can add but never take lapis |
@@ -56,7 +56,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 ---
 
-## SG — Siege
+## SG: Siege
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
@@ -64,7 +64,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | SG-002 | DONE | Anchor Breaker | `anchor_breaker` block; after breaker_duration_ticks, permanently destroys WorldAnchor |
 | SG-003 | DONE | Lapis fuel system | Both siege blocks consume lapis; progress pauses when fuel exhausted |
 | SG-004 | DONE | Config-driven durations | breach/breaker duration, core_slow_factor, core_fuel_burn_ticks in config |
-| SG-005 | DONE | WorldCore defensive fuel | Owner inserts lapis into WorldCore; slows attacker progress by core_slow_factor |
+| SG-005 | DONE | WorldCore defensive fuel | Anyone may add lapis to the WorldCore (owner and managers can take it out); slows attacker progress by core_slow_factor |
 | SG-006 | DONE | Dynamic beacon colour | WorldCore beam: blue=normal, pink=breacher present, red=breaker active+fueled; anchor destroyed = core inert (no beam) |
 | SG-007 | DONE | WorldAnchor indestructible | Hardness -1; only removable by AnchorBreaker via level.setBlock() (upper half follows) |
 | SG-008 | DONE | Breacher placement gating | A World Breacher can only be placed while the realm's owner or someone on its access list is inside the realm (breach visitors and smuggled players don't count) |
@@ -76,7 +76,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 ---
 
-## AE — Anti-Exploit
+## AE: Anti-Exploit
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
@@ -92,7 +92,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 ---
 
-## CP — Content & Polish
+## CP: Content & Polish
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
@@ -113,15 +113,15 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 | Phase | PRD IDs | Status |
 |-------|---------|--------|
-| 1 — Scaffold | (infrastructure) | DONE |
-| 2 — Pocket Rooms | PR-001 through PR-009 | DONE |
-| 3 — Realms | RL-001 through RL-013 | DONE |
-| 4 — Siege | SG-001 through SG-007, SG-009, SG-010 | DONE |
-| 4.5 — GUIs | (WorldCore + siege block screens) | DONE |
-| 4.6 — Access list & anchor model | RL-015, RL-016 | DONE |
-| 4.7 — Visual rework, safe arrival, config | CP-007, SG-010 to SG-013, PR-014, PR-015, RL-017 to RL-019 | DONE |
-| 5 — Anti-exploit | AE-001 through AE-008 | PARTIAL |
-| 6 — Content | CP-001 through CP-009 | DONE |
+| 1: Scaffold | (infrastructure) | DONE |
+| 2: Pocket Rooms | PR-001 through PR-009 | DONE |
+| 3: Realms | RL-001 through RL-013 | DONE |
+| 4: Siege | SG-001 through SG-007, SG-009, SG-010 | DONE |
+| 4.5: GUIs | (WorldCore + siege block screens) | DONE |
+| 4.6: Access list & anchor model | RL-015, RL-016 | DONE |
+| 4.7: Visual rework, safe arrival, config | CP-007, SG-010 to SG-013, PR-014, PR-015, RL-017 to RL-019 | DONE |
+| 5: Anti-exploit | AE-001 through AE-009 | PARTIAL (AE-007 left) |
+| 6: Content | CP-001 through CP-010 | DONE (CP-010 grows as needed) |
 
 ---
 
