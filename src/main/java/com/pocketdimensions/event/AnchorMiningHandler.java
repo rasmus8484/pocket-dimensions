@@ -196,7 +196,7 @@ public final class AnchorMiningHandler {
     }
 
     /** The crack for one player, where they stand. */
-    private static void crackFor(ServerPlayer p) {
+    public static void crackFor(ServerPlayer p) {
         var sound = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(ModSounds.REALITY_CRACK.get());
         p.connection.send(new ClientboundSoundPacket(sound, SoundSource.BLOCKS, p.getX(), p.getEyeY(), p.getZ(),
                 1f, 1f, p.getRandom().nextLong()));

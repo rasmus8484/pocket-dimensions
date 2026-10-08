@@ -116,6 +116,9 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
 
         int newState = computeSiegeState(be, serverLevel);
         int newCracks = newState == STATE_ANCHOR_LOST ? 0 : computeCrackSets(be, serverLevel);
+        // The realm hears its anchor crack: at each new lightning set (25 / 50 / 75 %) and when the anchor is lost
+        if (newCracks > be.crackSets || (newState == STATE_ANCHOR_LOST && be.siegeState != STATE_ANCHOR_LOST))
+            crackInRealm(be, serverLevel);
         if (newState != be.siegeState || newCracks != be.crackSets) {
             be.siegeState = newState;
             be.crackSets = newCracks;
@@ -128,6 +131,15 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
                     && level.getBlockState(pos.above()).getValue(WorldCoreBlock.SIEGE) != be.siegeState)) {
             WorldCoreBlock.setSiege(level, pos, be.siegeState);
         }
+    }
+
+    /** Reality cracks for everyone in this realm, where they stand, at the volume the anchor's side hears it. */
+    private static void crackInRealm(WorldCoreBlockEntity be, ServerLevel realm) {
+        if (be.ownerUUID == null) return;
+        RealmManager mgr = RealmManager.get(realm.getServer());
+        for (var p : realm.players())
+            if (mgr.isWithinRealm(be.ownerUUID, p.getX(), p.getZ()))
+                com.pocketdimensions.event.AnchorMiningHandler.crackFor(p);
     }
 
     /** Rune colours per siege state for the helix climbing the beam (cyan, pink, red). */
