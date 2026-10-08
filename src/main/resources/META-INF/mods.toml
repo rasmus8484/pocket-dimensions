@@ -23,7 +23,7 @@ Realms: a World Anchor and a World Seed bind a piece of a shared world to you, g
 [[dependencies.pocketdimensions]]
     modId="forge"
     mandatory=true
-    versionRange="[61,)"
+    versionRange="[61.1,62)"
     ordering="NONE"
     side="BOTH"
 
