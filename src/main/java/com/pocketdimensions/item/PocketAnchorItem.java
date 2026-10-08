@@ -21,7 +21,6 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
@@ -174,7 +173,7 @@ public class PocketAnchorItem extends BlockItem {
 
         BlockPos spawn = mgr.findSafeSpawn(finalPocketId, pocketLevel);
         Vec3 dest = new Vec3(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5);
-        ((ServerPlayer) player).teleport(new TeleportTransition(pocketLevel, dest, Vec3.ZERO, 0f, 0f, TeleportTransition.DO_NOTHING));
+        com.pocketdimensions.event.Companions.travel((ServerPlayer) player, pocketLevel, dest, 0f, 0f, com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
 
         return InteractionResult.SUCCESS;
     }

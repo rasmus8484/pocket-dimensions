@@ -121,7 +121,7 @@ public class WorldCoreMenu extends AbstractContainerMenu {
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (id == 0 && player instanceof ServerPlayer) {       // kept for older clients: exit the realm
-            RealmEventHandler.queueRealmExit(player.getUUID());
+            RealmEventHandler.queueChosenRealmExit(player.getUUID());
             player.closeContainer();
             return true;
         }

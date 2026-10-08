@@ -15,7 +15,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityTeleportEvent;
@@ -88,7 +87,7 @@ public class PocketEventHandler {
             // Safety net: player is in the pocket dimension with no occupant record.
             // This happens if they respawned here (e.g. /spawnpoint set inside a room
             // that was later destroyed). Eject immediately to prevent a void death loop.
-            mgr.teleportToEntryOrSpawn(serverPlayer, server);
+            mgr.teleportToEntryOrSpawn(serverPlayer, server, com.pocketdimensions.manager.TravelRules.Journey.FORCED);
             return;
         }
 
@@ -118,9 +117,9 @@ public class PocketEventHandler {
             if (targetLevel != null) {
                 BlockPos anchorPos = anchor.getValue();
                 if (targetLevel.getBlockState(anchorPos).is(ModBlocks.POCKET_ANCHOR.get())) {
-                    player.teleport(new TeleportTransition(targetLevel,
+                    Companions.travel(player, targetLevel,
                             new Vec3(anchorPos.getX() + 0.5, anchorPos.getY() + 1, anchorPos.getZ() + 0.5),
-                            Vec3.ZERO, player.getYRot(), player.getXRot(), TeleportTransition.DO_NOTHING));
+                            player.getYRot(), player.getXRot(), com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
                     return;
                 }
 
@@ -129,16 +128,16 @@ public class PocketEventHandler {
                     if (online == player) continue;
                     if (!holdsAnchorItem(online, pocketId)) continue;
                     BlockPos safeSpot = findSafeSpotNear(online, targetLevel);
-                    player.teleport(new TeleportTransition(targetLevel,
+                    Companions.travel(player, targetLevel,
                             new Vec3(safeSpot.getX() + 0.5, safeSpot.getY(), safeSpot.getZ() + 0.5),
-                            Vec3.ZERO, player.getYRot(), player.getXRot(), TeleportTransition.DO_NOTHING));
+                            player.getYRot(), player.getXRot(), com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
                     return;
                 }
             }
         }
 
         // 2. Fallback: entry location or overworld spawn
-        mgr.teleportToEntryOrSpawn(player, server);
+        mgr.teleportToEntryOrSpawn(player, server, com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
     }
 
     // -------------------------------------------------------------------------

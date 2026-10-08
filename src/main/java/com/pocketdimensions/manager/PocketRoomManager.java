@@ -14,7 +14,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.phys.Vec3;
@@ -440,7 +439,7 @@ public class PocketRoomManager extends SavedData {
         Set<UUID> toEject = new HashSet<>(getOccupants(pocketId));
         for (UUID playerUUID : toEject) {
             ServerPlayer player = server.getPlayerList().getPlayer(playerUUID);
-            if (player != null) teleportToEntryOrSpawn(player, server);
+            if (player != null) teleportToEntryOrSpawn(player, server, com.pocketdimensions.manager.TravelRules.Journey.FORCED);
             removeOccupant(pocketId, playerUUID);
         }
         clearAnchorLocation(pocketId);
@@ -484,21 +483,21 @@ public class PocketRoomManager extends SavedData {
         }
     }
 
-    public void teleportToEntryOrSpawn(ServerPlayer player, MinecraftServer server) {
+    /** Back where the player came in from (or world spawn); a chosen trip brings their mount and animals (Companions). */
+    public void teleportToEntryOrSpawn(ServerPlayer player, MinecraftServer server,
+                                       com.pocketdimensions.manager.TravelRules.Journey journey) {
         EntryLocation entry = entryLocations.get(player.getUUID());
         if (entry != null) {
             ServerLevel target = server.getLevel(entry.dimension);
             if (target != null) {
-                player.teleport(new TeleportTransition(target,
-                        new Vec3(entry.x, entry.y, entry.z), Vec3.ZERO,
-                        entry.yaw, entry.pitch, TeleportTransition.DO_NOTHING));
+                com.pocketdimensions.event.Companions.travel(player, target,
+                        new Vec3(entry.x, entry.y, entry.z), entry.yaw, entry.pitch, journey);
                 return;
             }
         }
         BlockPos spawn = server.getRespawnData().pos();
-        player.teleport(new TeleportTransition(server.overworld(),
-                new Vec3(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5), Vec3.ZERO,
-                0f, 0f, TeleportTransition.DO_NOTHING));
+        com.pocketdimensions.event.Companions.travel(player, server.overworld(),
+                new Vec3(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5), 0f, 0f, journey);
     }
 
     public boolean roomExists(UUID pocketId) {

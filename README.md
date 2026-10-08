@@ -86,6 +86,15 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 
 **Testing tools** (ops): `/pd test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost.
 
+### Travelling with animals
+
+Going into or out of a pocket room or a realm by choice (an anchor, the World Core, crouch + jump out of a room), you bring company:
+
+- **Your mount** comes with you, still ridden, if there is room for it where you arrive; so does everything aboard it (a creature in your boat, whatever it is), except other players, who are set down first. If another player is steering, you get off and it stays.
+- **Animals on your lead** within lead range follow, still on the lead. Monsters on a lead stay behind.
+
+Thrown out (sent out of a realm, or a room whose anchor was mined), you go alone. Ride past a realm's border and you are pushed back together with your mount.
+
 ### Siege System
 
 Two siege blocks can be placed on top of a linked World Anchor (never an empty one; on its upper half; **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:

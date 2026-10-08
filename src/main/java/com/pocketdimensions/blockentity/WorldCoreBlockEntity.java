@@ -197,7 +197,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
     public void exitRealm(Player player, Level level) {
         if (!(player instanceof ServerPlayer sp)) return;
         if (level.isClientSide()) return;
-        RealmEventHandler.queueRealmExit(sp.getUUID());
+        RealmEventHandler.queueChosenRealmExit(sp.getUUID());
     }
 
     /**

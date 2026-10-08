@@ -61,6 +61,9 @@ public class RealmEventHandler {
      */
     private static final Set<UUID> pendingRealmExits = ConcurrentHashMap.newKeySet();
 
+    /** Of the pending exits, the ones the player chose (the World Core): they bring their mount and animals. */
+    private static final Set<UUID> chosenRealmExits = ConcurrentHashMap.newKeySet();
+
     /**
      * Per-player transient runtime state for chunk-change / timer-based boundary checks.
      * Not persisted - rebuilt from PlayerRealmInfo on login or entry.
@@ -104,6 +107,12 @@ public class RealmEventHandler {
      * While pending, onEntityTravelToDimension will allow this player's travel.
      */
     public static void queueRealmExit(UUID playerUUID) {
+        pendingRealmExits.add(playerUUID);
+    }
+
+    /** A realm exit the player chose (at the World Core): their mount and the animals on their lead come along. */
+    public static void queueChosenRealmExit(UUID playerUUID) {
+        chosenRealmExits.add(playerUUID);
         pendingRealmExits.add(playerUUID);
     }
 
@@ -200,7 +209,7 @@ public class RealmEventHandler {
                 if (realmLevel != null) {
                     BlockPos spawnPos = RealmManager.get(server).findSafeSpawn(pendingOwner, realmLevel);
                     Vec3 dest = new Vec3(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-                    serverPlayer.teleport(new TeleportTransition(realmLevel, dest, Vec3.ZERO, 0f, 0f, TeleportTransition.DO_NOTHING));
+                    Companions.travel(serverPlayer, realmLevel, dest, 0f, 0f, com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
                     // Init runtime state for the spawn position
                     int cx = spawnPos.getX() >> 4;
                     int cz = spawnPos.getZ() >> 4;
@@ -219,7 +228,9 @@ public class RealmEventHandler {
             MinecraftServer server = ((ServerLevel) serverPlayer.level()).getServer();
             if (server != null) {
                 RealmManager mgr = RealmManager.get(server);
-                mgr.teleportToEntryOrSpawn(serverPlayer, server);
+                mgr.teleportToEntryOrSpawn(serverPlayer, server, chosenRealmExits.remove(playerUUID)
+                        ? com.pocketdimensions.manager.TravelRules.Journey.CHOSEN
+                        : com.pocketdimensions.manager.TravelRules.Journey.FORCED);
                 runtimeStates.remove(playerUUID);
                 // If teleport failed (e.g. target level null) the entry stays for retry next tick.
                 // If teleport succeeded, onEntityTravelToDimension already removed the entry.
@@ -283,7 +294,16 @@ public class RealmEventHandler {
                 // Use connection.teleport() directly - serverPlayer.teleport(TeleportTransition) fires
                 // EntityTravelToDimensionEvent even for same-dimension moves, and our handler cancels
                 // it (player is in REALM_DIM with no pending exit queued).
-                serverPlayer.connection.teleport(clampedX, y, clampedZ, yaw, pitch);
+                // Riding, the mount carries you on past a push on the rider alone: set down, move both, mount again.
+                net.minecraft.world.entity.Entity mount = serverPlayer.getRootVehicle();
+                if (mount != serverPlayer && !(mount instanceof Player)) {
+                    serverPlayer.stopRiding();
+                    mount.teleportTo(clampedX, y, clampedZ);
+                    serverPlayer.connection.teleport(clampedX, y, clampedZ, yaw, pitch);
+                    serverPlayer.startRiding(mount, true, false);
+                } else {
+                    serverPlayer.connection.teleport(clampedX, y, clampedZ, yaw, pitch);
+                }
             }
         }
     }

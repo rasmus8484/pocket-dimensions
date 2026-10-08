@@ -22,7 +22,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.phys.Vec3;
@@ -603,22 +602,20 @@ public class RealmManager extends SavedData {
     }
 
     /** Sends the player back where they entered from (or to world spawn), and forgets which realm they were in. */
-    public void teleportToEntryOrSpawn(ServerPlayer player, MinecraftServer server) {
+    public void teleportToEntryOrSpawn(ServerPlayer player, MinecraftServer server, TravelRules.Journey journey) {
         clearPlayerRealmInfo(player.getUUID());
         EntryLocation entry = entryLocations.get(player.getUUID());
         if (entry != null) {
             ServerLevel target = server.getLevel(entry.dimension);
             if (target != null) {
-                player.teleport(new TeleportTransition(target,
-                        new Vec3(entry.x, entry.y, entry.z), Vec3.ZERO,
-                        entry.yaw, entry.pitch, TeleportTransition.DO_NOTHING));
+                com.pocketdimensions.event.Companions.travel(player, target,
+                        new Vec3(entry.x, entry.y, entry.z), entry.yaw, entry.pitch, journey);
                 return;
             }
         }
         BlockPos spawn = server.getRespawnData().pos();
-        player.teleport(new TeleportTransition(server.overworld(),
-                new Vec3(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5), Vec3.ZERO,
-                0f, 0f, TeleportTransition.DO_NOTHING));
+        com.pocketdimensions.event.Companions.travel(player, server.overworld(),
+                new Vec3(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5), 0f, 0f, journey);
     }
 
     // -------------------------------------------------------------------------
