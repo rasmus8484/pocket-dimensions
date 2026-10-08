@@ -25,7 +25,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | PR-015 | DONE | Occupied anchor | Server sets `OCCUPIED` from online occupants; the Tumbling Cube glows brighter (light 9 vs 6) while someone is inside |
 | PR-016 | DONE | Lit rooms | The shell lets sky light through (`getLightBlock` 0, `propagatesSkylightDown`), so every spot in a room has light 15: crops plant and grow anywhere, hostile mobs never spawn naturally. Rooms made before this keep their old darkness until relit |
 | PR-017 | DONE | Liquid-proof anchor | The Pocket Anchor is forced solid, so flowing water or lava can't wash it away (its 10 px cube is too small to count as solid on its own, and fluids destroy non-solid blocks). Entering refuses, keeping the item, when there is no spot at your feet or beside you for the anchor |
-| PR-018 | DONE | Sleep with the overworld | Beds in pocket rooms work whenever the overworld's do (night or thunder) and never set spawn. Everyone in the overworld and in pocket rooms is one sleep pool: one "1/5 players sleeping" count for all, and the night passes once enough of them have slept (`playersSleepingPercentage`). `event/PocketSleepHandler` + pure `manager/SleepPool` |
+| PR-018 | DONE | Sleep where the anchor is | A pocket room is folded space inside the world around its anchor (`RoomHost`: the anchor's dimension, else where its occupant came in, else the overworld). Its beds follow that world's bed rule (night in the overworld or a realm; never in the Nether or End) and never set spawn. Its sleepers join that world's sleep pool: one "1/5 players sleeping" count with that world's players, and the night passes once enough of them have slept (`playersSleepingPercentage`). `event/PocketSleepHandler` + pure `manager/SleepPool` |
 
 ---
 
