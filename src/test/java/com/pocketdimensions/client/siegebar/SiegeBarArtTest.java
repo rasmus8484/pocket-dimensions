@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SiegeBarArtTest {
 
-    private static Params params(Side side, Kind kind, Mode mode, double progress, int fuel, int cap) {
+    private static Params params(Side side, Kind kind, Mode mode, double progress, double fuel, int cap) {
         return new Params(side, kind, mode, progress, fuel, cap, 1.25, 95, 18, 30);
     }
 
@@ -53,6 +53,25 @@ class SiegeBarArtTest {
     void slottedFuelShowsOneLitSlotPerLapis() {
         int[] img = draw(params(Side.ANCHOR, Kind.BREACHER, Mode.ACTIVE, 0.3, 3, 5));
         assertEquals(3, litRuns(img), "three of five slots lit");
+    }
+
+    @Test
+    void theBurningLapisSlotDrainsFromItsRightEnd() {
+        int[] img = draw(params(Side.ANCHOR, Kind.BREACHER, Mode.ACTIVE, 0.3, 2.5, 5));
+        assertEquals(3, litRuns(img), "two full slots and the half-burnt one");
+        int[][] sg = SiegeBarArt.Painter.segments(LINE_LEN, 5);
+        int lit = 0;
+        for (int k = sg[2][0]; k < sg[2][0] + sg[2][1]; k++) if (isLapis(at(img, LINE_X + k, FUEL_Y + 1))) lit++;
+        assertEquals(sg[2][1] / 2.0, lit, 1, "half of the burning slot is left");
+        assertTrue(isLapis(at(img, LINE_X + sg[2][0], FUEL_Y + 1)), "what is left sits at the slot's left end");
+    }
+
+    @Test
+    void aBigFuelMaxDrainsByThePixel() {
+        int[] img = draw(params(Side.CORE, Kind.BREACHER, Mode.ACTIVE, 0.3, 31.5, 64));
+        int lit = 0;
+        for (int k = 0; k < LINE_LEN; k++) if (isLapis(at(img, LINE_X + k, FUEL_Y + 1))) lit++;
+        assertEquals(LINE_LEN * 31.5 / 64, lit, 1);
     }
 
     @Test

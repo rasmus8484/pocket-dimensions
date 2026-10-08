@@ -110,7 +110,7 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half; **cr
 - The Anchor Breaker breaks when the anchor disappears
 - Destroying the breaker resets all progress
 
-**Defense:** Anyone can put lapis into the World Core (only the owner and managers can take it out); while it holds lapis, siege progress is slowed by 3x (`core_slow_factor`). While a siege block is progressing, one attacker lapis and one defender lapis are consumed every `core_fuel_burn_ticks`, creating a resource war. Defender lapis is only used while a siege is actually running.
+**Defense:** Anyone can put lapis into the World Core (only the owner and managers can take it out); while it holds lapis, siege progress is slowed by 3x (`core_slow_factor`). While a siege block is progressing, each lapis burns for `core_fuel_burn_ticks` (10 seconds by default) on each side, timed from when it starts burning, creating a resource war. The siege bar drains the burning lapis smoothly, so you can see how much of it is left. Defender lapis is only used while a siege is actually running.
 
 **The World Core (the Geode Heart):** a two-block boulder of weathered stone floating at the realm's centre, split open on four sides around a crystal-lined hollow that holds the realm's black hole (the same one as the anchor's). A shaft is bored straight down through it; the beacon rises from the black hole up the shaft, runes climb the beam in a slow double helix, crystal shards circle the black hole and drift down the shaft, faceted aurora crystals are driven through its crown and a layer of aurora crystal hangs beneath it, slowly shifting colour. A rune tablet below each opening marks where it answers you.
 
@@ -158,7 +158,7 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 | `siege.breach_duration_ticks` | 24000 | World Breacher full-breach time |
 | `siege.breaker_duration_ticks` | 24000 | Anchor Breaker anchor-destroy time |
 | `siege.core_slow_factor` | 3 | Defense slowdown (progress every N ticks) |
-| `siege.core_fuel_burn_ticks` | 200 | Ticks between each lapis consumed |
+| `siege.core_fuel_burn_ticks` | 200 | How long each lapis burns while a siege runs |
 | `siege.siege_bossbar_range` | 64 | Radius in blocks for seeing siege boss bars |
 | `access.max_allowed_players` | 0 | Max players on a realm's access list (0 = unlimited) |
 

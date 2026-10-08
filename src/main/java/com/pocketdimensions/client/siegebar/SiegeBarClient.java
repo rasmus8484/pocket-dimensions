@@ -50,7 +50,8 @@ public final class SiegeBarClient {
         if (m.remove()) { BARS.remove(m.id()); return; }
         Minecraft mc = Minecraft.getInstance();
         SiegeBarArt.Kind kind = m.kind() == SiegeBarS2C.BREAKER ? SiegeBarArt.Kind.BREAKER : SiegeBarArt.Kind.BREACHER;
-        SiegeBarState state = new SiegeBarState(kind, m.progressTicks(), m.durationTicks(), m.rate(), m.siegeFuel(), m.siegeCap(), m.coreFuel());
+        SiegeBarState state = new SiegeBarState(kind, m.progressTicks(), m.durationTicks(), m.rate(), m.siegeFuel(), m.siegeCap(), m.coreFuel(),
+                m.siegeBurnt(), m.coreBurnt(), m.burnTicks());
         BARS.put(m.id(), new Entry(state, mc.level != null ? mc.level.getGameTime() : 0, System.currentTimeMillis()));
     }
 
@@ -76,7 +77,8 @@ public final class SiegeBarClient {
             int fuel = side == SiegeBarArt.Side.CORE ? s.coreFuel() : s.siegeFuel();
             int cap = side == SiegeBarArt.Side.CORE ? Math.max(64, s.coreFuel()) : Math.max(1, s.siegeCap());
             String fuelText = fuel + " / " + cap;
-            SiegeBarArt.Params p = new SiegeBarArt.Params(side, s.kind(), s.mode(), s.progressAt(since), fuel, cap, now / 1000.0,
+            double fuelLeft = side == SiegeBarArt.Side.CORE ? s.coreFuelAt(since) : s.siegeFuelAt(since);
+            SiegeBarArt.Params p = new SiegeBarArt.Params(side, s.kind(), s.mode(), s.progressAt(since), fuelLeft, cap, now / 1000.0,
                     width(font, title), width(font, pct), width(font, fuelText));
 
             Slot slot = slot(mc, i++);

@@ -4,6 +4,7 @@ import com.pocketdimensions.block.WorldBreacherBlock;
 import com.pocketdimensions.block.WorldAnchorBlock;
 import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.PocketDimensionsConfig;
+import com.pocketdimensions.SiegeTuning;
 import com.pocketdimensions.init.ModBlockEntityTypes;
 import com.pocketdimensions.network.SiegeBarS2C;
 import com.pocketdimensions.manager.RealmManager;
@@ -72,6 +73,10 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
 
     /** Who sees this siege's bar (client/siegebar draws it). Transient: rebuilt within a second after a restart. */
     private final SiegeBarTracker bar = new SiegeBarTracker();
+    /** Ticks the lapis now burning has burnt (of core_fuel_burn_ticks); kept when the siege stops, saved. */
+    private int burnt = 0;
+    /** The lapis counts the bar was last sent ({@link #lapisSignature}). */
+    private long sentLapis = -1;
 
     public WorldBreacherBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntityTypes.WORLD_BREACHER.get(), pos, state);
@@ -156,13 +161,12 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
                 }
             }
 
-            // Every CORE_FUEL_BURN_TICKS: drain 1 attacker lapis; drain 1 defender lapis if active
-            if (level.getGameTime() % PocketDimensionsConfig.CORE_FUEL_BURN_TICKS.get() == 0) {
-                be.consumeOneFuel();
-                if (defended) {
-                    be.consumeDefenderFuel(serverLevel, anchor);
-                }
-            }
+            // Each side's lapis lasts core_fuel_burn_ticks of running siege, timed from when it starts burning
+            int burnTicks = PocketDimensionsConfig.CORE_FUEL_BURN_TICKS.get();
+            be.burnt = SiegeTuning.burnTick(be.burnt, burnTicks);
+            if (be.burnt == 0) be.consumeOneFuel();
+            if (defended) be.burnDefenderFuel(serverLevel, anchor, burnTicks);
+            be.setChanged();
         }
 
         // Siege visuals: tint the anchor's runes with breach progress and light the eye when complete
@@ -192,7 +196,12 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
 
         // --- Siege bar (gone once the breach completes: the beacon beam takes over) ---
         if (!be.isBreachComplete() && (be.progressTicks > 0 || be.hasFuel())) {
-            if (level.getGameTime() % 20 == 0) be.bar.update(serverLevel, pos, anchor, be.barState(serverLevel, anchor, defended));
+            // once a second, and at once when lapis goes in or out on either side
+            long lapis = be.lapisSignature(serverLevel, anchor);
+            if (level.getGameTime() % 20 == 0 || lapis != be.sentLapis) {
+                be.sentLapis = lapis;
+                be.bar.update(serverLevel, pos, anchor, be.barState(serverLevel, anchor, defended));
+            }
         } else {
             be.bar.clear();
         }
@@ -216,7 +225,8 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
         int rate = !hasFuel() || anchor == null ? 0 : defended ? PocketDimensionsConfig.CORE_SLOW_FACTOR.get() : 1;
         return new SiegeBarS2C(null, false, SiegeBarS2C.BREACHER, progressTicks, PocketDimensionsConfig.BREACH_DURATION_TICKS.get(), rate,
                 fuel + inventory.getItem(0).getCount(), com.pocketdimensions.PocketDimensionsServerConfig.WORLD_BREACHER_MAX_LAPIS.get(),
-                wc != null ? wc.getDefenseLapis() : 0);
+                wc != null ? wc.getDefenseLapis() : 0, burnt, wc != null ? wc.getDefenseBurnt() : 0,
+                PocketDimensionsConfig.CORE_FUEL_BURN_TICKS.get());
     }
 
     // -------------------------------------------------------------------------
@@ -230,9 +240,15 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
     }
 
     /** Consumes one unit of defense fuel from the realm's WorldCore. */
-    private void consumeDefenderFuel(ServerLevel level, WorldAnchorBlockEntity anchor) {
+    private void burnDefenderFuel(ServerLevel level, WorldAnchorBlockEntity anchor, int burnTicks) {
         WorldCoreBlockEntity wc = findWorldCore(level, anchor);
-        if (wc != null) wc.consumeDefenseFuel();
+        if (wc != null) wc.burnDefenseFuel(burnTicks);
+    }
+
+    /** Both lapis counts in one number, to notice the moment either changes. */
+    private long lapisSignature(ServerLevel level, @Nullable WorldAnchorBlockEntity anchor) {
+        WorldCoreBlockEntity wc = anchor != null ? findWorldCore(level, anchor) : null;
+        return ((long) (fuel + inventory.getItem(0).getCount()) << 32) | (wc != null ? wc.getDefenseLapis() : 0);
     }
 
     /** Looks up the WorldCoreBlockEntity for the realm owned by this anchor's owner. */
@@ -258,6 +274,7 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
         super.saveAdditional(output);
         output.putInt("progress_ticks", progressTicks);
         output.putInt("fuel", fuel);
+        output.putInt("burnt", burnt);
         ItemStack slot = inventory.getItem(0);
         output.putInt("slot_lapis_count", slot.isEmpty() ? 0 : slot.getCount());
     }
@@ -267,6 +284,7 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
         super.loadAdditional(input);
         progressTicks = input.getIntOr("progress_ticks", 0);
         fuel = input.getIntOr("fuel", 0);
+        burnt = input.getIntOr("burnt", 0);
         int slotCount = input.getIntOr("slot_lapis_count", 0);
         if (slotCount > 0) {
             inventory.setItem(0, new ItemStack(Items.LAPIS_LAZULI, slotCount));

@@ -13,6 +13,19 @@ class SiegeTuningTest {
     }
 
     @Test
+    void aLapisBurnsForExactlyTheBurnTimeOfRunningTicks() {
+        int burnt = 0, ticks = 0;
+        do { burnt = SiegeTuning.burnTick(burnt, 200); ticks++; } while (burnt != 0);
+        assertEquals(200, ticks);
+        assertEquals(0, SiegeTuning.burnTick(0, 1), "a burn time of one tick uses a lapis every tick");
+    }
+
+    @Test
+    void aTimerPastALoweredBurnTimeBurnsOutAtOnce() {
+        assertEquals(0, SiegeTuning.burnTick(500, 200));
+    }
+
+    @Test
     void zeroSecondsBreaksInstantly() {
         assertEquals(1f, SiegeTuning.mineProgressPerTick(0.0));
     }

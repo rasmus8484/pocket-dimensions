@@ -63,6 +63,8 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
 
     /** Legacy lapis fuel counter (from direct right-click fueling on older worlds). Drained before slot. */
     private int defenseFuel = 0;
+    /** Ticks the ward's lapis now burning has burnt (of core_fuel_burn_ticks); saved. */
+    private int defenseBurnt = 0;
 
     /** Current siege state - synced to client for beam colour. */
     private int siegeState = STATE_NORMAL;
@@ -227,8 +229,20 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         return defenseFuel > 0 || !inventory.getItem(0).isEmpty();
     }
 
-    /** Consume 1 lapis per breach tick-batch (called from siege block entities). */
-    public void consumeDefenseFuel() {
+    /**
+     * One tick of the ward burning against a running siege (called by the siege block): each lapis lasts burnTicks
+     * ticks, timed from when it starts burning. The timer is kept while the ward or the siege stops.
+     */
+    public void burnDefenseFuel(int burnTicks) {
+        defenseBurnt = com.pocketdimensions.SiegeTuning.burnTick(defenseBurnt, burnTicks);
+        if (defenseBurnt == 0) consumeDefenseFuel();
+        setChanged();
+    }
+
+    /** Ticks the ward's lapis now burning has burnt, as the siege bar shows it. */
+    public int getDefenseBurnt() { return defenseBurnt; }
+
+    private void consumeDefenseFuel() {
         if (defenseFuel > 0) {
             defenseFuel--;
         } else {
@@ -272,6 +286,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
             output.putLong("owner_uuid_lsb", ownerUUID.getLeastSignificantBits());
         }
         output.putInt("defense_fuel", defenseFuel);
+        output.putInt("defense_burnt", defenseBurnt);
         output.putInt("siege_state", siegeState);
         output.putInt("crack_sets", crackSets);
         ItemStack slot = inventory.getItem(0);
@@ -285,6 +300,7 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
         long lsb = input.getLongOr("owner_uuid_lsb", 0L);
         ownerUUID = (msb != 0 || lsb != 0) ? new UUID(msb, lsb) : null;
         defenseFuel = input.getIntOr("defense_fuel", 0);
+        defenseBurnt = input.getIntOr("defense_burnt", 0);
         siegeState = input.getIntOr("siege_state", STATE_NORMAL);
         crackSets = input.getIntOr("crack_sets", 0);
         int slotCount = input.getIntOr("slot_lapis_count", 0);

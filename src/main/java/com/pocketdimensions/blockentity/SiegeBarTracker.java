@@ -33,7 +33,7 @@ public final class SiegeBarTracker {
         watching.clear();
         watching.addAll(now);
         SiegeBarS2C msg = new SiegeBarS2C(id, false, state.kind(), state.progressTicks(), state.durationTicks(), state.rate(),
-                state.siegeFuel(), state.siegeCap(), state.coreFuel());
+                state.siegeFuel(), state.siegeCap(), state.coreFuel(), state.siegeBurnt(), state.coreBurnt(), state.burnTicks());
         for (ServerPlayer p : now) send(p, msg);
     }
 

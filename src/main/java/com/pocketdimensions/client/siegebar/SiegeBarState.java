@@ -6,7 +6,8 @@ package com.pocketdimensions.client.siegebar;
  * wards, 0 = standing still) so the bar moves smoothly. Pure logic, no Minecraft classes.
  */
 public record SiegeBarState(SiegeBarArt.Kind kind, int progressTicks, int durationTicks, int rate,
-                            int siegeFuel, int siegeCap, int coreFuel) {
+                            int siegeFuel, int siegeCap, int coreFuel,
+                            int siegeBurnt, int coreBurnt, int burnTicks) {
 
     /** Progress ticks {@code ticksSince} ticks after the report, never past the end. */
     public double progressTicksAt(double ticksSince) {
@@ -17,6 +18,25 @@ public record SiegeBarState(SiegeBarArt.Kind kind, int progressTicks, int durati
     /** Progress 0..1 {@code ticksSince} ticks after the report. */
     public double progressAt(double ticksSince) {
         return durationTicks <= 0 ? 1 : progressTicksAt(ticksSince) / durationTicks;
+    }
+
+    /**
+     * The siege block's lapis {@code ticksSince} ticks after the report, the one being burnt counted by what is left
+     * of it: it empties smoothly over the burn time while the siege runs, and holds still while it doesn't.
+     */
+    public double siegeFuelAt(double ticksSince) {
+        return fuelAt(siegeFuel, siegeBurnt, rate > 0, ticksSince);
+    }
+
+    /** The World Core's lapis the same way; it burns only while it wards a running siege. */
+    public double coreFuelAt(double ticksSince) {
+        return fuelAt(coreFuel, coreBurnt, rate > 0 && coreFuel > 0, ticksSince);
+    }
+
+    private double fuelAt(int count, int burnt, boolean burning, double ticksSince) {
+        if (count <= 0) return 0;
+        double used = (burnt + (burning ? ticksSince : 0)) / Math.max(1, burnTicks);
+        return count - Math.min(1, used);
     }
 
     /** No lapis in the siege block: dormant, whatever the core does. Otherwise warded while the core holds lapis. */

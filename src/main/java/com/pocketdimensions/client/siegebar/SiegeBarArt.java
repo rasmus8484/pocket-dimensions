@@ -25,7 +25,7 @@ public final class SiegeBarArt {
      * What to draw. {@code t} is seconds (drives the slow motion); the widths are the game font's pixel widths of the
      * title, the percent and the lapis count, so the art can fit the banner and place its icons beside the text.
      */
-    public record Params(Side side, Kind kind, Mode mode, double progress, int fuel, int cap, double t,
+    public record Params(Side side, Kind kind, Mode mode, double progress, double fuel, int cap, double t,
                          int titleW, int pctW, int fuelW) {}
 
     /** Where the game font should draw each piece of text. */
@@ -236,7 +236,7 @@ public final class SiegeBarArt {
         }
 
         /** Both lines, full width: progress (5 rows) above, fuel (2 rows) below. Returns the lit width. */
-        int lines(Layer L, ColorAt emptyP, ColorAt emptyF, ColorXY gapF, int fuel, int cap) {
+        int lines(Layer L, ColorAt emptyP, ColorAt emptyF, ColorXY gapF, double fuel, int cap) {
             int n = LINE_LEN, fw = (int) Math.round(n * p.progress());
             int[][] sg = cap <= 16 ? segments(n, cap) : null;
             int ft = (int) Math.round((double) n * fuel / cap);
@@ -248,7 +248,8 @@ public final class SiegeBarArt {
                 if (sg != null) {
                     for (int s = 0; s < sg.length; s++) if (k >= sg[s][0] && k < sg[s][0] + sg[s][1]) { slot = s; break; }
                     if (slot < 0) { for (int r = 0; r < 2; r++) L.set(x, FUEL_Y + r, gapF.at(x, FUEL_Y + r)); continue; }
-                    filled = slot < fuel;
+                    // whole lapis fill their slot; the one being burnt keeps what is left of it, from the left
+                    filled = slot + 1 <= fuel || (slot < fuel && k - sg[slot][0] < Math.round((fuel - slot) * sg[slot][1]));
                 } else filled = k < ft;
                 for (int r = 0; r < 2; r++) {
                     int y = FUEL_Y + r, c = filled ? lapisCol(x, y, r) : emptyF.at(x, y, r);
