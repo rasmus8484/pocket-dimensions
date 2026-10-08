@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.pocketdimensions.PocketDimensionsConfig;
 import com.pocketdimensions.block.WorldCoreBlock;
+import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import com.pocketdimensions.init.ModBlocks;
@@ -419,12 +420,8 @@ public class RealmManager extends SavedData {
             BlockPos landPos = findLandNearCenter(realmLevel, centerChunkX, centerChunkZ, searchRadius);
 
             if (landPos != null) {
-                realmLevel.setBlock(landPos, ModBlocks.WORLD_CORE.get().defaultBlockState(), 3);
-                if (realmLevel.getBlockEntity(landPos) instanceof WorldCoreBlockEntity wc) {
-                    wc.setOwnerUUID(ownerUUID);
-                }
+                placeCore(realmLevel, landPos, ownerUUID);
                 clearColumnAbove(realmLevel, landPos);
-                placeCoreUpperHalf(realmLevel, landPos);
                 data.worldCorePos = landPos;
                 data.generated = true;
                 setDirty();
@@ -446,23 +443,22 @@ public class RealmManager extends SavedData {
         realmLevel.getChunk(centerX >> 4, centerZ >> 4);
         int surfaceY = realmLevel.getHeight(Heightmap.Types.WORLD_SURFACE, centerX, centerZ);
         BlockPos corePos = new BlockPos(centerX, surfaceY, centerZ);
-        realmLevel.setBlock(corePos, ModBlocks.WORLD_CORE.get().defaultBlockState(), 3);
-        if (realmLevel.getBlockEntity(corePos) instanceof WorldCoreBlockEntity wc) {
-            wc.setOwnerUUID(ownerUUID);
-        }
+        placeCore(realmLevel, corePos, ownerUUID);
         clearColumnAbove(realmLevel, corePos);
-        placeCoreUpperHalf(realmLevel, corePos);
         data.worldCorePos = corePos;
         data.generated = true;
         setDirty();
     }
 
-    /** Clears all blocks in the column directly above corePos up to the world surface. */
-    /** The World Core is two blocks tall; its block entity lives on the lower half. */
-    private void placeCoreUpperHalf(ServerLevel level, BlockPos corePos) {
+    /** A World Core at corePos for ownerUUID's realm: two blocks tall, its block entity on the lower half. */
+    private void placeCore(ServerLevel level, BlockPos corePos, UUID ownerUUID) {
+        level.setBlock(corePos, ModBlocks.WORLD_CORE.get().defaultBlockState(), 3);
+        if (level.getBlockEntity(corePos) instanceof WorldCoreBlockEntity wc) wc.setOwnerUUID(ownerUUID);
         level.setBlock(corePos.above(), ModBlocks.WORLD_CORE.get().defaultBlockState()
                 .setValue(WorldCoreBlock.HALF, DoubleBlockHalf.UPPER), 3);
     }
+
+    /** Clears all blocks in the column directly above corePos up to the world surface. */
 
     private void clearColumnAbove(ServerLevel level, BlockPos corePos) {
         int topY = level.getHeight(Heightmap.Types.WORLD_SURFACE, corePos.getX(), corePos.getZ());
@@ -749,18 +745,8 @@ public class RealmManager extends SavedData {
         if (old == null) return false;
         MinecraftServer server = realmLevel.getServer();
 
-        for (ServerPlayer p : new ArrayList<>(realmLevel.players())) {
-            PlayerRealmInfo info = playerRealmInfos.get(p.getUUID());
-            boolean here = (info != null && info.realmOwner.equals(ownerUUID)) || isWithinRealm(ownerUUID, p.getX(), p.getZ());
-            if (here) com.pocketdimensions.event.RealmEventHandler.queueRealmExit(p.getUUID());
-        }
-        // anyone logged out inside the old realm is sent home when they come back
-        playerRealmInfos.values().removeIf(i -> i.realmOwner.equals(ownerUUID));
-
-        if (old.worldCorePos != null) {
-            realmLevel.setBlock(old.worldCorePos.above(), Blocks.AIR.defaultBlockState(), 2);
-            realmLevel.setBlock(old.worldCorePos, Blocks.AIR.defaultBlockState(), 2);
-        }
+        evacuate(ownerUUID, realmLevel);
+        removeCore(old, realmLevel);
 
         invalidPlots.add(old.plotIndex);
         int index = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
@@ -775,6 +761,70 @@ public class RealmManager extends SavedData {
         setDirty();
         ensureGenerated(ownerUUID, realmLevel);
         return true;
+    }
+
+    /**
+     * /pd disown: ownerUUID loses their realm. Everyone in it is sent back to where they entered from, its World Core
+     * is removed, its anchor is unlinked (it stays, and takes a new World Seed), and the plot is retired for good. The
+     * player may grow a new realm with a new seed.
+     */
+    public boolean disown(UUID ownerUUID, ServerLevel realmLevel) {
+        RealmData old = realms.get(ownerUUID);
+        if (old == null) return false;
+        MinecraftServer server = realmLevel.getServer();
+
+        evacuate(ownerUUID, realmLevel);
+        removeCore(old, realmLevel);
+        getAnchorLocation(ownerUUID).ifPresent(loc -> {
+            ServerLevel anchorLevel = server.getLevel(loc.getKey());
+            if (anchorLevel != null && anchorLevel.getBlockEntity(loc.getValue()) instanceof WorldAnchorBlockEntity a
+                    && ownerUUID.equals(a.getOwnerUUID()))
+                a.unlink();
+        });
+
+        invalidPlots.add(old.plotIndex);
+        realms.remove(ownerUUID);
+        setDirty();
+        return true;
+    }
+
+    public enum CoreRegen { NO_REALM, STILL_STANDS, REBUILT }
+
+    /**
+     * /pd regenCore: puts ownerUUID's World Core back where it stood (for one broken by accident, in creative). A realm
+     * that was never generated is generated now.
+     */
+    public CoreRegen regenerateCore(UUID ownerUUID, ServerLevel realmLevel) {
+        RealmData data = realms.get(ownerUUID);
+        if (data == null) return CoreRegen.NO_REALM;
+        if (!data.generated || data.worldCorePos == null) {
+            ensureGenerated(ownerUUID, realmLevel);
+            return CoreRegen.REBUILT;
+        }
+        if (realmLevel.getBlockEntity(data.worldCorePos) instanceof WorldCoreBlockEntity wc
+                && realmLevel.getBlockState(data.worldCorePos.above()).is(ModBlocks.WORLD_CORE.get())) {
+            if (!ownerUUID.equals(wc.getOwnerUUID())) wc.setOwnerUUID(ownerUUID);
+            return CoreRegen.STILL_STANDS;
+        }
+        placeCore(realmLevel, data.worldCorePos, ownerUUID);
+        return CoreRegen.REBUILT;
+    }
+
+    /** Sends everyone in ownerUUID's realm back to where they entered from, now or when they next log in. */
+    private void evacuate(UUID ownerUUID, ServerLevel realmLevel) {
+        for (ServerPlayer p : new ArrayList<>(realmLevel.players())) {
+            PlayerRealmInfo info = playerRealmInfos.get(p.getUUID());
+            boolean here = (info != null && info.realmOwner.equals(ownerUUID)) || isWithinRealm(ownerUUID, p.getX(), p.getZ());
+            if (here) com.pocketdimensions.event.RealmEventHandler.queueRealmExit(p.getUUID());
+        }
+        // anyone logged out inside the realm is sent home when they come back
+        playerRealmInfos.values().removeIf(i -> i.realmOwner.equals(ownerUUID));
+    }
+
+    private void removeCore(RealmData data, ServerLevel realmLevel) {
+        if (data.worldCorePos == null) return;
+        realmLevel.setBlock(data.worldCorePos.above(), Blocks.AIR.defaultBlockState(), 2);
+        realmLevel.setBlock(data.worldCorePos, Blocks.AIR.defaultBlockState(), 2);
     }
 
     @Nullable

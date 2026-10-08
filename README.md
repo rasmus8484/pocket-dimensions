@@ -74,9 +74,13 @@ The World Anchor is indestructible by normal mining: it can only be removed thro
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
-**Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it), or at a placed Pocket Anchor to record its room as theirs.
+**Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it; someone who already owns a realm can't be given a second), or at a placed Pocket Anchor to record its room as theirs.
 
 **Access by command:** looking at a World Anchor or World Core, admins can run `/pd allow <player>` to put someone on the realm's access list and `/pd deny <player>` to take them off. Add `man` to make them a manager (`/pd allow <player> man`) or take only the manager status away (`/pd deny <player> man`).
+
+**Taking a realm away:** `/pd disown <player>` takes a player's realm from them: everyone inside is sent back out, the World Core is removed, their anchor is unlinked (it stays, and takes a new World Seed) and the old plot is never handed out again. They can grow a new realm with a new seed.
+
+**A broken core:** `/pd regenCore` rebuilds the World Core where it stood, for the realm you're standing in or the World Anchor you're looking at (say, after it was broken by accident in creative).
 
 **Testing tools** (ops): `/pd test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost.
 

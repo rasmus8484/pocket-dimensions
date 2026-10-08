@@ -43,6 +43,10 @@ import java.util.UUID;
  *   /pd owner <name>                               - look at a World Anchor or World Core (the realm) or a Pocket
  *                                                    Anchor (the room) and give it to a player, resolved by name
  *   /pd owner 550e8400-e29b-41d4-a716-446655440000 - resolve by raw UUID
+ *   /pd disown <name>                              - the player loses their realm: everyone in it is sent out, its
+ *                                                    core is removed, its anchor unlinked and its plot retired
+ *   /pd regenCore                                  - rebuild the World Core of the realm you're standing in, or of
+ *                                                    the World Anchor you're looking at
  *   /pd allow <name> [man]                         - look at a World Anchor or World Core: put a player on the
  *                                                    realm's access list (with man: also make them a manager)
  *   /pd deny <name> [man]                          - take a player off the access list (with man: only take away
@@ -69,6 +73,11 @@ public class PocketDimensionsCommand {
                 .then(Commands.literal("owner")
                     .then(Commands.argument("player", StringArgumentType.word())
                         .executes(PocketDimensionsCommand::executeSetOwner)))
+                .then(Commands.literal("disown")
+                    .then(Commands.argument("player", StringArgumentType.word())
+                        .executes(PocketDimensionsCommand::executeDisown)))
+                .then(Commands.literal("regenCore")
+                    .executes(PocketDimensionsCommand::executeRegenCore))
                 .then(Commands.literal("allow")
                     .then(Commands.argument("player", StringArgumentType.word())
                         .executes(ctx -> executeAccess(ctx, true, false))
@@ -149,9 +158,14 @@ public class PocketDimensionsCommand {
             src.sendFailure(Component.literal(resolved.name() + " already holds dominion over this realm."));
             return 0;
         }
+        RealmManager mgr = RealmManager.get(server);
+        if (mgr.realmExistsFor(newOwner)) {
+            src.sendFailure(Component.literal(resolved.name() + " already holds a realm of their own."
+                    + " A soul may hold only one; /pd disown theirs first."));
+            return 0;
+        }
 
         // -- Transfer ownership across all three data holders ------------------
-        RealmManager mgr = RealmManager.get(server);
         mgr.transferOwnership(oldOwner, newOwner);
         if (target instanceof WorldAnchorBlockEntity anchor) anchor.setOwnerUUID(newOwner);
         if (target instanceof WorldCoreBlockEntity core) core.setOwnerUUID(newOwner);
@@ -173,6 +187,59 @@ public class PocketDimensionsCommand {
         src.sendSuccess(() -> Component.literal(
                 "Dominion over the realm has passed to " + resolved.name() + ". The former owner keeps the realm beside them."), true);
         return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pd disown <name>  /  /pd regenCore
+    // -------------------------------------------------------------------------
+
+    private static int executeDisown(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        NewOwner who = resolveNewOwner(ctx, server);
+        if (who == null) return 0;
+        RealmManager mgr = RealmManager.get(server);
+        ServerLevel realm = server.getLevel(PocketDimensionsMod.REALM_DIM);
+        if (!mgr.realmExistsFor(who.id()) || realm == null) {
+            src.sendFailure(Component.literal(who.name() + " holds no realm."));
+            return 0;
+        }
+        mgr.disown(who.id(), realm);
+        src.sendSuccess(() -> Component.literal("The bond breaks. " + who.name()
+                + "'s realm drifts loose and is lost to them; their anchor stands empty."), true);
+        return 1;
+    }
+
+    /** The realm you stand in, or else the one of the World Anchor or World Core you're looking at. */
+    private static int executeRegenCore(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        ServerPlayer player = src.getPlayerOrException();
+        RealmManager mgr = RealmManager.get(server);
+        ServerLevel realm = server.getLevel(PocketDimensionsMod.REALM_DIM);
+        if (realm == null) return 0;
+
+        UUID owner = player.level().dimension().equals(PocketDimensionsMod.REALM_DIM)
+                ? mgr.realmOwnerAt(player.getX(), player.getZ()) : null;
+        if (owner == null) {
+            BlockEntity target = lookedAt(src);
+            if (target == null) return 0;
+            if (target instanceof PocketAnchorBlockEntity) {
+                src.sendFailure(Component.literal("A pocket room has no core. Stand in a realm or look at its anchor."));
+                return 0;
+            }
+            owner = realmOwnerOf(src, target);
+            if (owner == null) return 0;
+        }
+
+        return switch (mgr.regenerateCore(owner, realm)) {
+            case NO_REALM -> { src.sendFailure(Component.literal("That realm no longer exists.")); yield 0; }
+            case STILL_STANDS -> { src.sendFailure(Component.literal("The realm's core still stands.")); yield 0; }
+            case REBUILT -> {
+                src.sendSuccess(() -> Component.literal("The realm's heart knits itself whole again."), true);
+                yield 1;
+            }
+        };
     }
 
     // -------------------------------------------------------------------------
