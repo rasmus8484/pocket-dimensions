@@ -40,13 +40,18 @@ public final class Companions {
         List<Entity> leashed = leashedTo(player, aboard);
 
         boolean steeredByOther = mount != player && mount.getControllingPassenger() instanceof Player p && p != player;
-        if (mount != player && TravelRules.takesMount(steeredByOther, fits(mount, target, pos))) {
+        Vec3 room = mount == player ? null : roomFor(mount, target, pos);
+        if (mount != player && TravelRules.takesMount(steeredByOther, room != null)) {
+            there = there.withPosition(room);
             for (Entity e : aboard)
                 if (e != player && e != mount && !TravelRules.passengerComes(e instanceof Player)) e.stopRiding();
             mount.teleport(there);                                      // vanilla moves the riders, then seats them again
             if (player.level() != target) player.teleport(there);       // the ride failed somewhere: go on foot
         } else {
             player.teleport(there);                                     // not asPassenger: set down from the mount
+            if (mount != player && !steeredByOther && player.level() == target)
+                player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        "There was no room for your mount where you arrived; it stays behind."), true);
         }
         if (player.level() != target) return;                           // the trip itself was refused
 
@@ -65,9 +70,23 @@ public final class Companions {
                         && TravelRules.leashedFollows(e instanceof Enemy, aboard.contains(e)));
     }
 
-    /** Whether the mount has room to stand where the player arrives. */
-    private static boolean fits(Entity mount, ServerLevel target, Vec3 pos) {
+    /**
+     * Where the mount can stand on arrival: the arrival spot if it fits there, else the nearest spot within two blocks
+     * (same height or one up) that it fits, else null. A mount is wider than its rider (a boat 1.375 blocks, a horse
+     * 1.4), so the arrival spot, picked for a player, is often a little too tight.
+     */
+    private static Vec3 roomFor(Entity mount, ServerLevel target, Vec3 pos) {
         target.getChunk(BlockPos.containing(pos));
-        return target.noCollision(mount.getType().getDimensions().makeBoundingBox(pos));
+        var size = mount.getType().getDimensions();
+        Vec3 best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (int dy = 0; dy <= 1; dy++)
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++) {
+                    Vec3 at = pos.add(dx, dy, dz);
+                    double d = dx * dx + dz * dz + dy * 0.5;
+                    if (d < bestDist && target.noCollision(size.makeBoundingBox(at))) { best = at; bestDist = d; }
+                }
+        return best;
     }
 }
