@@ -105,7 +105,7 @@ Two siege blocks can be placed on top of a linked World Anchor (never an empty o
 - Can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it; the owner can place one on their own anchor at any time (to open the realm to the public, say)
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
-- Progresses over 24,000 ticks (1 Minecraft day) while fueled
+- Progresses over 12,000 ticks (half a Minecraft day, 10 minutes) while fueled; a full day while the World Core wards
 - When complete, any player can use the anchor to enter the realm for as long as the breacher stands (it needs no more lapis), and a pink beacon beam rises from the breacher's eye
 - While attached, the anchor visibly falls under its influence: its black hole turns ember, its runes turn pink from the top down as the breach progresses (all pink when complete), and pink motes drain from the mandibles into the black hole
 - If fuel runs out after breach, access reverts to owner-only
@@ -115,7 +115,7 @@ Two siege blocks can be placed on top of a linked World Anchor (never an empty o
 - Like the breacher, can only be placed while someone who belongs to the realm is inside it, or by the realm's owner
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
-- Progresses over 24,000 ticks while fueled
+- Progresses over 12,000 ticks (10 minutes) while fueled; a full day while the World Core wards
 - When complete, permanently destroys the World Anchor
 - While attached, it siphons the anchor's own power against it: a red stream rises from the black hole into the funnel and red motes pour out through the windows to the clamp feet (while fueled); the coils fill, the black hole turns ember, the runes heat to red, stone cracks spread and a sigil of red glyphs burns around the base as progress grows
 - At 25 / 50 / 75 % a new set of silent lightning bolts bursts out of the black hole and stays frozen in the air, each with a distant thunder-like "reality crack"; the crack sounds a last time when the anchor is destroyed
@@ -123,7 +123,7 @@ Two siege blocks can be placed on top of a linked World Anchor (never an empty o
 - The Anchor Breaker breaks when the anchor disappears
 - Destroying the breaker resets all progress
 
-**Defense:** Anyone can put lapis into the World Core (only the owner and managers can take it out); while it holds lapis, siege progress is slowed by 3x (`core_slow_factor`). While a siege block is progressing, each lapis burns for `core_fuel_burn_ticks` (10 seconds by default) on each side, timed from when it starts burning, creating a resource war. The siege bar drains the burning lapis smoothly, so you can see how much of it is left. Defender lapis is only used while a siege is actually running.
+**Defense:** Anyone can put lapis into the World Core (only the owner and managers can take it out); while it holds lapis, siege progress is slowed by 2x (`core_slow_factor`). While a siege block is progressing, each lapis burns for `core_fuel_burn_ticks` (10 seconds by default) on each side, timed from when it starts burning, creating a resource war. The siege bar drains the burning lapis smoothly, so you can see how much of it is left. Defender lapis is only used while a siege is actually running.
 
 **The World Core (the Geode Heart):** a two-block boulder of weathered stone floating at the realm's centre, split open on four sides around a crystal-lined hollow that holds the realm's black hole (the same one as the anchor's). A shaft is bored straight down through it; the beacon rises from the black hole up the shaft, runes climb the beam in a slow double helix, crystal shards circle the black hole and drift down the shaft, faceted aurora crystals are driven through its crown and a layer of aurora crystal hangs beneath it, slowly shifting colour. A rune tablet below each opening marks where it answers you.
 
@@ -168,9 +168,9 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 | `realm.realm_radius_chunks` | 2 | Plot size (side = 2r-1 chunks) |
 | `realm.realm_padding_chunks` | 1 | Gap between adjacent realms |
 | `realm.max_spawn_search_chunks` | 16 | WorldCore dry-land search radius |
-| `siege.breach_duration_ticks` | 24000 | World Breacher full-breach time |
-| `siege.breaker_duration_ticks` | 24000 | Anchor Breaker anchor-destroy time |
-| `siege.core_slow_factor` | 3 | Defense slowdown (progress every N ticks) |
+| `siege.breach_duration_ticks` | 12000 | World Breacher full-breach time |
+| `siege.breaker_duration_ticks` | 12000 | Anchor Breaker anchor-destroy time |
+| `siege.core_slow_factor` | 2 | Defense slowdown (progress every N ticks) |
 | `siege.core_fuel_burn_ticks` | 200 | How long each lapis burns while a siege runs |
 | `siege.siege_bossbar_range` | 64 | Radius in blocks for seeing siege boss bars |
 | `access.max_allowed_players` | 0 | Max players on a realm's access list (0 = unlimited) |

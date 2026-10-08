@@ -69,16 +69,18 @@ public class PocketDimensionsConfig {
         builder.comment("Siege mechanics settings").push("siege");
 
         BREACH_DURATION_TICKS = builder
-                .comment("World Breacher full-breach duration in ticks (1 MC day = 24000).")
-                .defineInRange("breach_duration_ticks", 24000, 1, Integer.MAX_VALUE);
+                .comment("World Breacher full-breach duration in ticks, unwarded (24000 = 1 MC day, 20 min).",
+                         "Default: 12000 (half a day, 10 min; a full day while the World Core wards).")
+                .defineInRange("breach_duration_ticks", 12000, 1, Integer.MAX_VALUE);
 
         BREAKER_DURATION_TICKS = builder
-                .comment("Anchor Breaker anchor-destroy duration in ticks (1 MC day = 24000).")
-                .defineInRange("breaker_duration_ticks", 24000, 1, Integer.MAX_VALUE);
+                .comment("Anchor Breaker anchor-destroy duration in ticks, unwarded (24000 = 1 MC day, 20 min).",
+                         "Default: 12000 (half a day, 10 min; a full day while the World Core wards).")
+                .defineInRange("breaker_duration_ticks", 12000, 1, Integer.MAX_VALUE);
 
         CORE_SLOW_FACTOR = builder
-                .comment("WorldCore defense: advance attacker progress every N ticks (N=3 -> 3x slowdown).")
-                .defineInRange("core_slow_factor", 3, 1, 100);
+                .comment("WorldCore defense: while it holds lapis, attacker progress advances every N ticks (N=2 -> 2x slower).")
+                .defineInRange("core_slow_factor", 2, 1, 100);
 
         CORE_FUEL_BURN_TICKS = builder
                 .comment("Ticks between each attacker lapis consumed.")

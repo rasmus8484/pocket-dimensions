@@ -162,7 +162,7 @@ Fuel: **Lapis Lazuli**
 
 Base breach duration:
 
-- **1 Minecraft day (20 minutes)** of uninterrupted progress
+- **Half a Minecraft day (10 minutes)** of uninterrupted progress; a full day (20 minutes) while the WorldCore wards
 
 Progress advances only while all are true:
 
@@ -243,14 +243,14 @@ The WorldCore can be fed **lapis** as a defensive measure.
 
 Effect:
 
-- While the WorldCore has fuel, siege progress (World Breacher or Anchor Breaker) is slowed by **3x** (`core_slow_factor`)
+- While the WorldCore has fuel, siege progress (World Breacher or Anchor Breaker) is slowed by **2x** (`core_slow_factor`)
 
 Rules:
 
 - Anyone may put lapis into the WorldCore; only the owner and managers can take it out
 - Fuel is consumed **only while a siege is actually running**
 - If fuel runs out mid-siege, progress speed immediately returns to normal
-- No stacking beyond 3x slowdown
+- No stacking beyond 2x slowdown
 
 This creates a resource-vs-resource siege loop:
 
