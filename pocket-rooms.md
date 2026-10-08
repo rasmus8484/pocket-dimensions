@@ -98,6 +98,8 @@ When a player right-clicks while holding the anchor (in the air or on a block):
 - Player is teleported into the linked pocket room
 
 A player never enters while still carrying the anchor — entering always leaves the placed anchor behind as the way back out.
+- The anchor goes at the player's feet even under water or lava (the liquid is displaced), or beside them; if there is no spot at all, entering is refused and the item is kept
+- Liquids can't wash a placed anchor away (it is forced solid)
 
 The anchor stores:
 - `pocket_id`
