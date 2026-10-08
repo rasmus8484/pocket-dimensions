@@ -1,0 +1,28 @@
+{
+  "parent": "pocketdimensions:main/dominion",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:world_core"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.heart_of_the_realm.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.heart_of_the_realm.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "name_realm": {
+      "trigger": "pocketdimensions:event",
+      "conditions": {
+        "event": "name_realm"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "name_realm"
+    ]
+  ]
+}

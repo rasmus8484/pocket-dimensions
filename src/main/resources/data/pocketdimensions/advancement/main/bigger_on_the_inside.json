@@ -1,0 +1,28 @@
+{
+  "parent": "pocketdimensions:main/a_room_of_ones_own",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:pocket_anchor"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.bigger_on_the_inside.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.bigger_on_the_inside.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "entered": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "pocketdimensions:pocket"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "entered"
+    ]
+  ]
+}

@@ -51,6 +51,8 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
 
     /** Ticks of progress. Full destruction = BREAKER_DURATION_TICKS. */
     private int progressTicks = 0;
+    /** Who fixed this breaker on the anchor; told when it severs it (Severed). Null for breakers placed before this. */
+    private @org.jetbrains.annotations.Nullable UUID placer;
 
     /** Legacy lapis fuel counter (from direct right-click fueling on older worlds). Drained before slot. */
     private int fuel = 0;
@@ -170,6 +172,10 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
                 // Destroying the anchor triggers neighborChanged on this block -> drops this block
                 // setRemoved will clean up the boss bar
                 playCrack(level, anchorPos);
+                if (be.placer != null) {
+                    var p = serverLevel.getServer().getPlayerList().getPlayer(be.placer);
+                    if (p != null) com.pocketdimensions.advancement.Milestones.reach(p, com.pocketdimensions.advancement.Milestones.SEVER_ANCHOR);
+                }
                 level.setBlock(anchorPos, Blocks.AIR.defaultBlockState(), 3);
                 return;  // do not touch `be` after block removal
             }
@@ -262,6 +268,11 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
     }
 
     // -------------------------------------------------------------------------
+    public void setPlacer(UUID placer) {
+        this.placer = placer;
+        setChanged();
+    }
+
     // NBT
     // -------------------------------------------------------------------------
 
@@ -269,6 +280,7 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putInt("progress_ticks", progressTicks);
+        if (placer != null) output.putString("placer", placer.toString());
         output.putInt("fuel", fuel);
         ItemStack slot = inventory.getItem(0);
         output.putInt("slot_lapis_count", slot.isEmpty() ? 0 : slot.getCount());
@@ -278,6 +290,8 @@ public class AnchorBreakerBlockEntity extends BlockEntity implements MenuProvide
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         progressTicks = input.getIntOr("progress_ticks", 0);
+        String placerId = input.getStringOr("placer", "");
+        try { placer = placerId.isEmpty() ? null : UUID.fromString(placerId); } catch (IllegalArgumentException e) { placer = null; }
         fuel = input.getIntOr("fuel", 0);
         int slotCount = input.getIntOr("slot_lapis_count", 0);
         if (slotCount > 0) {

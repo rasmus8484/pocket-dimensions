@@ -83,6 +83,14 @@ public class AnchorBreakerBlock extends BaseEntityBlock {
         }
     }
 
+    /** The breaker remembers who fixed it on the anchor, for Severed. */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide() && placer instanceof Player player && level.getBlockEntity(pos) instanceof AnchorBreakerBlockEntity be)
+            be.setPlacer(player.getUUID());
+    }
+
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;

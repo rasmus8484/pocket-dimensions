@@ -1,0 +1,28 @@
+{
+  "parent": "pocketdimensions:main/gatecrasher",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:world_breacher"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.open_gates.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.open_gates.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "breach_entry": {
+      "trigger": "pocketdimensions:event",
+      "conditions": {
+        "event": "breach_entry"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "breach_entry"
+    ]
+  ]
+}

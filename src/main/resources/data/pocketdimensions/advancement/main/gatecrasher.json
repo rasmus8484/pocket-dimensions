@@ -1,0 +1,33 @@
+{
+  "parent": "pocketdimensions:main/dominion",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:world_breacher"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.gatecrasher.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.gatecrasher.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "placed": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:block_state_property",
+            "block": "pocketdimensions:world_breacher"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "placed"
+    ]
+  ]
+}

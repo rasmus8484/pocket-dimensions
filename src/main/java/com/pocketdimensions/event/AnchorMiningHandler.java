@@ -1,6 +1,7 @@
 package com.pocketdimensions.event;
 
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.advancement.Milestones;
 import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
 import com.pocketdimensions.blockentity.RoomVoidBlockEntity;
 import com.pocketdimensions.init.ModBlocks;
@@ -117,6 +118,7 @@ public final class AnchorMiningHandler {
                 if (room == null) continue;
                 watched.put(spot, w = new Watch(room));
                 crack(server, level, spot.pos(), w.pocketId);                // the first hit
+                for (ServerPlayer p : occupants(server, room)) Milestones.reach(p, Milestones.ROOM_SHUDDERS);
             }
             int cracks = AnchorMining.cracks(e.getValue());
             if (cracks > w.cracks) {

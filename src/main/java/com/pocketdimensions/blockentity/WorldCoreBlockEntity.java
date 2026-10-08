@@ -236,6 +236,18 @@ public class WorldCoreBlockEntity extends BlockEntity implements MenuProvider {
             if (!slot.isEmpty()) slot.shrink(1);
         }
         setChanged();
+        holdTheLine();
+    }
+
+    /** The realm's own people inside it while the core burns lapis against a siege: Hold the Line. */
+    private void holdTheLine() {
+        if (!(level instanceof ServerLevel serverLevel) || ownerUUID == null) return;
+        RealmManager mgr = RealmManager.get(serverLevel.getServer());
+        for (var p : serverLevel.players()) {
+            boolean belongs = p.getUUID().equals(ownerUUID) || mgr.isAllowed(ownerUUID, p.getUUID());
+            if (belongs && ownerUUID.equals(mgr.realmOwnerAt(p.getX(), p.getZ())))
+                com.pocketdimensions.advancement.Milestones.reach(p, com.pocketdimensions.advancement.Milestones.HOLD_THE_LINE);
+        }
     }
 
     /** Returns the ARGB beam colour for the current siege state. */

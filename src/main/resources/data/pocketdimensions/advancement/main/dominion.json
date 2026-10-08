@@ -1,0 +1,28 @@
+{
+  "parent": "pocketdimensions:main/a_seed_of_worlds",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:world_anchor"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.dominion.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.dominion.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "entered": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "pocketdimensions:realm"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "entered"
+    ]
+  ]
+}

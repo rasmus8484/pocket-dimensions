@@ -1,0 +1,32 @@
+{
+  "parent": "pocketdimensions:main/root",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:pocket_anchor"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.a_room_of_ones_own.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.a_room_of_ones_own.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "anchor": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "pocketdimensions:pocket_anchor"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "anchor"
+    ]
+  ]
+}

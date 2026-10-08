@@ -77,6 +77,10 @@ public class WorldAnchorBlockEntity extends BlockEntity {
             player.displayClientMessage(Component.literal("The anchor's wards hold firm. You shall not pass."), false);
             return;
         }
+        if (!player.getUUID().equals(ownerUUID) && level.getServer() != null
+                && !RealmManager.get(level.getServer()).isAllowed(ownerUUID, player.getUUID()))
+            com.pocketdimensions.advancement.Milestones.reach(player,                      // only the breach let them in
+                    com.pocketdimensions.advancement.Milestones.BREACH_ENTRY);
 
         MinecraftServer server = level.getServer();
         if (server == null) {

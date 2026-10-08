@@ -2,6 +2,7 @@ package com.pocketdimensions.network;
 
 import com.pocketdimensions.PocketDimensionsConfig;
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.advancement.Milestones;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.manager.RealmManager;
 import com.pocketdimensions.manager.RealmRules;
@@ -101,6 +102,7 @@ public class ModNetworking {
                     if (!RealmRules.canManage(role)) return;
                     String name = RealmRules.cleanName(m.text);
                     mgr.setName(owner, name);
+                    if (!name.isEmpty()) Milestones.reach(sender, Milestones.NAME_REALM);
                     tell(sender, "The realm will be known as " + RealmRules.displayName(name, resolveName(owner, server)) + ".");
                 }
                 case RELOCATE -> {
@@ -132,6 +134,7 @@ public class ModNetworking {
             }
             if (!mgr.addAllowedPlayer(owner, id)) { tell(sender, "That soul already walks freely through the realm's wards."); return; }
             tell(sender, resolveName(id, server) + " has been granted passage through the realm's wards.");
+            Milestones.reach(sender, Milestones.GRANT_ACCESS);
         }
     }
 

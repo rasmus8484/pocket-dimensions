@@ -1,0 +1,45 @@
+{
+  "parent": "pocketdimensions:main/root",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:world_seed"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.a_seed_of_worlds.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.a_seed_of_worlds.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "seed": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "pocketdimensions:world_seed"
+          }
+        ]
+      }
+    },
+    "anchor": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "pocketdimensions:world_anchor"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "seed"
+    ],
+    [
+      "anchor"
+    ]
+  ]
+}

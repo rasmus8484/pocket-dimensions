@@ -1,0 +1,29 @@
+{
+  "parent": "pocketdimensions:main/a_room_of_ones_own",
+  "display": {
+    "icon": {
+      "id": "minecraft:echo_shard"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.echoes_in_the_walls.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.echoes_in_the_walls.description"
+    },
+    "frame": "task",
+    "hidden": true
+  },
+  "criteria": {
+    "room_shudders": {
+      "trigger": "pocketdimensions:event",
+      "conditions": {
+        "event": "room_shudders"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "room_shudders"
+    ]
+  ]
+}

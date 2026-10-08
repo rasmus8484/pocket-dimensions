@@ -1,0 +1,28 @@
+{
+  "parent": "pocketdimensions:main/dominion",
+  "display": {
+    "icon": {
+      "id": "minecraft:lapis_lazuli"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.hold_the_line.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.hold_the_line.description"
+    },
+    "frame": "goal"
+  },
+  "criteria": {
+    "hold_the_line": {
+      "trigger": "pocketdimensions:event",
+      "conditions": {
+        "event": "hold_the_line"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "hold_the_line"
+    ]
+  ]
+}

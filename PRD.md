@@ -98,7 +98,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 |----|--------|---------|-------|
 | CP-001 | DONE | Crafting recipes | Pocket Anchor, World Seed, World Anchor, World Breacher, Anchor Breaker; nothing from the End. All five unlock on first entering the Nether |
 | CP-002 | DONE | Drops | By design: siege blocks vanish unless `siege_blocks_drop` (then they drop themselves and their lapis, in code, no loot tables); a mined Pocket Anchor destroys its room and drops nothing; World Anchor and World Core are indestructible |
-| CP-003 | TODO | Advancements | Progression milestones (first room, first realm, first siege, etc.); only a hidden recipe-unlock advancement exists |
+| CP-003 | DONE | Advancements | Tab "Folded Space" (unlocks on entering the Nether): pocket rooms (A Room of One's Own, Bigger on the Inside, Dreaming Within, hidden Light Fingers / Echoes in the Walls / Unmade), realms (A Seed of Worlds, Dominion, Heart of the Realm, Kept Company, Hold the Line) and sieges (Gatecrasher, Open Gates, The Unmaker, Severed). Vanilla triggers plus one custom `pocketdimensions:event` trigger (`advancement/PocketEventTrigger`, events in `advancement/Milestones`); files in `data/pocketdimensions/advancement/main`, checked by `AdvancementsTest` |
 | CP-004 | DONE | Custom textures | Every block and item has its own design (`tools/anchor/`); the pocket room walls borrow vanilla's gold and netherite blocks around the end-portal void |
 | CP-005 | DONE | Mining/tool tags | Pocket Anchor, World Breacher and Anchor Breaker in `mineable/pickaxe` and `needs_diamond_tool`; mining times from the server config |
 | CP-006 | DONE | Anchor break warning FX | Red motes and the crack sound at any anchor being mined; inside, the Anchor Breaker's lightning, enlarged, tears in from the walls at 25 / 50 / 75 % and vanishes when the mining stops (pure `manager/RoomCracks`, `client/RoomVoidRenderer`) |
@@ -121,7 +121,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | 4.6 — Access list & anchor model | RL-015, RL-016 | DONE |
 | 4.7 — Visual rework, safe arrival, config | CP-007, SG-010 to SG-013, PR-014, PR-015, RL-017 to RL-019 | DONE |
 | 5 — Anti-exploit | AE-001 through AE-008 | PARTIAL |
-| 6 — Content | CP-001 through CP-009 | PARTIAL (CP-003 left) |
+| 6 — Content | CP-001 through CP-009 | DONE |
 
 ---
 

@@ -54,6 +54,7 @@ public class PocketDimensionsMod {
         ModMenuTypes.MENU_TYPES.register(modBusGroup);
         ModParticles.PARTICLE_TYPES.register(modBusGroup);
         ModSounds.SOUND_EVENTS.register(modBusGroup);
+        com.pocketdimensions.init.ModTriggers.TRIGGERS.register(modBusGroup);
 
         ModNetworking.register();
 

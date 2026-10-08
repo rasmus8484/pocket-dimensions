@@ -1,0 +1,32 @@
+{
+  "parent": "pocketdimensions:main/bigger_on_the_inside",
+  "display": {
+    "icon": {
+      "id": "minecraft:red_bed"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.dreaming_within.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.dreaming_within.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "slept": {
+      "trigger": "minecraft:slept_in_bed",
+      "conditions": {
+        "player": {
+          "location": {
+            "dimension": "pocketdimensions:pocket"
+          }
+        }
+      }
+    }
+  },
+  "requirements": [
+    [
+      "slept"
+    ]
+  ]
+}

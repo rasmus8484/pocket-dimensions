@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:pocket_anchor"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.root.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.root.description"
+    },
+    "frame": "task",
+    "background": "minecraft:block/crying_obsidian",
+    "show_toast": false,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "entered": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "minecraft:the_nether"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "entered"
+    ]
+  ]
+}

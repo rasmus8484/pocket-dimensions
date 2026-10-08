@@ -1,0 +1,29 @@
+{
+  "parent": "pocketdimensions:main/a_room_of_ones_own",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:pocket_anchor"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.light_fingers.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.light_fingers.description"
+    },
+    "frame": "goal",
+    "hidden": true
+  },
+  "criteria": {
+    "steal_anchor": {
+      "trigger": "pocketdimensions:event",
+      "conditions": {
+        "event": "steal_anchor"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "steal_anchor"
+    ]
+  ]
+}

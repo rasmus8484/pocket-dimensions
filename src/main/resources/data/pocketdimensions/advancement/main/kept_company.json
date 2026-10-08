@@ -1,0 +1,28 @@
+{
+  "parent": "pocketdimensions:main/heart_of_the_realm",
+  "display": {
+    "icon": {
+      "id": "minecraft:name_tag"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.kept_company.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.kept_company.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "grant_access": {
+      "trigger": "pocketdimensions:event",
+      "conditions": {
+        "event": "grant_access"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "grant_access"
+    ]
+  ]
+}

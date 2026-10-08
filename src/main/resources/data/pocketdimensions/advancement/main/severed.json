@@ -1,0 +1,28 @@
+{
+  "parent": "pocketdimensions:main/the_unmaker",
+  "display": {
+    "icon": {
+      "id": "pocketdimensions:anchor_breaker"
+    },
+    "title": {
+      "translate": "advancements.pocketdimensions.severed.title"
+    },
+    "description": {
+      "translate": "advancements.pocketdimensions.severed.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "sever_anchor": {
+      "trigger": "pocketdimensions:event",
+      "conditions": {
+        "event": "sever_anchor"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "sever_anchor"
+    ]
+  ]
+}

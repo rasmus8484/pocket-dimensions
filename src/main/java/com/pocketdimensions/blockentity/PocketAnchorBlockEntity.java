@@ -143,6 +143,8 @@ public class PocketAnchorBlockEntity extends BlockEntity {
         if (!level.isClientSide() && level.getServer() != null) {
             PocketRoomManager.get(level.getServer()).clearAnchorLocation(pocketId);
         }
+        if (owner != null && !owner.equals(thief.getUUID()))
+            com.pocketdimensions.advancement.Milestones.reach(thief, com.pocketdimensions.advancement.Milestones.STEAL_ANCHOR);
         // No sound, no particle - intentionally silent
     }
 
