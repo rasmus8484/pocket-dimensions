@@ -127,7 +127,7 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
      */
     public static void clientTick(Level level, BlockPos pos, BlockState state, WorldBreacherBlockEntity be) {
         long t = level.getGameTime();
-        if (t % 15 != 0 || !state.getValue(com.pocketdimensions.block.WorldBreacherBlock.COMPLETE) || !be.hasFuel()) return;
+        if (t % 15 != 0 || !state.getValue(com.pocketdimensions.block.WorldBreacherBlock.COMPLETE)) return;
         double strand = (t / 15) % 2 == 0 ? 0 : Math.PI;
         level.addParticle(com.pocketdimensions.init.ModParticles.RUNE_HELIX.get(),
                 pos.getX() + 0.5, pos.getY() + 0.75, pos.getZ() + 0.5, strand, 0, 0xFF5ADC);
@@ -146,8 +146,9 @@ public class WorldBreacherBlockEntity extends BlockEntity implements MenuProvide
         // Check defender slowdown from WorldCore inside the realm
         boolean defended = hasAnchor && anchor != null && be.isDefenderCoreActive(serverLevel, anchor);
 
-        // Progress + fuel drain (only when fueled and anchor present)
-        if (be.hasFuel() && hasAnchor && anchor != null) {
+        // Progress + fuel drain (only when fueled and anchor present). A complete breach stays open on its own and
+        // burns nothing more, on either side.
+        if (!be.isBreachComplete() && be.hasFuel() && hasAnchor && anchor != null) {
             boolean shouldAdvance = !defended
                     || (level.getGameTime() % PocketDimensionsConfig.CORE_SLOW_FACTOR.get() == 0);
             if (shouldAdvance) {

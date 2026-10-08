@@ -37,7 +37,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | RL-002 | DONE | WorldAnchor + WorldSeed linking | WorldSeed binds anchor to realm; rekey only once the linked anchor is destroyed (by design: no dodging a siege) |
 | RL-003 | DONE | Realm terrain generation | RealmChunkGenerator: overworld-like noise, legacy_random_source; structures and features per the server config (RL-014; none and no dungeons by default) |
 | RL-004 | DONE | WorldCore placement | Searches for dry land near plot center; clears column above; sets owner UUID |
-| RL-005 | DONE | Realm entry | Right-click linked anchor; owner and access-list players always, others only if breached+fueled |
+| RL-005 | DONE | Realm entry | Right-click linked anchor; owner and access-list players always, others only while a completed World Breacher stands |
 | RL-006 | DONE | Realm exit via WorldCore | Right-click WorldCore; queued teleport to entry location or world spawn |
 | RL-007 | DONE | Border enforcement | Chunk-change + 200-tick timer checks; connection.teleport() snap-back |
 | RL-008 | DONE | Portal blocking | EntityTravelToDimensionEvent cancelled for all non-queued exits from realm |
@@ -60,7 +60,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 
 | ID | Status | Feature | Notes |
 |----|--------|---------|-------|
-| SG-001 | DONE | World Breacher | `world_breacher` block; after breach_duration_ticks, opens realm access to anyone while fueled |
+| SG-001 | DONE | World Breacher | `world_breacher` block; after breach_duration_ticks, opens realm access to anyone for as long as it stands (no fuel needed once complete) |
 | SG-002 | DONE | Anchor Breaker | `anchor_breaker` block; after breaker_duration_ticks, permanently destroys WorldAnchor |
 | SG-003 | DONE | Lapis fuel system | Both siege blocks consume lapis; progress pauses when fuel exhausted |
 | SG-004 | DONE | Config-driven durations | breach/breaker duration, core_slow_factor, core_fuel_burn_ticks in config |

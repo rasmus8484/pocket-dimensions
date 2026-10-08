@@ -205,13 +205,9 @@ Players on the realm's **access list** (see section 13) can also always enter.
 
 After successful breach (100%):
 
-- The WorldAnchor becomes accessible to **anyone** as long as:
-  - The World Breacher still exists
-  - The World Breacher currently contains at least 1 lapis fuel
-
-If the breacher has no fuel:
-
-- Access immediately reverts to owner-only
+- The WorldAnchor becomes accessible to **anyone** as long as the World Breacher still exists
+- A complete breach needs no more lapis; it burns none (and the World Core burns none against it)
+- Mining or otherwise removing the breacher reverts access to owner-only
 
 This supports both:
 

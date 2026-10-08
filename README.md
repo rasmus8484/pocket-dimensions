@@ -93,7 +93,7 @@ Two siege blocks can be placed on top of a World Anchor (on its upper half; **cr
 - Right-click with lapis to fuel it, or **crouch + right-click** to open its GUI
 - GUI shows progress bar, status, ETA, and a lapis fuel slot (insert/remove like a furnace)
 - Progresses over 24,000 ticks (1 Minecraft day) while fueled
-- When complete, any player can use the anchor to enter the realm (as long as the breacher remains fueled), and a pink beacon beam rises from the breacher's eye while it stays fueled
+- When complete, any player can use the anchor to enter the realm for as long as the breacher stands (it needs no more lapis), and a pink beacon beam rises from the breacher's eye
 - While attached, the anchor visibly falls under its influence: its black hole turns ember, its runes turn pink from the top down as the breach progresses (all pink when complete), and pink motes drain from the mandibles into the black hole
 - If fuel runs out after breach, access reverts to owner-only
 - Destroying the breacher resets all progress

@@ -11,7 +11,7 @@ class RealmRulesTest {
     void onlyTheOwnerTheAccessListOrAnOpenBreachMayBeInARealm() {
         assertTrue(RealmRules.mayEnter(true, false, false), "the owner");
         assertTrue(RealmRules.mayEnter(false, true, false), "a player on the access list");
-        assertTrue(RealmRules.mayEnter(false, false, true), "anyone while a fuelled, completed breach stands");
+        assertTrue(RealmRules.mayEnter(false, false, true), "anyone while a completed breach stands");
         assertFalse(RealmRules.mayEnter(false, false, false), "anyone else, however they arrived");
     }
 

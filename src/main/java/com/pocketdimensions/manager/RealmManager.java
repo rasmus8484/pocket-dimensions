@@ -582,7 +582,7 @@ public class RealmManager extends SavedData {
         if (level == null) return false;
         BlockPos siegePos = anchor.get().getValue().above(2);           // a siege block sits on the anchor's upper half
         return level.getBlockEntity(siegePos) instanceof com.pocketdimensions.blockentity.WorldBreacherBlockEntity b
-                && b.isBreachComplete() && b.hasFuel();
+                && b.isBreachComplete();
     }
 
     /** Sends the player back where they entered from (or to world spawn), and forgets which realm they were in. */

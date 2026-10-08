@@ -37,9 +37,9 @@ public class WorldBreacherBlockEntityRenderer implements BlockEntityRenderer<Wor
                                    ModelFeatureRenderer.CrumblingOverlay crumbling) {
         BlockEntityRenderState.extractBase(be, state, crumbling);
 
-        // The beam shows the breach is open: complete AND still fueled (same rule as realm access)
+        // The beam shows the breach is open: complete (same rule as realm access; it needs no fuel once open)
         // COMPLETE is a synced block state; isBreachComplete() would use the client's own (unsynced) config value
-        if (!be.getBlockState().getValue(WorldBreacherBlock.COMPLETE) || !be.hasFuel()) {
+        if (!be.getBlockState().getValue(WorldBreacherBlock.COMPLETE)) {
             state.beamHeight = 0;
             return;
         }

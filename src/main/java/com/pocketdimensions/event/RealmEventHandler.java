@@ -84,6 +84,7 @@ public class RealmEventHandler {
         EntityTravelToDimensionEvent.BUS.addListener(this::onEntityTravelToDimension);
         MobSpawnEvent.FinalizeSpawn.BUS.addListener(this::onFinalizeSpawn);
         PlayerInteractEvent.RightClickBlock.BUS.addListener(this::onRightClickWorldAnchor);
+        PlayerInteractEvent.RightClickBlock.BUS.addListener(this::onRightClickWorldCore);
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onPlayerLoggedIn);
         PlayerEvent.PlayerChangedDimensionEvent.BUS.addListener(this::onChangedDimension);
         SleepFinishedTimeEvent.BUS.addListener(this::onRealmSleepFinished);
@@ -320,6 +321,17 @@ public class RealmEventHandler {
         if (event.getEntity().isShiftKeyDown()) return;
 
         // Not sneaking: suppress the item so useWithoutItem fires and the player enters the realm.
+        event.setUseItem(Result.DENY);
+    }
+
+    /**
+     * The World Core always answers its own click, whatever is in hand: crouch opens its screen, lapis feeds it,
+     * anything else takes you home (WorldCoreBlock.useItemOn). Vanilla would skip the block when crouching with an
+     * item, and place blocks or use items against it instead. Runs on both sides so the client agrees.
+     */
+    private void onRightClickWorldCore(PlayerInteractEvent.RightClickBlock event) {
+        if (!event.getLevel().getBlockState(event.getPos()).is(ModBlocks.WORLD_CORE.get())) return;
+        event.setUseBlock(Result.ALLOW);
         event.setUseItem(Result.DENY);
     }
 

@@ -155,9 +155,9 @@ public class WorldCoreBlock extends BaseEntityBlock {
     }
 
     /**
-     * Right-click with item:
-     * - Crouch: open GUI (owner only)
-     * - Lapis (not crouching): direct fuel insert (owner only)
+     * Right-click with item (RealmEventHandler makes sure this runs even when crouching with an item):
+     * - Crouch: open the screen, whatever is in hand
+     * - Lapis: put as much of the stack in as fits (anyone may)
      * - Anything else: exit realm
      */
     @Override
@@ -181,7 +181,7 @@ public class WorldCoreBlock extends BaseEntityBlock {
 
     /**
      * Empty-hand right-click:
-     * - Crouch: open GUI (owner only)
+     * - Crouch: open the screen
      * - Normal: exit realm
      */
     @Override
