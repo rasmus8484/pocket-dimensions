@@ -42,7 +42,7 @@ Status: `DONE` | `PARTIAL` | `TODO`
 | RL-007 | DONE | Border enforcement | Chunk-change + 200-tick timer checks; connection.teleport() snap-back |
 | RL-008 | DONE | Portal blocking | EntityTravelToDimensionEvent cancelled for all non-queued exits from realm |
 | RL-009 | DONE | Hostile mob spawn blocking | MobSpawnEvent.FinalizeSpawn cancelled for natural Monster spawns in realm |
-| RL-010 | DONE | Ownership transfer | `/pd owner <player|uuid>` command transfers realm, anchor, and core |
+| RL-010 | DONE | Ownership transfer | `/pd owner <player|uuid>`: looking at a World Anchor transfers realm, anchor and core; at a placed Pocket Anchor, the room's recorded owner and the anchor's owner |
 | RL-011 | DONE | Realm relinking | WorldSeed on new anchor rekeys realm; refused while the old anchor stands |
 | RL-012 | DONE | Login restoration | PlayerLoggedInEvent restores runtime bounds or ejects player if no info |
 | RL-013 | DONE | Sleep time advancement | The realm shares the overworld's clock and its sleep pool: realm sleepers count with the overworld's players (`PocketSleepHandler`, `RoomHost.poolHost`), so the realm can't skip the overworld's night alone |

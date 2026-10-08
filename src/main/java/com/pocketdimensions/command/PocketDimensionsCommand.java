@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketdimensions.blockentity.PocketAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
 import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
 import com.pocketdimensions.manager.RealmManager;
@@ -32,7 +33,8 @@ import java.util.UUID;
  * Registers all "/pd" sub-commands.
  *
  * Syntax:
- *   /pd owner <name>                               - resolve by player name
+ *   /pd owner <name>                               - look at a World Anchor (the realm) or a Pocket Anchor (the
+ *                                                    room) and give it to a player, resolved by name
  *   /pd owner 550e8400-e29b-41d4-a716-446655440000 - resolve by raw UUID
  *   /pd test mineAnchor [seconds]                  - testing: mine the anchor of the room you're in, start to finish
  *                                                    (default: pocket_anchor_mine_seconds from the server config)
@@ -125,8 +127,10 @@ public class PocketDimensionsCommand {
         }
 
         BlockPos targetPos = hit.getBlockPos();
+        if (level.getBlockEntity(targetPos) instanceof PocketAnchorBlockEntity pocketAnchor)
+            return setPocketOwner(ctx, server, pocketAnchor);
         if (!(level.getBlockEntity(targetPos) instanceof WorldAnchorBlockEntity anchor)) {
-            src.sendFailure(Component.literal("That is not a World Anchor."));
+            src.sendFailure(Component.literal("That is neither a World Anchor nor a Pocket Anchor."));
             return 0;
         }
 
@@ -137,28 +141,10 @@ public class PocketDimensionsCommand {
         }
 
         // -- Resolve new owner UUID from the argument --------------------------
-        String arg = StringArgumentType.getString(ctx, "player");
-        UUID newOwner;
-        String newOwnerName;
-
-        // Auto-detect: if the argument parses as a UUID, use it directly; otherwise resolve by name.
-        UUID parsedDirectly = tryParseUUID(arg);
-        if (parsedDirectly != null) {
-            newOwner = parsedDirectly;
-            ServerPlayer online = server.getPlayerList().getPlayer(newOwner);
-            newOwnerName = (online != null) ? online.getName().getString() : arg;
-        } else {
-            // Name lookup: online -> ops list -> whitelist
-            newOwner = resolveByName(server, arg);
-            if (newOwner == null) {
-                src.sendFailure(Component.literal(
-                        "No soul by the name '" + arg + "' could be found."
-                        + " They must be online, opped, or whitelisted."
-                        + " You may also pass a UUID: /pd owner xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"));
-                return 0;
-            }
-            newOwnerName = arg;
-        }
+        NewOwner resolved = resolveNewOwner(ctx, server);
+        if (resolved == null) return 0;
+        UUID newOwner = resolved.id();
+        String newOwnerName = resolved.name();
 
         if (oldOwner.equals(newOwner)) {
             src.sendFailure(Component.literal(newOwnerName + " already holds dominion over this anchor."));
@@ -185,9 +171,58 @@ public class PocketDimensionsCommand {
         return 1;
     }
 
+    /**
+     * A Pocket Anchor you're looking at: its room is recorded as the new owner's, and so is the placed anchor. (Rooms
+     * stay open to anyone either way.)
+     */
+    private static int setPocketOwner(CommandContext<CommandSourceStack> ctx, MinecraftServer server,
+                                      PocketAnchorBlockEntity anchor) {
+        CommandSourceStack src = ctx.getSource();
+        UUID room = anchor.getPocketId();
+        var mgr = com.pocketdimensions.manager.PocketRoomManager.get(server);
+        if (room == null || !mgr.roomExists(room)) {
+            src.sendFailure(Component.literal("This Pocket Anchor holds no room."));
+            return 0;
+        }
+        NewOwner resolved = resolveNewOwner(ctx, server);
+        if (resolved == null) return 0;
+        if (resolved.id().equals(mgr.getRoomOwner(room)) && resolved.id().equals(anchor.getOwnerUUID())) {
+            src.sendFailure(Component.literal(resolved.name() + " already holds this pocket."));
+            return 0;
+        }
+        mgr.setRoomOwner(room, resolved.id());
+        anchor.setOwnerUUID(resolved.id());
+        src.sendSuccess(() -> Component.literal("The pocket now answers to " + resolved.name() + "."), true);
+        return 1;
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private record NewOwner(UUID id, String name) {}
+
+    /**
+     * The "player" argument as a UUID and a name: a UUID is taken as given, a name is looked up (online, ops,
+     * whitelist). Tells the executor and returns null when no one matches.
+     */
+    private static NewOwner resolveNewOwner(CommandContext<CommandSourceStack> ctx, MinecraftServer server) {
+        String arg = StringArgumentType.getString(ctx, "player");
+        UUID parsedDirectly = tryParseUUID(arg);
+        if (parsedDirectly != null) {
+            ServerPlayer online = server.getPlayerList().getPlayer(parsedDirectly);
+            return new NewOwner(parsedDirectly, online != null ? online.getName().getString() : arg);
+        }
+        UUID byName = resolveByName(server, arg);
+        if (byName == null) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "No soul by the name '" + arg + "' could be found."
+                    + " They must be online, opped, or whitelisted."
+                    + " You may also pass a UUID: /pd owner xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"));
+            return null;
+        }
+        return new NewOwner(byName, arg);
+    }
 
     /**
      * Resolves a player name to a UUID.

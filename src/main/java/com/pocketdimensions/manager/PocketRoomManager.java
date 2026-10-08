@@ -50,7 +50,7 @@ public class PocketRoomManager extends SavedData {
 
     public static class RoomData {
         public final int plotIndex;
-        public final UUID ownerUUID;
+        public UUID ownerUUID;                       // changed only by /pd owner
         public boolean generated = false;
         public @Nullable String anchorDimKey = null;
         public @Nullable BlockPos anchorPos = null;
@@ -332,6 +332,19 @@ public class PocketRoomManager extends SavedData {
     // -------------------------------------------------------------------------
     // Anchor tracking
     // -------------------------------------------------------------------------
+
+    public @Nullable UUID getRoomOwner(UUID pocketId) {
+        RoomData data = rooms.get(pocketId);
+        return data == null ? null : data.ownerUUID;
+    }
+
+    /** /pd owner: the room is recorded as someone else's. */
+    public void setRoomOwner(UUID pocketId, UUID owner) {
+        RoomData data = rooms.get(pocketId);
+        if (data == null) return;
+        data.ownerUUID = owner;
+        setDirty();
+    }
 
     public void setAnchorLocation(UUID pocketId, ResourceKey<Level> dim, BlockPos pos) {
         RoomData data = rooms.get(pocketId);
