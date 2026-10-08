@@ -74,7 +74,7 @@ The World Anchor is indestructible by normal mining: it can only be removed thro
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
-**Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player, or at a placed Pocket Anchor to record its room as theirs.
+**Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it), or at a placed Pocket Anchor to record its room as theirs.
 
 **Access by command:** looking at a World Anchor or World Core, admins can run `/pd allow <player>` to put someone on the realm's access list and `/pd deny <player>` to take them off. Add `man` to make them a manager (`/pd allow <player> man`) or take only the manager status away (`/pd deny <player> man`).
 

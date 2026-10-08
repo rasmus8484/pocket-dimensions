@@ -14,6 +14,19 @@ public final class RealmRules {
     private RealmRules() {}
 
     /**
+     * The access list and managers when a realm changes hands (/pd owner): the new owner needs no place on the list,
+     * and the old owner stays on as a manager. The old owner is added even past max_allowed_players.
+     */
+    public static void handOver(java.util.List<java.util.UUID> allowed, java.util.Set<java.util.UUID> managers,
+                                java.util.UUID oldOwner, java.util.UUID newOwner) {
+        allowed.remove(newOwner);
+        managers.remove(newOwner);
+        if (oldOwner.equals(newOwner)) return;
+        if (!allowed.contains(oldOwner)) allowed.add(oldOwner);
+        managers.add(oldOwner);
+    }
+
+    /**
      * Who may be in a realm: its owner, a player on its access list, or anyone while a fuelled, completed World Breacher
      * stands on its anchor. The anchor checks this on entry; the realm checks it again on any other arrival.
      */

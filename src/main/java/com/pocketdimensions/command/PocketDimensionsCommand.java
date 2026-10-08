@@ -171,7 +171,7 @@ public class PocketDimensionsCommand {
         }
 
         src.sendSuccess(() -> Component.literal(
-                "Dominion over the realm has passed to " + resolved.name() + "."), true);
+                "Dominion over the realm has passed to " + resolved.name() + ". The former owner keeps the realm beside them."), true);
         return 1;
     }
 

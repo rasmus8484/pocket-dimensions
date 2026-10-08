@@ -653,7 +653,7 @@ public class RealmManager extends SavedData {
         fresh.createdGameTime = old.createdGameTime;
         fresh.allowedPlayers.addAll(old.allowedPlayers);
         fresh.managers.addAll(old.managers);
-        fresh.managers.remove(newOwner);
+        RealmRules.handOver(fresh.allowedPlayers, fresh.managers, oldOwner, newOwner);
         fresh.name            = old.name;
         realms.put(newOwner, fresh);
         setDirty();

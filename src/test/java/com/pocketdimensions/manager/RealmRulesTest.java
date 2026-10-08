@@ -85,6 +85,30 @@ class RealmRulesTest {
     }
 
     @Test
+    void onAHandOverTheOldOwnerStaysAsAManagerAndTheNewOwnerLeavesTheList() {
+        java.util.UUID old = new java.util.UUID(0, 1), heir = new java.util.UUID(0, 2), friend = new java.util.UUID(0, 3);
+        java.util.List<java.util.UUID> allowed = new java.util.ArrayList<>(java.util.List.of(heir, friend));
+        java.util.Set<java.util.UUID> managers = new java.util.LinkedHashSet<>(java.util.Set.of(heir));
+
+        RealmRules.handOver(allowed, managers, old, heir);
+
+        assertEquals(java.util.List.of(friend, old), allowed, "the heir leaves the list, the old owner joins it");
+        assertEquals(java.util.Set.of(old), managers, "the old owner keeps the realm; the heir's crown is gone");
+    }
+
+    @Test
+    void handingARealmToAnOutsiderStillKeepsTheOldOwner() {
+        java.util.UUID old = new java.util.UUID(0, 1), outsider = new java.util.UUID(0, 4);
+        java.util.List<java.util.UUID> allowed = new java.util.ArrayList<>();
+        java.util.Set<java.util.UUID> managers = new java.util.LinkedHashSet<>();
+
+        RealmRules.handOver(allowed, managers, old, outsider);
+
+        assertEquals(java.util.List.of(old), allowed);
+        assertEquals(java.util.Set.of(old), managers);
+    }
+
+    @Test
     void anUnnamedRealmIsNamedAfterItsOwner() {
         assertEquals("Realm of Wayfarer", RealmRules.displayName("", "Wayfarer"));
         assertEquals("Hollowmere", RealmRules.displayName("Hollowmere", "Wayfarer"));
