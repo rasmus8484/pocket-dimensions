@@ -151,8 +151,16 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 | `mining.siege_blocks_drop` | false | Whether a mined World Breacher or Anchor Breaker drops itself and its lapis (false: destroyed with its fuel) |
 | `fuel.world_breacher_max_lapis` | 5 | Lapis a World Breacher can hold (1-64) |
 | `fuel.anchor_breaker_max_lapis` | 5 | Lapis an Anchor Breaker can hold (1-64) |
+| `realm.structures.generate_structures` | false | Whether structures generate in realms; exceptions in `structure_whitelist` / `structure_blacklist` |
+| `realm.features.generate_features` | true | Whether features (ores, trees, lakes, dungeons, ...) generate; exceptions in `feature_whitelist` / `feature_blacklist` (default blacklist: dungeons) |
+| `realm.mobs.spawn_monsters` | false | Whether monsters spawn naturally in realms |
+| `realm.mobs.spawn_friendly_mobs` | true | Whether every other kind spawns naturally (animals, bats, fish, ...) |
+| `realm.mobs.categories.<category>` | "group" | Per mob category: "group" follows the switch above, "true" / "false" overrides it |
+| `realm.mobs.exceptions.mob_whitelist` / `mob_blacklist` | [] | Single mobs or tags that always / never spawn naturally |
 
 Mining times are fixed: enchantments, Haste and mining fatigue don't change them. 0 means the block breaks instantly.
+
+In every whitelist / blacklist, the blacklist wins; entries are ids (`minecraft:igloo`, or just `igloo`) or tags (`#minecraft:village`). The config file itself has examples next to each list. Realm generation changes apply to land generated afterwards (structures after a restart).
 
 ---
 
