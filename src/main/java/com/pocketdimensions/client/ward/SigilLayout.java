@@ -1,0 +1,95 @@
+package com.pocketdimensions.client.ward;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Where the ward's sigil puts its pieces, flat at PLANE_Y over the realm: an inner seal round the top of the Core's
+ * beam, four rings of runes centred on the Core (the outermost inside the nearest edge, wherever the Core stands), a
+ * square band of runes just inside the Veil, and eight spokes from the seal out to the band. Rings are drawn turned by
+ * turn(ring, ticks). Plain logic, unit tested; built once per ward sync, drawn every frame.
+ */
+public final class SigilLayout {
+
+    public static final int PLANE_Y = 340;
+    private static final double EDGE_MARGIN = 6, SEAL_RADIUS = 20, RING_TURN = 0.0004;     // radians per tick
+
+    public enum Kind { SEAL, RING, SPOKE, BAND }
+    public record Rune(Kind kind, int ring, double x, double z, double size, double angle, int glyph, double radius) {}
+    public record Line(Kind kind, int ring, double x1, double z1, double x2, double z2, double width) {}
+    public record Sigil(double cx, double cz, List<Rune> runes, List<Line> lines) {}
+
+    private SigilLayout() {}
+
+    public static Sigil build(double cx, double cz, int minX, int minZ, int maxX, int maxZ) {
+        List<Rune> runes = new ArrayList<>();
+        List<Line> lines = new ArrayList<>();
+        double edge = Math.min(Math.min(cx - minX, maxX - cx), Math.min(cz - minZ, maxZ - cz)) - EDGE_MARGIN;
+        double size = Math.max(3, Math.min(16, edge / 24));
+        int glyph = 0;
+
+        // the seal: eight runes round the beam's top, and a circle
+        double seal = Math.min(SEAL_RADIUS, edge * 0.12);
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.PI / 4;
+            runes.add(new Rune(Kind.SEAL, -1, cx + Math.cos(a) * seal, cz + Math.sin(a) * seal, size * 0.7, a, glyph++ % 6, seal));
+        }
+        circle(lines, Kind.SEAL, -1, cx, cz, seal + size * 0.6, size * 0.12, 48);
+
+        // four turning rings, the outermost clear of the nearest edge at any angle
+        double outer = edge - size;
+        for (int ring = 0; ring < 4; ring++) {
+            double r = outer * (0.28 + 0.24 * ring);
+            int count = (int) Math.floor(2 * Math.PI * r / (size * 1.6));
+            for (int i = 0; i < count; i++) {
+                double a = 2 * Math.PI * i / count;
+                runes.add(new Rune(Kind.RING, ring, cx + Math.cos(a) * r, cz + Math.sin(a) * r, size, a + Math.PI / 2, glyph++ % 6, r));
+            }
+            circle(lines, Kind.RING, ring, cx, cz, r - size * 0.75, size * 0.08, 96);
+            circle(lines, Kind.RING, ring, cx, cz, r + size * 0.75, size * 0.08, 96);
+        }
+
+        // the band: runes along a square just inside the plot
+        double bx0 = minX + EDGE_MARGIN + size / 2, bx1 = maxX - EDGE_MARGIN - size / 2;
+        double bz0 = minZ + EDGE_MARGIN + size / 2, bz1 = maxZ - EDGE_MARGIN - size / 2;
+        double step = size * 1.4;
+        for (double x = bx0; x <= bx1 + 1e-9; x += step) {
+            runes.add(new Rune(Kind.BAND, -2, x, bz0, size, 0, glyph++ % 6, 0));
+            runes.add(new Rune(Kind.BAND, -2, x, bz1, size, Math.PI, glyph++ % 6, 0));
+        }
+        for (double z = bz0 + step; z <= bz1 - step + 1e-9; z += step) {
+            runes.add(new Rune(Kind.BAND, -2, bx0, z, size, -Math.PI / 2, glyph++ % 6, 0));
+            runes.add(new Rune(Kind.BAND, -2, bx1, z, size, Math.PI / 2, glyph++ % 6, 0));
+        }
+
+        // eight spokes from the seal to the band, in short segments so each is pulled on its own
+        for (int i = 0; i < 8; i++) {
+            double a = i * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a);
+            double to = toSquare(cx, cz, dx, dz, bx0, bz0, bx1, bz1) - size;
+            double seg = Math.max(4, size);
+            for (double r = seal + size; r + seg <= to; r += seg)
+                lines.add(new Line(Kind.SPOKE, -3, cx + dx * r, cz + dz * r, cx + dx * (r + seg), cz + dz * (r + seg), size * 0.1));
+        }
+        return new Sigil(cx, cz, runes, lines);
+    }
+
+    /** Radians ring `ring` has turned after `ticks`: even rings one way, odd rings the other, inner rings faster. */
+    public static double turn(int ring, double ticks) {
+        double dir = ring % 2 == 0 ? 1 : -1;
+        return dir * RING_TURN * ticks / (1 + ring * 0.5);
+    }
+
+    private static void circle(List<Line> out, Kind kind, int ring, double cx, double cz, double r, double width, int segments) {
+        for (int i = 0; i < segments; i++) {
+            double a0 = 2 * Math.PI * i / segments, a1 = 2 * Math.PI * (i + 1) / segments;
+            out.add(new Line(kind, ring, cx + Math.cos(a0) * r, cz + Math.sin(a0) * r, cx + Math.cos(a1) * r, cz + Math.sin(a1) * r, width));
+        }
+    }
+
+    /** Distance from (cx, cz) along (dx, dz) to the square [x0, x1] x [z0, z1]. */
+    private static double toSquare(double cx, double cz, double dx, double dz, double x0, double z0, double x1, double z1) {
+        double tx = dx > 1e-9 ? (x1 - cx) / dx : dx < -1e-9 ? (x0 - cx) / dx : Double.MAX_VALUE;
+        double tz = dz > 1e-9 ? (z1 - cz) / dz : dz < -1e-9 ? (z0 - cz) / dz : Double.MAX_VALUE;
+        return Math.min(tx, tz);
+    }
+}
