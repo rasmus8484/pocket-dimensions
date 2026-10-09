@@ -5,6 +5,7 @@ import com.pocketdimensions.block.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.PushReaction;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -20,6 +21,15 @@ public class ModBlocks {
                     .strength(-1.0f, 3600000.0f)
                     .sound(SoundType.STONE)
                     .requiresCorrectToolForDrops()));
+
+    public static final RegistryObject<Block> VEIL = BLOCKS.register("veil",
+            () -> new VeilBlock(BlockBehaviour.Properties.of()
+                    .setId(BLOCKS.key("veil"))
+                    .strength(-1.0f, 3600000.0f)
+                    .sound(SoundType.AMETHYST)
+                    .pushReaction(PushReaction.BLOCK)
+                    .noLootTable()
+                    .isValidSpawn((state, level, pos, type) -> false)));
 
     public static final RegistryObject<Block> POCKET_ANCHOR = BLOCKS.register("pocket_anchor",
             () -> new PocketAnchorBlock(BlockBehaviour.Properties.of()

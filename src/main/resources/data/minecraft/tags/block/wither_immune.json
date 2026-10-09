@@ -5,6 +5,7 @@
     "pocketdimensions:world_anchor",
     "pocketdimensions:world_core",
     "pocketdimensions:world_breacher",
-    "pocketdimensions:anchor_breaker"
+    "pocketdimensions:anchor_breaker",
+    "pocketdimensions:veil"
   ]
 }

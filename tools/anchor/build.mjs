@@ -8,6 +8,7 @@ import { damageShape, damagePaint } from './damage.mjs';
 import { shape as coreShape, paint as corePaint, STATES as CORE_STATES, CORE as CORE_C } from './geode.mjs';
 import { shape as pocketShape, paint as pocketPaint, glowSprite } from './pocket.mjs';
 import { sprite as seedSprite } from './seed.mjs';
+import { veilTexture, FRAMES as VEIL_FRAMES } from './veil.mjs';
 import { slab, polished, hollow, tablet } from './gui.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
@@ -243,3 +244,19 @@ for (const [name, im] of [['core_slab', slab()], ['core_polished', polished()], 
 }
 
 console.log(report.join('\n'));
+
+// The Veil: one full-bright cube model and one animated texture per height band
+const veilVariants = {};
+for (let b = 0; b < 8; b++) {
+  write(`textures/block/veil_${b}.png`, encodePNG(16, 16 * VEIL_FRAMES, veilTexture(b)));
+  write(`textures/block/veil_${b}.png.mcmeta`, json({ animation: { frametime: 3, interpolate: true } }));
+  const face = dir => ({ uv: [0, 0, 16, 16], texture: '#all', cullface: dir });
+  write(`models/block/veil_${b}.json`, json({
+    ambientocclusion: false,
+    textures: { all: `pocketdimensions:block/veil_${b}`, particle: `pocketdimensions:block/veil_${b}` },
+    elements: [{ from: [0, 0, 0], to: [16, 16, 16], shade: false, light_emission: 15,
+      faces: { north: face('north'), south: face('south'), east: face('east'), west: face('west'), up: face('up'), down: face('down') } }],
+  }));
+  veilVariants[`band=${b}`] = { model: `pocketdimensions:block/veil_${b}` };
+}
+write('blockstates/veil.json', json({ variants: veilVariants }));
