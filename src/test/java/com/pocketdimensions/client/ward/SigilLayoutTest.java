@@ -45,13 +45,51 @@ class SigilLayoutTest {
     }
 
     @Test
-    void itHasASealFourRingsEightSpokesAndABand() {
+    void itHasASealFourRingsAndABand() {
         SigilLayout.Sigil s = SigilLayout.build(392, 392, MIN, MIN, MAX, MAX);
         assertTrue(s.runes().stream().anyMatch(r -> r.kind() == SigilLayout.Kind.SEAL));
         assertEquals(4, s.runes().stream().filter(r -> r.kind() == SigilLayout.Kind.RING).mapToInt(SigilLayout.Rune::ring).distinct().count());
         assertTrue(s.runes().stream().anyMatch(r -> r.kind() == SigilLayout.Kind.BAND));
-        assertEquals(8, s.lines().stream().filter(l -> l.kind() == SigilLayout.Kind.SPOKE).map(l -> Math.round(Math.toDegrees(Math.atan2(l.z2() - l.z1(), l.x2() - l.x1())))).distinct().count());
         for (SigilLayout.Rune r : s.runes()) assertTrue(r.glyph() >= 0 && r.glyph() < 6);
+    }
+
+    @Test
+    void fourSpiralArmsCurlOutFromTheSeal() {
+        SigilLayout.Sigil s = SigilLayout.build(392, 392, MIN, MIN, MAX, MAX);
+        var arms = s.lines().stream().filter(l -> l.kind() == SigilLayout.Kind.ARM).toList();
+        assertEquals(4, arms.stream().mapToInt(SigilLayout.Line::ring).distinct().count());
+        for (int arm = 0; arm < 4; arm++) {
+            int a = arm;
+            var segs = arms.stream().filter(l -> l.ring() == a).toList();
+            assertTrue(segs.size() > 10, "arm " + a + " has " + segs.size() + " segments");
+            double first = Math.hypot(segs.get(0).x1() - 392, segs.get(0).z1() - 392);
+            double last = Math.hypot(segs.get(segs.size() - 1).x2() - 392, segs.get(segs.size() - 1).z2() - 392);
+            assertTrue(last > first * 5, "it reaches out: " + first + " to " + last);
+            for (int i = 1; i < segs.size(); i++) {
+                assertTrue(segs.get(i).fade() <= segs.get(i - 1).fade(), "fades outward");
+                assertTrue(segs.get(i).along() > segs.get(i - 1).along(), "distance along grows");
+            }
+            // a spiral, not a spoke: the direction from the centre turns along the arm
+            double a0 = Math.atan2(segs.get(0).z1() - 392, segs.get(0).x1() - 392);
+            double a1 = Math.atan2(segs.get(segs.size() - 1).z2() - 392, segs.get(segs.size() - 1).x2() - 392);
+            double turned = Math.abs(Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)));
+            assertTrue(turned > 0.5, "turned " + turned);
+        }
+    }
+
+    @Test
+    void aHexagramTurnsInTheSeal() {
+        SigilLayout.Sigil s = SigilLayout.build(392, 392, MIN, MIN, MAX, MAX);
+        var star = s.lines().stream().filter(l -> l.kind() == SigilLayout.Kind.STAR).toList();
+        assertEquals(6, star.size());
+        for (SigilLayout.Line l : star) assertTrue(Math.hypot(l.x1() - 392, l.z1() - 392) < 40, "inside the seal");
+    }
+
+    @Test
+    void armsAndSealTurnSlowly() {
+        assertTrue(SigilLayout.turnArms(100) > 0);
+        assertTrue(SigilLayout.turnSeal(100) != 0);
+        assertEquals(0, SigilLayout.turnArms(0), 1e-12);
     }
 
     @Test

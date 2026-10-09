@@ -17,7 +17,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Draws the ward's sigil over the realm (SigilLayout), in a frame pass of its own just before the terrain (added by
+ * Draws the ward's sigil over the realm (SigilLayout: seal and hexagram, turning rings, spiral arms with pulses, band), in a frame pass of its own just before the terrain (added by
  * LevelRendererMixin), so the world is drawn over it. Every piece is pulled toward the camera by one factor (CameraPull),
  * which leaves its picture unchanged while keeping it inside the fog-free zone, so the sigil looks the same at every
  * render distance. Colour, brightness, cracks and pulses come from WardLook.
@@ -89,13 +89,19 @@ public final class WardSigilRenderer {
         return new double[]{s.cx() + dx * c - dz * n, s.cz() + dx * n + dz * c};
     }
 
-    private static double turnOf(Frame f, int ring) {
-        return ring >= 0 && f.turns() ? SigilLayout.turn(ring, f.ticks()) : 0;
+    private static double turnOf(Frame f, SigilLayout.Kind kind, int ring) {
+        if (!f.turns()) return 0;
+        return switch (kind) {
+            case RING -> SigilLayout.turn(ring, f.ticks());
+            case ARM -> SigilLayout.turnArms(f.ticks());
+            case STAR -> SigilLayout.turnSeal(f.ticks());
+            default -> 0;
+        };
     }
 
     private static void runeQuad(BufferBuilder b, Frame f, SigilLayout.Sigil s, SigilLayout.Rune r, int index, boolean glow) {
         if (!WardLook.shown(index, f.sync().siege(), f.sync().breachOpen(), f.tick())) return;
-        double turn = turnOf(f, r.ring());
+        double turn = turnOf(f, r.kind(), r.ring());
         double[] c = turned(s, r.x(), r.z(), turn);
         double half = r.size() / 2 * (glow ? 1.7 : 1.0), a = r.angle() + turn;
         float alpha = f.bright() * (glow ? 0.45f : 0.9f);
@@ -104,12 +110,12 @@ public final class WardSigilRenderer {
 
     private static void lineQuad(BufferBuilder b, Frame f, SigilLayout.Sigil s, SigilLayout.Line l, int index) {
         if (!WardLook.shown(index, f.sync().siege(), f.sync().breachOpen(), f.tick())) return;
-        double turn = turnOf(f, l.ring());
+        double turn = turnOf(f, l.kind(), l.ring());
         double[] p = turned(s, l.x1(), l.z1(), turn), q = turned(s, l.x2(), l.z2(), turn);
         double mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2;
         double len = Math.hypot(q[0] - p[0], q[1] - p[1]), a = Math.atan2(q[1] - p[1], q[0] - p[0]);
-        float boost = l.kind() == SigilLayout.Kind.SPOKE ? WardLook.pulse(Math.hypot(mx - s.cx(), mz - s.cz()), f.ticks()) : 0;
-        quad(b, f, mx, mz, len / 2, l.width() * 2, a, f.bright() * (0.6f + 0.4f * boost), 1 + boost);
+        float boost = l.kind() == SigilLayout.Kind.ARM ? WardLook.pulse(l.along(), f.ticks()) : 0;
+        quad(b, f, mx, mz, len / 2, l.width() * 2, a, f.bright() * (float) l.fade() * (0.6f + 0.4f * boost), 1 + boost);
     }
 
     /**

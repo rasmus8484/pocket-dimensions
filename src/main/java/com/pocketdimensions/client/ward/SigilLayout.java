@@ -5,18 +5,25 @@ import java.util.List;
 
 /**
  * Where the ward's sigil puts its pieces, flat at PLANE_Y over the realm: an inner seal round the top of the Core's
- * beam, four rings of runes centred on the Core (the outermost inside the nearest edge, wherever the Core stands), a
- * square band of runes just inside the Veil, and eight spokes from the seal out to the band. Rings are drawn turned by
- * turn(ring, ticks). Plain logic, unit tested; built once per ward sync, drawn every frame.
+ * beam with a hexagram turning in it, four rings of runes centred on the Core (the outermost inside the nearest edge), a
+ * square band of runes just inside the Veil, and four spiral arms curling out from the seal to the band like the
+ * accretion disk round the Core's black hole. Rings are drawn turned by turn(ring, ticks), the arms by turnArms, the
+ * hexagram by turnSeal. Plain logic, unit tested; built once per ward sync, drawn every frame.
  */
 public final class SigilLayout {
 
     public static final int PLANE_Y = 340;
     private static final double EDGE_MARGIN = 6, SEAL_RADIUS = 20, RING_TURN = 0.0004;     // radians per tick
+    private static final double ARM_TURN = 0.0006, SEAL_TURN = -0.0015;                     // radians per tick
+    private static final int ARMS = 4;
+    /** How fast a spiral arm's radius grows per radian it turns (r = r0 * e^(GROWTH * angle)). */
+    private static final double GROWTH = 1.75;
 
-    public enum Kind { SEAL, RING, SPOKE, BAND }
+    public enum Kind { SEAL, RING, ARM, STAR, BAND }
     public record Rune(Kind kind, int ring, double x, double z, double size, double angle, int glyph, double radius) {}
-    public record Line(Kind kind, int ring, double x1, double z1, double x2, double z2, double width) {}
+    /** A stroke; `ring` is the ring for RING lines and the arm for ARM lines; `fade` 1..0.3 dims an arm toward its end,
+     *  `along` is how far along its arm a segment starts (for the pulses). */
+    public record Line(Kind kind, int ring, double x1, double z1, double x2, double z2, double width, double fade, double along) {}
     public record Sigil(double cx, double cz, List<Rune> runes, List<Line> lines) {}
 
     private SigilLayout() {}
@@ -62,13 +69,35 @@ public final class SigilLayout {
             runes.add(new Rune(Kind.BAND, -2, bx1, z, size, Math.PI / 2, glyph++ % 6, 0));
         }
 
-        // eight spokes from the seal to the band, in short segments so each is pulled on its own
-        for (int i = 0; i < 8; i++) {
-            double a = i * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a);
-            double to = toSquare(cx, cz, dx, dz, bx0, bz0, bx1, bz1) - size;
-            double seg = Math.max(4, size);
-            for (double r = seal + size; r + seg <= to; r += seg)
-                lines.add(new Line(Kind.SPOKE, -3, cx + dx * r, cz + dz * r, cx + dx * (r + seg), cz + dz * (r + seg), size * 0.1));
+        // a hexagram turning in the seal: two triangles
+        double star = seal + size * 0.6;
+        for (int t = 0; t < 2; t++)
+            for (int i = 0; i < 3; i++) {
+                double a0 = t * Math.PI / 3 + i * 2 * Math.PI / 3, a1 = a0 + 2 * Math.PI / 3;
+                lines.add(new Line(Kind.STAR, -4, cx + Math.cos(a0) * star, cz + Math.sin(a0) * star,
+                        cx + Math.cos(a1) * star, cz + Math.sin(a1) * star, size * 0.1, 1, 0));
+            }
+
+        // four spiral arms from the seal out to the band, in segments about a rune long, fading toward their ends
+        double r0 = seal + size, seg = Math.max(4, size), stretch = Math.sqrt(1 + GROWTH * GROWTH);
+        for (int arm = 0; arm < ARMS; arm++) {
+            double base = arm * 2 * Math.PI / ARMS, th = 0, along = 0;
+            List<Line> segs = new ArrayList<>();
+            while (true) {
+                double r = r0 * Math.exp(GROWTH * th);
+                double th1 = th + seg / (r * stretch), r1 = r0 * Math.exp(GROWTH * th1);
+                double a1 = base + th1;
+                if (r1 > toSquare(cx, cz, Math.cos(a1), Math.sin(a1), bx0, bz0, bx1, bz1) - size) break;
+                double a = base + th;
+                segs.add(new Line(Kind.ARM, arm, cx + Math.cos(a) * r, cz + Math.sin(a) * r,
+                        cx + Math.cos(a1) * r1, cz + Math.sin(a1) * r1, size * 0.07, 0, along));
+                along += Math.hypot(Math.cos(a1) * r1 - Math.cos(a) * r, Math.sin(a1) * r1 - Math.sin(a) * r);
+                th = th1;
+            }
+            for (int i = 0; i < segs.size(); i++) {
+                Line l = segs.get(i);
+                lines.add(new Line(l.kind(), l.ring(), l.x1(), l.z1(), l.x2(), l.z2(), l.width(), 1 - 0.7 * i / Math.max(1, segs.size()), l.along()));
+            }
         }
         return new Sigil(cx, cz, runes, lines);
     }
@@ -79,10 +108,16 @@ public final class SigilLayout {
         return dir * RING_TURN * ticks / (1 + ring * 0.5);
     }
 
+    /** Radians the spiral arms have turned after `ticks`. */
+    public static double turnArms(double ticks) { return ARM_TURN * ticks; }
+
+    /** Radians the seal's hexagram has turned after `ticks` (against the arms). */
+    public static double turnSeal(double ticks) { return SEAL_TURN * ticks; }
+
     private static void circle(List<Line> out, Kind kind, int ring, double cx, double cz, double r, double width, int segments) {
         for (int i = 0; i < segments; i++) {
             double a0 = 2 * Math.PI * i / segments, a1 = 2 * Math.PI * (i + 1) / segments;
-            out.add(new Line(kind, ring, cx + Math.cos(a0) * r, cz + Math.sin(a0) * r, cx + Math.cos(a1) * r, cz + Math.sin(a1) * r, width));
+            out.add(new Line(kind, ring, cx + Math.cos(a0) * r, cz + Math.sin(a0) * r, cx + Math.cos(a1) * r, cz + Math.sin(a1) * r, width, 1, 0));
         }
     }
 
