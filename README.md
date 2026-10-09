@@ -74,6 +74,8 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 
 **The Veil and the ceiling:** every realm is walled by the **Veil**, the realm's ward made visible: a wall of drifting mist along every edge, from bedrock to the build limit, that can't be broken, blown up or moved. It hides whatever lies beyond, so nobody sees into another realm (Distant Horizons included). Overhead the ward holds you with your feet at y 318, and nothing can be built at y 318 or 319, so nobody can look over the Veil.
 
+**The ward's sigil:** high over every realm hangs the ward's sigil, a great circle of glowing runes: a seal with a turning hexagram, four slowly turning rings, four spiral arms curling out to a band of runes along the top of the Veil, and the World Core's beam rising into the seal. It shows the realm's state to everyone inside: blue at peace, pink while a World Breacher works, cracked once the breach is complete, red while an Anchor Breaker works, dim red and broken once the anchor is lost. It shines brightly while the Core holds lapis and dims without it, and it is faint by day and glows at night. It looks the same at every render distance.
+
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
 **Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it; someone who already owns a realm can't be given a second), or at a placed Pocket Anchor to record its room as theirs.

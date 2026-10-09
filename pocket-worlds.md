@@ -81,7 +81,8 @@ Server enforces hard region boundaries (implementation choice), but the rule is 
 - Its colour follows height: dark indigo underground, pale mist at ground level, the realm's fog and sky colours at the top, so from far away it reads as horizon haze.
 - Overhead the ward holds players with their feet at or below y 318 (eyes stay under the Veil's top), and no block can be placed at y 318 or 319. The player's own game clamps them so the ceiling feels solid; the server holds anyone more than a block past it.
 - The gap between plots must be at least one chunk (`realm_padding_chunks` >= 1).
-- Planned: a great rune sigil overhead centred on the World Core, showing the siege state, and rune ripples where the Veil or the ceiling is touched (spec: `docs/superpowers/specs/2026-10-09-realm-ward-design.md`).
+- The ward's sigil hangs at y 340 over the realm's centre: a seal with a turning hexagram, four turning rings of runes, four spiral arms with pulses running out to a band of runes above the Veil, and the World Core's beam rising into the seal (carried across by a conduit while the Core stands off centre). Its colour follows the siege (blue, pink, cracked once breached, red, dim red and broken once the anchor is lost); it dims when the Core has no lapis, and by day. It is drawn pulled toward the camera, so it looks the same at every render distance.
+- Planned: rune ripples where the Veil or the ceiling is touched, and the Core always landing at the centre on an aurora crystal platform (PRD RL-024) (spec: `docs/superpowers/specs/2026-10-09-realm-ward-design.md`).
 
 ---
 
