@@ -16,7 +16,7 @@ the lore: **the realm's ward**, the same ward the World Core is fed with lapis, 
 - **The Veil.** A wall of slowly drifting mist stands along every edge of the realm, from bedrock to the top of the
   world. Faint runes are woven into it. Near the ground it is pale mist; low down it darkens; toward the top it takes
   on the realm's sky and fog colours, so from far away (as Distant Horizons shows it) it reads as haze on the horizon.
-- **The ceiling.** Players can build and fly as normal, up to a ceiling well above the vanilla build limit. There the
+- **The ceiling.** Players can build and fly as normal, up to a ceiling just below the top of the world. There the
   ward holds them, as the border does at the sides.
 - **The sigil.** A great circle of runes hangs high over the realm, centred on the World Core. The Core's beam rises
   into its centre. Rings of runes turn slowly; a square band of runes runs along the top of the Veil; spokes join the
@@ -30,19 +30,22 @@ the lore: **the realm's ward**, the same ward the World Core is fed with lapis, 
 
 ## Part A: the Veil and the ceiling (server and world generation)
 
-### Taller realm dimension
+### Heights
 
-`dimension_type/realm_type.json`: `height` 384 -> **512** and `logical_height` 384 -> 512, `min_y` stays -64. The top
-of the world becomes y 447.
+The realm dimension keeps its vanilla height (y -64 to 319). The sigil is drawn by our own code, so it needs no room
+in the world and can hang above the top of it.
 
 | Height | Meaning |
 |---|---|
-| y -64 to 447 | The Veil |
-| y 432 | The sigil's plane |
-| y 400 | The ceiling: players' feet are held at or below it |
+| y 340 | The sigil's plane (drawn, above the world's top) |
+| y -64 to 319 | The Veil (its top surface is at y 320) |
+| y 318 | The ceiling: players' feet are held at or below it |
+| y 318 and 319 | No blocks may be placed here in a realm |
 | y 192 | Clouds (unchanged), below the sigil |
 
-Players' eyes at the ceiling are about 46 blocks below the Veil's top, so nobody can look over it.
+A player's eyes are 1.62 blocks above their feet, so at the ceiling they are at y 319.62, below the Veil's top
+surface: nobody can look over it. The two refused rows stop anyone standing on a block above the ceiling (feet at
+y 319), which the ceiling would push down into that block. Building reaches y 317, two blocks short of vanilla.
 
 ### The Veil block
 
@@ -51,7 +54,7 @@ New block `pocketdimensions:veil` (no item in the creative tab; ops can still `/
 - Unbreakable and blast-proof like the Boundary block (`strength(-1, 3600000)`), `PushReaction.BLOCK`, no drops, in the
   `wither_immune` and `dragon_immune` tags, not flammable, mobs never spawn on it, endermen can't take it.
 - A full opaque cube, so it blocks the view, and it blocks movement, mobs, water and lava physically.
-- Blockstate `band` 0..7: which height band it is in (64 blocks per band, y -64 at band 0). Each band has its own
+- Blockstate `band` 0..7: which height band it is in (48 blocks per band, y -64 at band 0). Each band has its own
   colour; the textures are animated (a slowly scrolling mist with faint runes), made with the texture tools in
   `tools/`. Colours run from a dark indigo underground, through pale mist around ground level, to the realm's fog
   colour `#c0d8ff` and sky colour `#78a7ff` in the top bands.
@@ -76,18 +79,19 @@ the generator never needs to know which plots are taken.
 ### The ceiling
 
 - **Server**: in the existing realm `PlayerTickEvent`, every tick (a single comparison, unlike the lazy border check),
-  a player above y 400 is put back at y 400 with no upward speed, using `connection.teleport` and the same mount
-  handling as the border.
-- **Client**: the local player is also clamped at y 400 on the client, so flying into the ceiling feels like hitting
+  a player whose feet are above y 318 is put back at y 318 with no upward speed, using `connection.teleport` and the
+  same mount handling as the border.
+- **Client**: the local player is also clamped at y 318 on the client, so flying into the ceiling feels like hitting
   something rather than being pulled back by the server.
-- The ceiling height is a constant in code (`RealmWard.CEILING_Y`); the client needs no sync for it.
+- **Building**: placing a block at y 318 or 319 in the realm dimension is refused (`BlockEvent.EntityPlaceEvent`,
+  cancelled), so nobody can stand above the ceiling.
+- The heights are constants in code (`RealmWard.CEILING_Y`, `RealmWard.NO_BUILD_Y`); the client needs no sync.
 
 ### What changes for existing worlds
 
 New worlds get all of this from the start. Existing realms keep their already-generated edge chunks without a Veil
 (only newly generated chunks get it); this mod has not been released, so the test world starts over rather than being
-retrofitted. Raising an existing dimension's height must be checked on a copy of the test world (Minecraft should
-treat the new space as empty sections, but this is a risk to verify).
+retrofitted. The dimension's height does not change, so nothing else in existing worlds is affected.
 
 ## Part B: the sigil (client rendering)
 
@@ -103,7 +107,7 @@ Visitors see the ward of the realm they are in. Outside the realm dimension the 
 ### Layout
 
 Pure and tested (`SigilLayout`): from the Core's position and the plot bounds it produces the list of elements to draw
-at y 432:
+at y 340:
 
 - an **inner seal** around the beam's top (radius about 24 blocks, large runes);
 - **three or four rings** centred on the Core, the outermost inside the nearest Veil (the Core can sit up to 8 chunks
@@ -131,7 +135,7 @@ distance) and cut off by the far plane at low render distances. So each element 
    same at every render distance and setting.
 
 The **beam** above the vanilla beam's reach (the Core's renderer draws up to 256 blocks above the Core, and it is
-fogged high up) is continued by the sigil renderer as pulled segments up to y 432, so the beam visibly meets the seal.
+fogged high up) is continued by the sigil renderer as pulled segments up to y 340, so the beam visibly meets the seal.
 
 ### Colour and state
 
@@ -177,7 +181,7 @@ Pure classes with JUnit tests, written first:
 
 - `VeilLayout`: columns just outside a plot are Veil, including the corners; columns inside a plot never are; cells
   with no realm still get their ring; band boundaries for y.
-- `RealmWard` ceiling rule: positions above y 400 are clamped, at or below are untouched.
+- `RealmWard` rules: feet above y 318 are clamped, at or below are untouched; placing at y 318 or 319 is refused, at y 317 allowed.
 - `SigilLayout`: every element lies inside the plot; the rings fit inside the nearest Veil for a Core at the centre
   and at the 8-chunk extreme; element counts stay within budget.
 - `CameraPull`: `k` is 1 within `R`, shrinks beyond it; a scaled element projects to the same screen position as the
