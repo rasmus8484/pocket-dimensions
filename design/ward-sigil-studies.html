@@ -1,0 +1,568 @@
+<title>Ward Sigil Studies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+  /* Layout: a night-sky viewer as the stage, the six studies as a column of plates beside it, notes under the stage. */
+  :root {
+    --night: #090e1c;
+    --panel: #111a31;
+    --panel-hi: #1a2646;
+    --rule: #26335a;
+    --ink: #e2eaff;
+    --muted: #8e9cc4;
+    --ward: #8cebff;
+    --display: "Pixelify Sans", "Courier New", monospace;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--night); color: var(--ink); }
+  body { font: 15px/1.55 var(--body); padding-inline: 16px; padding-block: 20px 40px; }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+  header { display: grid; gap: 6px; }
+  h1 { font: 700 clamp(26px, 4vw, 38px)/1.05 var(--display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
+  h1 span { color: var(--ward); }
+  .lede { margin: 0; color: var(--muted); max-width: 68ch; }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+  .viewer { display: grid; gap: 10px; min-width: 0; }
+  canvas { width: 100%; aspect-ratio: 16 / 10; display: block; image-rendering: pixelated; border: 2px solid var(--rule); background: #000; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  .seg { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; background: var(--panel); border: 1px solid var(--rule); padding: 3px; }
+  .seg .lbl { font: 500 11px/1 var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); padding: 0 6px 0 4px; }
+  .seg button { font: 14px/1 var(--body); color: var(--muted); background: transparent; border: 0; padding: 7px 9px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--panel-hi); color: var(--ink); box-shadow: inset 0 -2px 0 var(--ward); }
+  button:focus-visible { outline: 2px solid var(--ward); outline-offset: 1px; }
+  .studies { display: grid; gap: 8px; min-width: 0; }
+  @media (max-width: 900px) { .studies { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } }
+  .study { text-align: left; display: grid; gap: 3px; padding: 11px 13px; background: var(--panel); color: var(--ink);
+           border: 1px solid var(--rule); border-left: 4px solid var(--rule); cursor: pointer; font: inherit; }
+  .study:hover { background: var(--panel-hi); }
+  .study[aria-pressed="true"] { border-left-color: var(--ward); background: var(--panel-hi); }
+  .study b { font: 700 17px/1.1 var(--display); letter-spacing: .02em; }
+  .study small { color: var(--muted); font-size: 13px; line-height: 1.4; }
+  .tag { font: 500 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ward); }
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; background: var(--panel);
+           border: 1px solid var(--rule); padding: 16px 18px; }
+  .notes h2 { grid-column: 1 / -1; margin: 0; font: 700 22px/1.1 var(--display); }
+  .notes h3 { margin: 0 0 3px; font: 500 12px/1.2 var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--ward); }
+  .notes p { margin: 0; color: var(--ink); max-width: 60ch; }
+  .notes div { min-width: 0; }
+  footer { color: var(--muted); font-size: 13px; max-width: 80ch; }
+  @media (prefers-reduced-motion: reduce) { .study { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Ward Sigil <span>Studies</span></h1>
+    <p class="lede">Rune-only ways to draw a realm's ward in its sky, seen from the ground the way a player sees them, with the mod's own rune sprites drawn as the game draws them. No strokes: every shape is traced by small runes, in layers at different heights, and runes may travel on curves. Pick a study, then try the siege states, where you stand ("Halfway out" shows the layers best) and how power leaves the beam.</p>
+  </header>
+
+  <section class="stage">
+    <div class="viewer">
+      <canvas id="sky" width="640" height="400" aria-label="Preview of the selected ward sigil in the realm's sky"></canvas>
+      <div class="controls">
+        <div class="seg" id="state"><span class="lbl">Ward</span>
+          <button data-v="peace">At peace</button><button data-v="breaching">Breaching</button><button data-v="breached">Breached</button><button data-v="breaking">Breaking</button><button data-v="lost">Anchor lost</button></div>
+        <div class="seg" id="stand"><span class="lbl">Stand</span>
+          <button data-v="core">At the Core</button><button data-v="half">Halfway out</button><button data-v="edge">By the Veil</button><button data-v="top">From above</button></div>
+        <div class="seg" id="time"><span class="lbl">Sky</span>
+          <button data-v="night">Night</button><button data-v="day">Day</button><button data-v="warded">Night, no lapis</button></div>
+        <div class="seg" id="power"><span class="lbl">Power</span>
+          <button data-v="field">Ward field</button><button data-v="off">Off</button></div>
+        <div class="seg" id="play"><span class="lbl">Motion</span>
+          <button data-v="on">Play</button><button data-v="off">Pause</button></div>
+      </div>
+    </div>
+    <nav class="studies" id="studies" aria-label="Sigil studies"></nav>
+  </section>
+
+  <section class="notes" id="notes" aria-live="polite"></section>
+
+  <footer>Preview of a radius 25 realm (784 blocks across), sigil plane at y 340, you at y 72, turning at the game's own speed. The runes are the mod's six rune sprites and their glows, tinted with the World Core beam's siege colours.</footer>
+</div>
+
+<script>
+(() => {
+  const STUDIES = [
+    { id: 'vault', name: 'Vaulted Ward', tag: 'Dome with worlds',
+      line: 'A dome of ornate rune tiers rising to a crowning seal, with the orrery\'s spinning ring-worlds riding the tiers.',
+      idea: 'The ward as a vault over the realm, now without ribs. Three ornate tiers of runes hang at rising heights toward a crown of three nested rings, and set into each tier are worlds from the orrery: spinning rings of runes carried round with their tier, sitting in gaps in its runes (four on the inner tier, three large ones on the middle, eight on the outer). The outer worlds have a tiny rune moon.',
+      sky: 'From the Core you look up into the crown with the worlds drifting round it on their tiers. From halfway out the tiers separate into a dome and the worlds turn with them at their own heights.',
+      feel: 'The vault gives the grand shape and the depth, the worlds give it life. Ornate without any lines reaching out from the centre.',
+      cost: 'About 1,300 small runes. Fine for the game.' },
+    { id: 'helix', name: 'Helix Crown', tag: 'Tower',
+      line: 'A double helix of runes climbs the beam into a stacked crown of seals, over an ornate lotus of runes.',
+      idea: 'The Core already throws a helix of runes; here it continues up the beam above the clouds into three seals stacked one above another, like a crown on a tower. Below the crown spreads a lotus: petals traced in runes between two ornate rings.',
+      sky: 'A rising spiral of runes around the beam that you can follow up into the crown, and a flower of runes opening around it.',
+      feel: 'Makes the beam the centrepiece and ties it to the Core\'s existing rune helix. Very vertical.',
+      cost: 'About 1,100 small runes. Fine.' },
+    { id: 'mandala', name: 'Mandala Layers', tag: 'Stacked planes',
+      line: 'Three mandalas on three floors: a hexagram on top, a lotus in the middle, rosettes on the widest, each turning its own way.',
+      idea: 'Three flat patterns at three heights, smallest on top. A hexagram traced in runes, a twelve-petal lotus, and a great ring carrying turning rosettes. Each layer turns in its own direction, so they slide over one another.',
+      sky: 'Seen from the ground the layers overlap into one rich pattern; as you move they shift apart, and the depth becomes obvious.',
+      feel: 'The most ornate. Reads as one sigil, but lives in depth.',
+      cost: 'About 1,300 small runes. Fine.' },
+    { id: 'orrery', name: 'Rune Orrery', tag: 'Moving parts',
+      line: 'Worlds of runes orbit the crown on three tiers, each a small turning ring with its own moon.',
+      idea: 'An orrery of the ward: small ring-worlds of runes circle the crown on three tiers at different heights, each spinning on itself, the outer ones with a tiny rune moon. Their orbits are traced by dotted tracks of tiny runes.',
+      sky: 'Lots of independent motion, all of it gentle: worlds drifting round, spinning, moons circling them, against a fine dotted frame.',
+      feel: 'Playful and clearly magical machinery. The most alive, while staying sparse between its parts.',
+      cost: 'About 900 small runes. Fine.' },
+  ];
+  const STATES = {
+    peace:     { rgb: [140, 235, 255] },
+    breaching: { rgb: [255, 90, 220] },
+    breached:  { rgb: [255, 90, 220] },
+    breaking:  { rgb: [255, 80, 40] },
+    lost:      { rgb: [138, 42, 26] },
+  };
+  const ui = { study: 'vault', state: 'peace', stand: 'core', time: 'night', play: 'on', power: 'field' };
+  try { const saved = localStorage.getItem('ward-study-v3'); if (saved && STUDIES.some(s => s.id === saved)) ui.study = saved; } catch (e) {}
+
+  // ---------- controls
+  const studiesEl = document.getElementById('studies');
+  STUDIES.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'study'; b.id = 'study-' + s.id; b.type = 'button';
+    b.innerHTML = `<span class="tag">${s.tag}</span><b>${s.name}</b><small>${s.line}</small>`;
+    b.onclick = () => { ui.study = s.id; try { localStorage.setItem('ward-study-v3', s.id); } catch (e) {} sync(); };
+    studiesEl.appendChild(b);
+  });
+  for (const key of ['state', 'stand', 'time', 'play', 'power']) {
+    document.getElementById(key).querySelectorAll('button').forEach(b => { b.type = 'button'; b.onclick = () => { ui[key] = b.dataset.v; sync(); }; });
+  }
+  function sync() {
+    STUDIES.forEach(s => document.getElementById('study-' + s.id).setAttribute('aria-pressed', s.id === ui.study));
+    for (const key of ['state', 'stand', 'time', 'play', 'power'])
+      document.getElementById(key).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === ui[key]));
+    const s = STUDIES.find(x => x.id === ui.study);
+    document.getElementById('notes').innerHTML =
+      `<h2>${s.name}</h2><div><h3>The idea</h3><p>${s.idea}</p></div><div><h3>In the sky</h3><p>${s.sky}</p></div>` +
+      `<div><h3>Why it fits</h3><p>${s.feel}</p></div><div><h3>Cost to draw</h3><p>${s.cost}</p></div>`;
+  }
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ui.play = 'off';
+  sync();
+
+  // ---------- the mod's rune sprites, tinted per siege colour (vertex colour times texture, as in game)
+  const SPRITES = {"rune": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAGklEQVR4nGNgIBb8RwNYFRBtAlHWke4GsgEAJogzzQC2mqQAAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAG0lEQVR4nGNgIAX8hwKcktjYxJtAtG6CJpAMAKuSJ9lxCmK4AAAAAElFTkSuQmCC", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAIUlEQVR4nGNgIBb8////PzKNVQEyIN0EdIV4FRBURBIAAPGEK9UHPnqtAAAAAElFTkSuQmCC", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAHElEQVR4nGNgIBb8RwIEFRI0Aa8igm4g2tFEAwCtyCvV+uN2jQAAAABJRU5ErkJggg==", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAIUlEQVR4nGNgIBb8////PzY2hgKskjAJnJJEm4DXDWQDAF7tJ9mQNPvvAAAAAElFTkSuQmCC", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAH0lEQVR4nGNgIAX8////P15JGCBoAl5FRFtFnKuJAQCneiPdo6THowAAAABJRU5ErkJggg=="], "glow": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAZ0lEQVR4nI3O0QnCUAyF4QzRFlfwUdygKk5wC27gJg7RDTpY1/hEiBAuPnggLzl/wh8RERhxw4KGGUN8k+XezakCSy43rHhgqsC9u37iUIEjXvlhS+hSgfMPh2sFhjRv6fORHuOfvAHKYJHsoEn6EQAAAABJRU5ErkJggg==", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAXElEQVR4nGNggIL///+L////3wmKxRmQwf///8X+//+f+P///2dQDGKLISswhEqsgmIQ25ABzfg0JBNKUayBWhGDpDsS3Q2GSLpB2BVdgQjU9aEgyf///4syEAsABc5+3dvzZ5gAAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAYElEQVR4nH3OwQmDYAwG0AxhKc7QYy141uIKncKLQ4izOJhrPBH+Q0TpByGHPJJERAQqNHjhg2fkoMeGtfTphPArg1zNvw0L6gyOH1qMBcwnkOCQTrzvwANfdMfWC7jLDuc5f0IHfMObAAAAAElFTkSuQmCC", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAZElEQVR4nIXPwQmDUBCE4b16j5AShBzVBkIEU4AdebAGS0hhaeOTBwaW5yEDc/tndyYiInDDEwsmtJGFHt/kuQY6bPicwIp7BsbqQnGfgUdK7+VF6ZWBISXfaOoOvxWvy4J/OgAlmX9SvAwpBgAAAABJRU5ErkJggg==", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAVklEQVR4nI3PwQmAQAxE0fSgaBeKLViEIB4EW7ILC7ONJwsr7Gn1Q8iQDEMSERFoMaFDjxFNvGDGjQ1H1mNpWPLwyn1PaaVhzYtUJ4Yo+ZPweUP9ixoPJ/qLSq6UQvsAAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAXUlEQVR4nG3OwQmDUBCE4VdExGAdYgEab14twQaSamzBwmzjk8AK+nwDyxzmZ3ZSCqFG+/eUK8IvdvzQ5EAb4XnLrSlr2MKHvOWNCWsAc2lLd3kzloAXenxQPYCSDic3cM6zbeQfAAAAAElFTkSuQmCC"]};
+  const imgs = { rune: SPRITES.rune.map(src => { const i = new Image(); i.src = src; return i; }),
+                 glow: SPRITES.glow.map(src => { const i = new Image(); i.src = src; return i; }) };
+  const tintCache = new Map();
+  function tinted(kind, k, rgb) {
+    const key = kind + k + rgb.join(',');
+    let c = tintCache.get(key);
+    if (c) return c;
+    const img = imgs[kind][k];
+    if (!img.complete || !img.naturalWidth) return null;
+    c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const x = c.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(img, 0, 0);
+    x.globalCompositeOperation = 'multiply'; x.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; x.fillRect(0, 0, c.width, c.height);
+    x.globalCompositeOperation = 'destination-in'; x.drawImage(img, 0, 0);
+    tintCache.set(key, c);
+    return c;
+  }
+
+  // ---------- drawing
+  const cv = document.getElementById('sky'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const fx = document.createElement('canvas'); fx.width = W; fx.height = H; const g = fx.getContext('2d'); g.imageSmoothingEnabled = false;
+  const HALF = 392, PLANE = 340, EYE = 72, BEAM_X = 0, BEAM_Z = 0;
+  const TAU = Math.PI * 2;
+
+  function hash(i) { let n = Math.imul(i | 0, 374761393) ^ 0x9e3779b9; n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967295; }
+
+  let cam, project;
+  function setCamera() {
+    if (ui.stand === 'top') {
+      const S = (H * 0.92) / (HALF * 2);
+      project = (x, y, z) => [W / 2 + x * S, H / 2 + z * S];
+      return;
+    }
+    const at = { core: [0, -10, 64], half: [0, -210, 46], edge: [0, -360, 30] }[ui.stand];
+    const pitch = at[2] * Math.PI / 180, cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const F = (W / 2) / Math.tan(50 * Math.PI / 180);
+    cam = { x: at[0], z: at[1] };
+    project = (x, y, z) => {
+      const rx = x - cam.x, ry = y - EYE, rz = z - cam.z;
+      const Z = ry * sp + rz * cp, Y = ry * cp - rz * sp;
+      if (Z < 2) return null;
+      return [W / 2 + rx / Z * F, H * 0.62 - Y / Z * F];
+    };
+  }
+
+  let col = [140, 235, 255], alpha = 1;
+  function fillPts(pts, a = alpha, c = col) {
+    const p = [];
+    for (const q of pts) { const s = project(q[0], q[1], q[2]); if (!s) return; p.push(s); }
+    g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+    g.beginPath(); g.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]);
+    g.closePath(); g.fill();
+  }
+  // an axis-aligned block cell of side s centred on (x, z) in the sigil plane
+  function cell(x, z, s, a) { const h = s / 2; fillPts([[x - h, PLANE, z - h], [x + h, PLANE, z - h], [x + h, PLANE, z + h], [x - h, PLANE, z + h]], a); }
+  // a cell turned by angle (for runes riding curves)
+  function rcell(x, z, s, ang, a) {
+    const c = Math.cos(ang) * s / 2, n = Math.sin(ang) * s / 2;
+    fillPts([[x - c + n, PLANE, z - n - c], [x + c + n, PLANE, z + n - c], [x + c - n, PLANE, z + n + c], [x - c - n, PLANE, z - n + c]], a);
+  }
+  // a 5 x 5 rune in a 7 x 7 frame; snapped to the grid unless ang is given
+  function rune(x, z, size, seed, a, ang = 0, frame = false) {
+    const u = size / 7, c = Math.cos(ang), n = Math.sin(ang);
+    const put = (i, j, k) => { const lx = (i - 3) * u, lz = (j - 3) * u; const px = x + lx * c - lz * n, pz = z + lx * n + lz * c; ang ? rcell(px, pz, u * 1.02, ang, a * k) : cell(px, pz, u * 1.02, a * k); };
+    for (let j = 1; j <= 5; j++) put(3, j, 1);
+    const k = 1 + Math.floor(hash(seed) * 3);
+    for (let b = 0; b < k; b++) {
+      const row = 1 + Math.floor(hash(seed * 7 + b) * 5), dir = hash(seed * 3 + b) > 0.5 ? 1 : -1;
+      put(3 + dir, row, 1); if (hash(seed * 11 + b) > 0.45) put(3 + dir * 2, row + (hash(seed + b) > 0.5 ? 1 : -1), 1);
+    }
+    if (hash(seed * 5) > 0.6) { put(2, 5, 1); put(4, 5, 1); }
+    if (frame) for (let i = 0; i < 7; i++) { put(i, 0, 0.55); put(i, 6, 0.55); if (i > 0 && i < 6) { put(0, i, 0.55); put(6, i, 0.55); } }
+  }
+  // cells along a stepped line (Bresenham on a grid of side G)
+  function steppedLine(x0, z0, x1, z1, G, a, id, hide) {
+    let i0 = Math.round(x0 / G), j0 = Math.round(z0 / G); const i1 = Math.round(x1 / G), j1 = Math.round(z1 / G);
+    const di = Math.abs(i1 - i0), dj = -Math.abs(j1 - j0), si = i0 < i1 ? 1 : -1, sj = j0 < j1 ? 1 : -1; let e = di + dj, k = 0;
+    while (true) {
+      if (!hide(id + k++)) cell(i0 * G, j0 * G, G * 0.92, a);
+      if (i0 === i1 && j0 === j1) break;
+      const e2 = 2 * e; if (e2 >= dj) { e += dj; i0 += si; } if (e2 <= di) { e += di; j0 += sj; }
+    }
+  }
+  function steppedCircle(cx, cz, r, G, a, id, hide) {
+    const seen = new Set(), n = Math.ceil(TAU * r / (G * 0.5)); let k = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / n * TAU, ci = Math.round((cx + Math.cos(t) * r) / G), cj = Math.round((cz + Math.sin(t) * r) / G), key = ci + ',' + cj;
+      if (seen.has(key)) continue; seen.add(key);
+      if (!hide(id + k++)) cell(ci * G, cj * G, G * 0.92, a);
+    }
+  }
+  function band(hide, a) {
+    let id = 90000; const step = 22, e = HALF - 14;
+    for (let x = -e; x <= e; x += step) { if (!hide(id)) rune(x, -e, 14, id, a); id++; if (!hide(id)) rune(x, e, 14, id, a); id++; }
+    for (let z = -e + step; z < e; z += step) { if (!hide(id)) rune(-e, z, 14, id, a); id++; if (!hide(id)) rune(e, z, 14, id, a); id++; }
+  }
+  const clickOf = (t, period) => Math.floor(t / period);
+
+  // a rune sprite lying flat at height y, centred on (x, z), turned by ang; glow behind it like the game (1.7x, 0.45)
+  function spriteAt(kind, k, x, y, z, half, ang, a) {
+    const c = tinted(kind, k, col);
+    if (!c) return;
+    const ux = Math.cos(ang) * half, uz = Math.sin(ang) * half, vx = -Math.sin(ang) * half, vz = Math.cos(ang) * half;
+    const p00 = project(x - ux - vx, y, z - uz - vz), p10 = project(x + ux - vx, y, z + uz - vz), p01 = project(x - ux + vx, y, z - uz + vz);
+    if (!p00 || !p10 || !p01) return;
+    const n = c.width;
+    g.setTransform((p10[0] - p00[0]) / n, (p10[1] - p00[1]) / n, (p01[0] - p00[0]) / n, (p01[1] - p00[1]) / n, p00[0], p00[1]);
+    g.globalAlpha = a; g.drawImage(c, 0, 0);
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+  }
+  // smooth value noise, for the flowing fields
+  function vnoise(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const h = (a, b) => hash(Math.imul(a, 73856093) ^ Math.imul(b, 19349663));
+    const a = h(xi, yi), b = h(xi + 1, yi), c = h(xi, yi + 1), d = h(xi + 1, yi + 1);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  }
+  function runeAt(x, y, z, size, ang, k, a = 1) {
+    spriteAt('glow', k, x, y, z, size / 2 * 1.7, ang, 0.45 * a);
+    spriteAt('rune', k, x, y, z, size / 2, ang, 0.9 * a);
+  }
+  // a rune standing upright and turned to face the camera (for the helix), flat in the view from above
+  function runeUp(x, y, z, size, k, a = 1) {
+    if (ui.stand === 'top') { runeAt(x, y, z, size, 0, k, a); return; }
+    let dx = x - cam.x, dz = z - cam.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
+    for (const [kind, s, al] of [['glow', size / 2 * 1.7, 0.45 * a], ['rune', size / 2, 0.9 * a]]) {
+      const c = tinted(kind, k, col); if (!c) continue;
+      const rx = -dz * s, rz = dx * s;
+      const p00 = project(x - rx, y + s, z - rz), p10 = project(x + rx, y + s, z + rz), p01 = project(x - rx, y - s, z - rz);
+      if (!p00 || !p10 || !p01) continue;
+      const n = c.width;
+      g.setTransform((p10[0] - p00[0]) / n, (p10[1] - p00[1]) / n, (p01[0] - p00[0]) / n, (p01[1] - p00[1]) / n, p00[0], p00[1]);
+      g.globalAlpha = al; g.drawImage(c, 0, 0); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+    }
+  }
+  const EDGE = HALF - 6, OUTER = EDGE - 24;
+  // a ring of runes: n from the spacing, turned by `turn`, tangential
+  function ringOf(cx, cz, y, r, size, spacing, turn, id0, hide, a = 1) {
+    const n = Math.max(3, Math.floor(TAU * r / spacing));
+    for (let i = 0; i < n; i++) {
+      const id = id0 + i; if (hide(id)) continue;
+      const ang = i / n * TAU + turn;
+      runeAt(cx + Math.cos(ang) * r, y, cz + Math.sin(ang) * r, size, ang + Math.PI / 2, id % 6, a);
+    }
+  }
+  // an ornate ring: a main track flanked by two tracks of tiny runes turning the other way
+  function ornate(y, r, size, turn, id0, hide) {
+    ringOf(0, 0, y, r, size, size * 1.5, turn, id0, hide);
+    ringOf(0, 0, y, r - size * 1.1, size * 0.45, size * 0.9, -turn * 1.6, id0 + 2000, hide, 0.8);
+    ringOf(0, 0, y, r + size * 1.1, size * 0.45, size * 0.9, -turn * 1.6, id0 + 4000, hide, 0.8);
+  }
+  // runes traced along a straight segment (shapes are drawn by runes, never by strokes)
+  function traceLine(x0, y0, z0, x1, y1, z1, size, spacing, id0, hide, a = 1) {
+    const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0), n = Math.max(1, Math.round(len / spacing)), ang = Math.atan2(z1 - z0, x1 - x0);
+    for (let i = 0; i <= n; i++) {
+      const id = id0 + i; if (hide(id)) continue;
+      const f = i / n; runeAt(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, z0 + (z1 - z0) * f, size, ang, id % 6, a);
+    }
+  }
+  // a petal: two arcs of runes meeting at its tips, between radii r0 and r1 at angle a, width w (radians)
+  function petal(y, a, r0, r1, w, size, id0, hide) {
+    for (const side of [-1, 1]) {
+      const n = 9;
+      for (let i = 0; i <= n; i++) {
+        const f = i / n, r = r0 + (r1 - r0) * f, b = a + side * w * Math.sin(Math.PI * f);
+        const id = id0 + (side + 1) * 10 + i; if (hide(id)) continue;
+        runeAt(Math.cos(b) * r, y, Math.sin(b) * r, size, b + Math.PI / 2, id % 6);
+      }
+    }
+  }
+  function band(y, size, hide) {
+    let id = 90000; const step = size * 1.4, e = EDGE - size / 2;
+    for (let x = -e; x <= e; x += step) { if (!hide(id)) runeAt(x, y, -e, size, 0, id % 6); id++; if (!hide(id)) runeAt(x, y, e, size, Math.PI, id % 6); id++; }
+    for (let z = -e + step; z <= e - step; z += step) { if (!hide(id)) runeAt(-e, y, z, size, -Math.PI / 2, id % 6); id++; if (!hide(id)) runeAt(e, y, z, size, Math.PI / 2, id % 6); id++; }
+    // a second, tiny row just inside
+    const f = e - size * 1.3, st = size * 0.9;
+    for (let x = -f; x <= f; x += st) { if (!hide(id)) runeAt(x, y, -f, size * 0.45, 0, id % 6, 0.7); id++; if (!hide(id)) runeAt(x, y, f, size * 0.45, 0, id % 6, 0.7); id++; }
+    for (let z = -f + st; z <= f - st; z += st) { if (!hide(id)) runeAt(-f, y, z, size * 0.45, 0, id % 6, 0.7); id++; if (!hide(id)) runeAt(f, y, z, size * 0.45, 0, id % 6, 0.7); id++; }
+  }
+  const W8 = 0.008;     // radians per second, the game's slow turning
+
+  // smooth 3D value noise, for the flowing field
+  function vnoise3(x, y, z) {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const fx = x - xi, fy = y - yi, fz = z - zi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), sz = fz * fz * (3 - 2 * fz);
+    const h = (a, b, c) => hash(Math.imul(a, 73856093) ^ Math.imul(b, 19349663) ^ Math.imul(c, 83492791));
+    const lerp = (a, b, k) => a + (b - a) * k;
+    const x00 = lerp(h(xi, yi, zi), h(xi + 1, yi, zi), sx), x10 = lerp(h(xi, yi + 1, zi), h(xi + 1, yi + 1, zi), sx);
+    const x01 = lerp(h(xi, yi, zi + 1), h(xi + 1, yi, zi + 1), sx), x11 = lerp(h(xi, yi + 1, zi + 1), h(xi + 1, yi + 1, zi + 1), sx);
+    return lerp(lerp(x00, x10, sy), lerp(x01, x11, sy), sz);
+  }
+  // the ward field: a force field over the whole array whose walls are the flowing contour lines of a smooth noise field
+  // (like the bands in marble, or light on a pool floor): curved, meandering, never meeting at joints. The field is
+  // laid out round the circle and streams outward from the core, its features stretched along the radius so the walls
+  // mostly run away from it. Each wall is a soft swell of light fading to clear on either side, with a slow pulse as on
+  // the siege bar. It fills the square out to the band of runes over the Veil.
+  function wardField(t, dome) {
+    // the field fills the square out to the band of runes over the Veil, which frames it
+    const S = EDGE - 9, pulse = 0.85 + 0.15 * Math.sin(t * 1.1);
+    const wave = col.map(v => v * 0.6 + 100);
+    const C = 6, n = Math.ceil(S / C), h = C / 2, AROUND = 2.6, ALONG = 190, SPEED = 9, WIDTH = 0.055;
+    for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) {
+      const x = i * C, z = j * C, r = Math.hypot(x, z); if (Math.max(Math.abs(x), Math.abs(z)) > S || r < 16) continue;
+      let a, c = wave;
+      {
+        const cx = x / r * AROUND, cz = z / r * AROUND, u = (r - t * SPEED) / ALONG;
+        const f = 0.68 * vnoise3(cx, cz, u) + 0.32 * vnoise3(cx * 2.1 + 9, cz * 2.1 + 4, u * 2.1 + 0.37 * t * 0.05);
+        const sw = (f - 0.5) / WIDTH;
+        // clear by the core, falling off steeply (exponentially) to very faint at the outer tier: about seven times
+        // the base strength right round the crown, three times at 60 blocks, back to the faint base by about 150
+        const core = 1 + 10 * Math.exp(-r / 38);
+        a = 0.065 * Math.exp(-sw * sw) * pulse * core * Math.min(1, (r - 16) / 24);
+      }
+      if (a < 0.004) continue;
+      const y = dome(r) + 5;
+      fillPts([[x - h, y, z - h], [x + h, y, z - h], [x + h, y, z + h], [x - h, y, z + h]], a, c);
+    }
+  }
+
+  const DRAW = {
+    vault(t, hide, frozen) {
+      const tt = frozen ? 0 : t;
+      const dome = r => 382 - 58 * Math.pow(Math.min(1, r / OUTER), 1.5);
+      // the crown: three nested rings at the top
+      ringOf(0, 0, 384, 9, 4.5, 6, tt * 0.05, 10, hide);
+      ringOf(0, 0, 383, 17, 5.5, 8, -tt * 0.03, 40, hide);
+      ringOf(0, 0, 382, 27, 6.5, 10, tt * 0.02, 80, hide);
+      // three tiers, each an ornate track with ring-worlds riding it
+      const tiers = [{ f: 0.36, n: 4, wr: 14 }, { f: 0.62, n: 3, wr: 32, heart: 13 }, { f: 0.88, n: 8, wr: 22, moon: true }];
+      if (ui.power === 'field' && !frozen) {
+        const sinks = [];
+        tiers.forEach((tr, k) => {
+          const r = OUTER * tr.f, turn = (k % 2 ? -1 : 1) * W8 * tt / (1 + k * 0.5);
+          for (let i = 0; i < tr.n; i++) { const a = i / tr.n * TAU + turn; sinks.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, r: tr.wr, s: tr.wr / 14 }); }
+        });
+        wardField(t, dome);
+      }
+      tiers.forEach((tr, k) => {
+        const r = OUTER * tr.f, y = dome(r), trackTurn = (k % 2 ? -1 : 1) * W8 * tt / (1 + k * 0.5);
+        const worlds = [...Array(tr.n).keys()].map(i => i / tr.n * TAU + trackTurn);     // carried round by their tier, part of it
+        // a rune of the track is left out where a world passes, so the world sits in a gap in its tier
+        const clear = (ang, rr, pad) => worlds.every(wa => { const d = Math.atan2(Math.sin(ang - wa), Math.cos(ang - wa)); return Math.abs(d) * rr > tr.wr + pad; });
+        const track = (rr, size, spacing, turn, id0, a, pad) => {
+          const n = Math.max(3, Math.floor(TAU * rr / spacing));
+          for (let i = 0; i < n; i++) {
+            const id = id0 + i, ang = i / n * TAU + turn; if (hide(id) || !clear(ang, rr, pad)) continue;
+            runeAt(Math.cos(ang) * rr, y, Math.sin(ang) * rr, size, ang + Math.PI / 2, id % 6, a);
+          }
+        };
+        track(r, 10, 15, trackTurn, 1000 + k * 10000, 1, 8);
+        // the thin outlines: just inside and outside the tier, bulging round each world so they trace its circle,
+        // their runes flowing along them (and so round the worlds)
+        for (const side of [-1, 1]) {
+          const off = 11, R = tr.wr + 7, step = 1.5, pts = [];
+          const n = Math.ceil(TAU * r / step);
+          for (let q = 0; q <= n; q++) {
+            const ang = q / n * TAU;
+            let lat = off;
+            for (const wa of worlds) {
+              const sArc = Math.atan2(Math.sin(ang - wa), Math.cos(ang - wa)) * r;
+              if (Math.abs(sArc) < R) lat = Math.max(lat, Math.sqrt(R * R - sArc * sArc));
+            }
+            const rr = r + side * lat; pts.push([Math.cos(ang) * rr, Math.sin(ang) * rr]);
+          }
+          const spacing = 9, flow = ((frozen ? 0 : tt * 6 * (k % 2 ? 1 : -1) * side) % spacing + spacing) % spacing;
+          let along = 0, next = flow, idn = 0;
+          for (let q = 1; q < pts.length; q++) {
+            const dx = pts[q][0] - pts[q - 1][0], dz = pts[q][1] - pts[q - 1][1], len = Math.hypot(dx, dz);
+            while (len > 0 && next <= along + len) {
+              const f = (next - along) / len, x = pts[q - 1][0] + dx * f, z = pts[q - 1][1] + dz * f, id = 3000 + k * 10000 + (side + 1) * 1000 + idn++;
+              if (!hide(id)) runeAt(x, y, z, 4.5, Math.atan2(dz, dx), id % 6, 0.8);
+              next += spacing;
+            }
+            along += len;
+          }
+        }
+        worlds.forEach((a, i) => {
+          const cx = Math.cos(a) * r, cz = Math.sin(a) * r, id = 20000 + k * 1000 + i * 100, wy = y + 2;
+          ringOf(cx, cz, wy, tr.wr, tr.wr > 25 ? 6.5 : 5.5, tr.wr > 25 ? 9 : 8, tt * 0.12 * (i % 2 ? -1 : 1), id, hide);
+          ringOf(cx, cz, wy, tr.wr * 0.55, tr.wr > 25 ? 4.5 : 3.5, tr.wr > 25 ? 7 : 6, -tt * 0.2, id + 50, hide, 0.8);
+          if (!hide(id + 90)) runeAt(cx, wy, cz, tr.heart || 8, a, i % 6);
+          if (tr.moon && !hide(id + 95)) { const m = tt * 0.5 + i; runeAt(cx + Math.cos(m) * (tr.wr + 10), wy, cz + Math.sin(m) * (tr.wr + 10), 5, m, (i + 2) % 6); }
+        });
+      });
+      band(dome(OUTER + 24), 10, hide);
+    },
+    helix(t, hide, frozen) {
+      const tt = frozen ? 0 : t;
+      // the double helix climbing the beam above the clouds
+      for (let strand = 0; strand < 2; strand++) for (let i = 0; i < 70; i++) {
+        const y = 196 + i * 2.3, r = 6 + i * 0.12, a = strand * Math.PI + i * 0.32 + tt * 0.9, id = 200 + strand * 100 + i;
+        if (hide(id)) continue;
+        runeUp(Math.cos(a) * r, y, Math.sin(a) * r, 3.2, id % 6, 0.9);
+      }
+      // the crown: three seals stacked
+      ringOf(0, 0, 362, 14, 5, 7, tt * 0.04, 500, hide);
+      ringOf(0, 0, 350, 24, 6, 9, -tt * 0.03, 560, hide);
+      ringOf(0, 0, 338, 36, 7, 10, tt * 0.02, 640, hide);
+      // the lotus: twelve petals between two ornate rings
+      const turn = W8 * tt;
+      ornate(334, OUTER * 0.3, 9, turn, 3000, hide);
+      for (let p = 0; p < 12; p++) petal(336, p * TAU / 12 - turn * 0.6, OUTER * 0.34, OUTER * 0.74, 0.17, 6, 20000 + p * 40, hide);
+      ornate(330, OUTER * 0.8, 10, -turn * 0.7, 13000, hide);
+      band(326, 10, hide);
+    },
+    mandala(t, hide, frozen) {
+      const tt = frozen ? 0 : t;
+      // top floor: a hexagram traced in runes inside a ring
+      const yT = 372, rT = 70, hx = tt * 0.02;
+      for (let tri = 0; tri < 2; tri++) {
+        const p = [0, 1, 2].map(k => { const a = hx + tri * Math.PI / 3 + k * TAU / 3 - Math.PI / 2; return [Math.cos(a) * rT, Math.sin(a) * rT]; });
+        for (let k = 0; k < 3; k++) traceLine(p[k][0], yT, p[k][1], p[(k + 1) % 3][0], yT, p[(k + 1) % 3][1], 5, 8, 100 + tri * 300 + k * 100, hide);
+      }
+      ringOf(0, 0, yT, rT + 8, 6, 9, -hx, 800, hide);
+      ringOf(0, 0, yT, 18, 5, 7, hx * 2, 900, hide);
+      // middle floor: a twelve-petal lotus
+      const yM = 350, lt = -W8 * tt;
+      for (let p = 0; p < 12; p++) petal(yM, p * TAU / 12 + lt, 104, 196, 0.16, 6, 2000 + p * 40, hide);
+      ringOf(0, 0, yM, 100, 5, 8, lt * 2, 3000, hide);
+      ornate(yM, 210, 8, lt, 3500, hide);
+      // lowest floor: a great ring carrying turning rosettes
+      const yL = 328, ft = W8 * tt;
+      ornate(yL, OUTER * 0.86, 10, ft, 9000, hide);
+      for (let k = 0; k < 16; k++) {
+        const a = k * TAU / 16 + ft, cx = Math.cos(a) * OUTER * 0.86, cz = Math.sin(a) * OUTER * 0.86;
+        ringOf(cx, cz, yL + 2, 13, 4.5, 6.5, -tt * 0.08 + k, 40000 + k * 30, hide);
+        if (!hide(41000 + k)) runeAt(cx, yL + 2, cz, 7, a, k % 6);
+      }
+      band(324, 10, hide);
+    },
+    orrery(t, hide, frozen) {
+      const tt = frozen ? 0 : t;
+      ringOf(0, 0, 376, 10, 5, 7, tt * 0.05, 10, hide);
+      ringOf(0, 0, 370, 20, 6, 9, -tt * 0.03, 40, hide);
+      ringOf(0, 0, 364, 32, 7, 10, tt * 0.02, 80, hide);
+      const tiers = [{ y: 362, r: 110, n: 4, wr: 14, w: 0.03 }, { y: 346, r: 215, n: 6, wr: 18, w: -0.02 }, { y: 330, r: 320, n: 8, wr: 22, w: 0.014, moon: true }];
+      tiers.forEach((tr, ti) => {
+        // the orbit, traced by dotted tiny runes
+        ringOf(0, 0, tr.y, tr.r, 2.6, 9, 0, 5000 + ti * 1000, hide, 0.55);
+        for (let i = 0; i < tr.n; i++) {
+          const a = i / tr.n * TAU + tt * tr.w, cx = Math.cos(a) * tr.r, cz = Math.sin(a) * tr.r, id = 20000 + ti * 1000 + i * 100;
+          ringOf(cx, cz, tr.y + 3, tr.wr, 5.5, 8, tt * 0.12 * (i % 2 ? -1 : 1), id, hide);
+          ringOf(cx, cz, tr.y + 3, tr.wr * 0.55, 3.5, 6, -tt * 0.2, id + 50, hide, 0.8);
+          if (!hide(id + 90)) runeAt(cx, tr.y + 3, cz, 8, a, i % 6);
+          if (tr.moon && !hide(id + 95)) { const m = tt * 0.5 + i; runeAt(cx + Math.cos(m) * (tr.wr + 10), tr.y + 3, cz + Math.sin(m) * (tr.wr + 10), 5, m, (i + 2) % 6); }
+        }
+      });
+      band(324, 10, hide);
+    },
+  };
+
+  function drawVeil(day) {
+    if (ui.stand === 'top') {
+      g.strokeStyle = 'rgba(192,216,255,0.35)'; g.lineWidth = 2;
+      const a = project(-HALF, 0, -HALF), b = project(HALF, 0, HALF); g.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); return;
+    }
+    const bands = [[86, 92, 146], [172, 188, 222], [182, 200, 236], [188, 210, 248], [192, 216, 255], [156, 192, 255], [120, 167, 255]];
+    const walls = [[-HALF, HALF, HALF, HALF], [-HALF, -HALF, -HALF, HALF], [HALF, -HALF, HALF, HALF]];
+    for (const [x0, z0, x1, z1] of walls) for (let s = 0; s < 16; s++) {
+      const ax = x0 + (x1 - x0) * s / 16, az = z0 + (z1 - z0) * s / 16, bx = x0 + (x1 - x0) * (s + 1) / 16, bz = z0 + (z1 - z0) * (s + 1) / 16;
+      for (let k = 0; k < bands.length; k++) {
+        const y0 = 40 + k * 40, y1 = y0 + 40, c = bands[k].map(v => v * (day ? 1 : 0.32));
+        const p = [[ax, y0, az], [bx, y0, bz], [bx, y1, bz], [ax, y1, az]].map(q => project(q[0], q[1], q[2]));
+        if (p.some(q => !q)) continue;
+        ctx.fillStyle = `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+        ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => ctx.lineTo(q[0], q[1])); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  function drawBeam(c, a) {
+    for (let y = EYE - 10; y < 380; y += 12) {
+      const p = [[-1.2, y, 0], [1.2, y, 0], [1.2, y + 12, 0], [-1.2, y + 12, 0]].map(q => project(q[0], q[1], q[2]));
+      if (p.some(q => !q)) continue;
+      g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+      g.beginPath(); g.moveTo(p[0][0], p[0][1]); p.slice(1).forEach(q => g.lineTo(q[0], q[1])); g.closePath(); g.fill();
+    }
+  }
+
+  let last = 0, clock = 0, prev = performance.now();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (now - last < 33) return; last = now;
+    if (ui.play === 'on') clock += (now - prev) / 1000; prev = now;
+    setCamera();
+    const day = ui.time === 'day', st = STATES[ui.state], frozen = ui.state === 'lost';
+    const bright = (day ? 0.38 : 1) * (ui.time === 'warded' ? 0.55 : 1) * (frozen ? 0.6 : 1);
+    col = st.rgb;
+    const tick = Math.floor(clock * 6);
+    const hide = ui.state === 'breached'
+      ? (id => { const h = hash(id * 31 + 7); return h < 0.22 || (h < 0.32 && hash(id + tick * 977) > 0.5); })
+      : frozen ? (id => hash(id * 31 + 7) < 0.4) : (() => false);
+
+    // sky
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    if (day) { sky.addColorStop(0, '#5f93f0'); sky.addColorStop(1, '#a9c9ff'); }
+    else { sky.addColorStop(0, '#03050c'); sky.addColorStop(1, '#0d1631'); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    if (!day) for (let i = 0; i < 140; i++) { ctx.fillStyle = `rgba(255,255,255,${0.25 + hash(i) * 0.6})`; ctx.fillRect((hash(i * 3) * W) | 0, (hash(i * 5) * H * 0.8) | 0, 1, 1); }
+
+    // the sigil, drawn into its own layer, then bloomed onto the sky
+    g.clearRect(0, 0, W, H); g.globalCompositeOperation = 'source-over';
+    DRAW[ui.study](clock, hide, frozen);
+    if (!frozen) drawBeam(col, 0.95);
+    ctx.globalAlpha = bright;
+    ctx.globalCompositeOperation = 'lighter';
+    try { ctx.filter = 'blur(4px)'; ctx.drawImage(fx, 0, 0); ctx.filter = 'none'; } catch (e) {}
+    ctx.drawImage(fx, 0, 0);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+
+    // the Veil in front of the sky, as in game
+    drawVeil(day);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>

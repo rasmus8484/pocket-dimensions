@@ -104,20 +104,40 @@ state changes (siege state, breach open, the Core gaining or running out of lapi
 
 Visitors see the ward of the realm they are in. Outside the realm dimension the client draws nothing.
 
-### Layout
+### Layout: the Vaulted Ward (agreed 2026-10-09)
 
-Pure and tested (`SigilLayout`): from the Core's position and the plot bounds it produces the list of elements to draw
-at y 340:
+The first in-game version (a flat circle of runes with spokes, then spiral arms) was replaced after design rounds in
+`design/ward-sigil-studies.html` (published as the "Ward Sigil Studies" artifact). That page's "Vaulted Ward" study,
+with "Ward field" power, is the reference implementation for everything below; its numbers are for a radius 25
+realm. The design rules the user set: no drawn lines or strokes; every shape is made of runes (runes may travel on
+curves); smaller runes, ornate, layered at different heights; power shown as a soft flowing field, not as particles,
+veins or channels.
 
-- an **inner seal** around the beam's top (radius about 24 blocks, large runes);
-- **three or four rings** centred on the Core, the outermost inside the nearest Veil (the Core can sit up to 8 chunks
-  off the plot's centre, so the rings are sized to the nearest edge);
-- a **square band** of runes just inside the top of the Veil;
-- **eight spokes** from the seal to the band, made of short line segments.
+Everything is centred on the plot's centre (not the Core, until RL-024 always centres the Core); an off-centre Core's
+beam is joined to the crown by a conduit of runes. `OUTER` is the outer tier's radius: `half - 6 - 24` blocks
+(362 for radius 25). Heights follow a dome over the realm: `y(r) = 382 - 58 * (r / OUTER)^1.5`.
 
-Runes are about 16 blocks across; the whole sigil is in the low thousands of quads. New, larger rune textures (with
-glow versions) are generated in the same style as the anchor's runes. Rings turn slowly, alternating direction; pulses
-run outward along the spokes.
+- **The crown**: three nested rings of small runes at the top of the dome (radius 9, 17, 27; y 384 to 382), turning
+  slowly in alternate directions. The Core's beam rises into it.
+- **Three tiers** at radius `OUTER x 0.36, 0.62, 0.88`, each at its dome height, each turning slowly (alternating
+  direction, inner tiers faster). A tier is:
+  - a **main track** of runes (10 blocks, every 15 blocks), with a gap wherever a world sits;
+  - **worlds** set into it and carried round with it: on the inner tier 4 (radius 14), on the middle tier 3 large ones
+    (radius 32, a larger rune at the heart), on the outer tier 8 (radius 22) each with a small rune moon circling it.
+    A world is a ring of runes spinning on itself, a smaller ring inside turning the other way, and a rune at its heart;
+  - two **outlines** of tiny runes (4.5 blocks, every 9), 11 blocks inside and outside the track, that bulge round each
+    world to trace its circle (radius world + 7), their runes flowing along them, the inner and outer outline in
+    opposite directions.
+- **The band**: a row of runes (10 blocks) along the top of the Veil with a row of tiny runes just inside it.
+- **The ward field** (the power), under the runes: soft light filling the square out to the band, whose walls are the
+  flowing contour lines of a smooth noise field, laid out round the circle (features stretched along the radius) and
+  streaming outward from the core at 9 blocks a second. Each wall is a bell-shaped swell fading to clear on either
+  side. Strength falls off steeply from the core: peak opacity `0.065 * (1 + 10 * e^(-r / 38))` (45% at r 20, 20% at
+  r 60, 6.5% by the outer tier and out to the band), times a slow pulse. Drawn as quads with a
+  colour per corner so the gradient is smooth.
+- **Sizes for other realms**: tier radii and counts follow `OUTER`; rune and world sizes are fixed in blocks, scaled
+  down for realms smaller than radius 25 (`min(1, OUTER / 362)`) so small realms are not crowded. A realm too small
+  for the tiers (radius 3 or less) shows only the crown and the band.
 
 ### How it is drawn: the pulled dome
 
@@ -135,17 +155,17 @@ distance) and cut off by the far plane at low render distances. So each element 
    same at every render distance and setting.
 
 The **beam** above the vanilla beam's reach (the Core's renderer draws up to 256 blocks above the Core, and it is
-fogged high up) is continued by the sigil renderer as pulled segments up to y 340, so the beam visibly meets the seal.
+fogged high up) is continued by the sigil renderer as pulled segments up to the crown, so the beam visibly meets it.
 
 ### Colour and state
 
 | Ward state | Sigil |
 |---|---|
 | Normal | Anchor cyan `#8CEBFF` |
-| Breaching | Pink `#FF5ADC` spreading from the centre |
-| Breach complete | Cracks: segments of the rings missing or flickering |
+| Breaching | Pink `#FF5ADC` |
+| Breach complete | Cracks: runes missing or flickering |
 | Breaking | Red `#FF5028` |
-| Anchor lost | Dim red, rings broken apart, no pulses |
+| Anchor lost | Dim red, broken apart, still; no ward field |
 
 Brightness: full while `warded`, about half without. Day and night: brightness scales with how dark the sky is (the
 star brightness), never below about a quarter by day.
