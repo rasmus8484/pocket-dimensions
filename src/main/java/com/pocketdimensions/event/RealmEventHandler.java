@@ -213,29 +213,48 @@ public class RealmEventHandler {
     }
 
     /**
-     * Puts a player who got above the ward's ceiling back under it, on a free spot (a block pushed up to the top of the
-     * world must not trap them), mount and all: a rider is moved with their mount, keeping their height above it.
+     * What moves the player (their mount while riding one, else the player), and whether it could be lowered by `over`
+     * without going into a block.
+     */
+    private static boolean canLower(ServerLevel realm, net.minecraft.world.entity.Entity mover, double over) {
+        return realm.noCollision(mover, mover.getBoundingBox().move(0, -over, 0));
+    }
+
+    private static net.minecraft.world.entity.Entity moverOf(ServerPlayer player) {
+        net.minecraft.world.entity.Entity root = player.getRootVehicle();
+        return root != player && !(root instanceof Player) ? root : player;
+    }
+
+    /**
+     * Puts a player who got above the ward's ceiling back under it, inside their plot. A mount in open air is lowered
+     * with its rider still on; one that can't be lowered (standing on a floor near the top) is left where it is and the
+     * rider is set down off it, never pushed into the floor. A player who can't simply be lowered goes to the nearest
+     * free spot a little below the ceiling, so a block that got up there (pushed, fallen, grown) never traps them.
      */
     private void holdUnderCeiling(ServerPlayer player, RealmManager.PlayerRealmInfo info, double x, double z, float yaw, float pitch) {
         ServerLevel realm = (ServerLevel) player.level();
+        double over = player.getY() - RealmWard.CEILING_Y;
+        x = RealmWard.inside(x, info.minX, info.maxX);
+        z = RealmWard.inside(z, info.minZ, info.maxZ);
+        net.minecraft.world.entity.Entity mover = moverOf(player);
+        if (mover != player && canLower(realm, mover, over)) {
+            double dx = x - player.getX(), dz = z - player.getZ();
+            player.stopRiding();
+            mover.teleportTo(mover.getX() + dx, mover.getY() - over, mover.getZ() + dz);
+            player.connection.teleport(x, RealmWard.CEILING_Y, z, yaw, pitch);
+            player.startRiding(mover, true, false);
+            return;
+        }
+        if (mover != player) player.stopRiding();
         double y = RealmWard.CEILING_Y;
-        BlockPos at = BlockPos.containing(x, y, z);
-        if (!SafeSpot.isFreeToStandIn(realm, at) || !SafeSpot.isFreeToStandIn(realm, at.above())) {
-            BlockPos min = new BlockPos(Math.max(info.minX + 1, at.getX() - 8), realm.getMinY() + 1, Math.max(info.minZ + 1, at.getZ() - 8));
+        if (!realm.noCollision(player, player.getBoundingBox().move(x - player.getX(), y - player.getY(), z - player.getZ()))) {
+            BlockPos at = BlockPos.containing(x, y, z);
+            BlockPos min = new BlockPos(Math.max(info.minX + 1, at.getX() - 8), RealmWard.searchFloorY(), Math.max(info.minZ + 1, at.getZ() - 8));
             BlockPos max = new BlockPos(Math.min(info.maxX - 2, at.getX() + 8), RealmWard.CEILING_Y, Math.min(info.maxZ - 2, at.getZ() + 8));
             BlockPos safe = SafeSpot.nearest(realm, at, min, max, q -> false);
             if (safe != null) { x = safe.getX() + 0.5; y = safe.getY(); z = safe.getZ() + 0.5; }
         }
-        net.minecraft.world.entity.Entity mount = player.getRootVehicle();
-        if (mount != player && !(mount instanceof Player)) {
-            double above = player.getY() - mount.getY();
-            player.stopRiding();
-            mount.teleportTo(x, y - above, z);
-            player.connection.teleport(x, y, z, yaw, pitch);
-            player.startRiding(mount, true, false);
-        } else {
-            player.connection.teleport(x, y, z, yaw, pitch);
-        }
+        player.connection.teleport(x, y, z, yaw, pitch);
     }
 
     // -------------------------------------------------------------------------
@@ -313,9 +332,13 @@ public class RealmEventHandler {
         long gameTime = serverPlayer.level().getGameTime();
 
         // The ward's ceiling: checked every tick (one comparison), unlike the border below
-        if (RealmWard.serverMustHold(y)) {
-            holdUnderCeiling(serverPlayer, info, x, z, yaw, pitch);
-            return;
+        if (RealmWard.aboveCeiling(y)) {
+            ServerLevel here = (ServerLevel) serverPlayer.level();
+            boolean cannotLower = !canLower(here, moverOf(serverPlayer), y - RealmWard.CEILING_Y);
+            if (RealmWard.serverMustHold(y, cannotLower)) {
+                holdUnderCeiling(serverPlayer, info, x, z, yaw, pitch);
+                return;
+            }
         }
 
         int cx = ((int) Math.floor(x)) >> 4;

@@ -131,8 +131,8 @@ public class RealmChunkGenerator extends NoiseBasedChunkGenerator {
     }
 
     /**
-     * Fills each Veil column from the bottom of the world to the top. Carvers and features run after the surface, and
-     * the Veil is in features_cannot_replace (and the carvers' replaceable tag doesn't have it), so nothing cuts it.
+     * Fills each Veil column from the bottom of the world to the top. Carvers and most features respect it (it is in
+     * features_cannot_replace and not in the carvers' replaceable tags); the few that don't are undone by repairVeil.
      */
     private static void raiseVeil(ChunkAccess chunk) {
         int side = RealmManager.sideBlocks(), cell = RealmManager.cellBlocks();
@@ -150,6 +150,30 @@ public class RealmChunkGenerator extends NoiseBasedChunkGenerator {
         }
     }
 
+    /**
+     * Puts back any Veil block that decoration replaced. Some features (mossy boulders, desert wells) and structure
+     * pieces place blocks without checking what is there. A chunk's decoration writes only into it and its eight
+     * neighbours, so repairing those nine after each chunk's decoration catches every overwrite, including spill from a
+     * neighbour decorated later (that neighbour repairs its own nine).
+     */
+    private static void repairVeil(WorldGenLevel level, ChunkPos center) {
+        int side = RealmManager.sideBlocks(), cell = RealmManager.cellBlocks();
+        int minY = level.getMinY(), height = level.getHeight();
+        VeilBlock veil = (VeilBlock) ModBlocks.VEIL.get();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int cx = center.x - 1; cx <= center.x + 1; cx++) for (int cz = center.z - 1; cz <= center.z + 1; cz++) {
+            int x0 = cx << 4, z0 = cz << 4;
+            for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
+                int x = x0 + dx, z = z0 + dz;
+                if (!VeilLayout.isVeilColumn(x, z, side, cell)) continue;
+                for (int y = minY; y < minY + height; y++) {
+                    if (level.getBlockState(pos.set(x, y, z)).is(veil)) continue;
+                    level.setBlock(pos, veil.state(VeilLayout.band(y, minY, height)), 2);
+                }
+            }
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Features
     // -------------------------------------------------------------------------
@@ -162,6 +186,7 @@ public class RealmChunkGenerator extends NoiseBasedChunkGenerator {
     public void applyBiomeDecoration(WorldGenLevel level, ChunkAccess chunk, StructureManager structureManager) {
         if (RealmWorldRules.allFeatures() || !reflectionReady()) {
             super.applyBiomeDecoration(level, chunk, structureManager);
+            repairVeil(level, chunk.getPos());
             return;
         }
         List<FeatureSorter.StepFeatureData> steps = featuresPerStep();
@@ -240,6 +265,7 @@ public class RealmChunkGenerator extends NoiseBasedChunkGenerator {
                     .setDetail("Decoration Seed", i);
             throw new ReportedException(report);
         }
+        repairVeil(level, chunkpos);
     }
 
     private static BoundingBox writableArea(ChunkAccess chunk) {

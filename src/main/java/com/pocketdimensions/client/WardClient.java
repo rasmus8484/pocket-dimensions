@@ -11,8 +11,9 @@ import net.minecraftforge.fml.LogicalSide;
 
 /**
  * The ward's ceiling on the player's own side: before the player moves, upward speed is cut so the move ends at the
- * ceiling; after, anything left over is put back under it. The player (or their mount, which is what moves while
- * riding) meets the ceiling like a surface instead of being pulled back by the server.
+ * ceiling; after, anything left over is put back under it, unless that would push into a block (then the server finds
+ * a free spot). The player (or their mount, which is what moves while riding) meets the ceiling like a surface instead
+ * of being pulled back by the server.
  */
 public final class WardClient {
 
@@ -43,6 +44,8 @@ public final class WardClient {
         Entity mover = moverInRealm(player, event.side());
         if (mover == null || !RealmWard.aboveCeiling(player.getY())) return;
         double over = player.getY() - RealmWard.CEILING_Y;
+        // a mount on a floor near the top, or a block that got up there: never push into it, the server sets them down
+        if (!player.level().noCollision(mover, mover.getBoundingBox().move(0, -over, 0))) return;
         mover.setPos(mover.getX(), mover.getY() - over, mover.getZ());
         Vec3 v = mover.getDeltaMovement();
         if (v.y > 0) mover.setDeltaMovement(v.x, 0, v.z);
