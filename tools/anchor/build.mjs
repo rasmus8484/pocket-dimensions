@@ -9,6 +9,7 @@ import { shape as coreShape, paint as corePaint, STATES as CORE_STATES, CORE as 
 import { shape as pocketShape, paint as pocketPaint, glowSprite } from './pocket.mjs';
 import { sprite as seedSprite } from './seed.mjs';
 import { veilTexture, FRAMES as VEIL_FRAMES } from './veil.mjs';
+import { lineTexture } from './sigil.mjs';
 import { slab, polished, hollow, tablet } from './gui.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
@@ -260,3 +261,6 @@ for (let b = 0; b < 8; b++) {
   veilVariants[`band=${b}`] = { model: `pocketdimensions:block/veil_${b}` };
 }
 write('blockstates/veil.json', json({ variants: veilVariants }));
+
+// The ward sigil's line and beam stroke
+write('textures/misc/ward_line.png', encodePNG(16, 16, lineTexture()));

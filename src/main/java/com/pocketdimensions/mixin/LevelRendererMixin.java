@@ -30,6 +30,6 @@ public abstract class LevelRendererMixin {
     private void pocketdimensions$wardSigilPass(FrameGraphBuilder builder, Frustum frustum, Matrix4f view, GpuBufferSlice fog,
                                                 boolean outline, LevelRenderState state, DeltaTracker delta,
                                                 ProfilerFiller profiler, CallbackInfo ci) {
-        WardSigilRenderer.addPass(builder, targets);
+        WardSigilRenderer.addPass(builder, targets, state);
     }
 }
