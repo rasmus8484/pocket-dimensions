@@ -19,6 +19,8 @@ minecraft {
         configureEach {
             workingDir = layout.projectDirectory.dir('run')
             systemProperty 'eventbus.api.strictRuntimeChecks', 'true'
+            // the mod's mixins (in a built jar, the manifest's MixinConfigs names them)
+            args '-mixin.config=pocketdimensions.mixins.json'
         }
 
         register('client') {
@@ -55,4 +57,5 @@ tasks.withType(JavaCompile).configureEach {
 // MIT asks for the notice to travel with every copy: ship it inside the jar
 tasks.named('jar') {
     from('LICENSE')
+    manifest { attributes('MixinConfigs': 'pocketdimensions.mixins.json') }
 }
