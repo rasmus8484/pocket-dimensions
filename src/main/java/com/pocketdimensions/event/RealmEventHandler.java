@@ -4,8 +4,10 @@ import com.pocketdimensions.PocketDimensionsMod;
 import com.pocketdimensions.init.ModBlocks;
 import com.pocketdimensions.init.ModItems;
 import com.pocketdimensions.manager.RealmManager;
+import com.pocketdimensions.manager.RealmWard;
 import com.pocketdimensions.manager.SafeSpot;
 import net.minecraft.core.BlockPos;
+import net.minecraftforge.event.level.BlockEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -83,6 +85,8 @@ public class RealmEventHandler {
 
     public RealmEventHandler() {
         TickEvent.PlayerTickEvent.Post.BUS.addListener(this::onPlayerTick);
+        BlockEvent.EntityPlaceEvent.BUS.addListener(this::onPlaceAboveCeiling);
+        BlockEvent.EntityMultiPlaceEvent.BUS.addListener(this::onMultiPlaceAboveCeiling);
         // Predicate overload required for record-based cancellable events
         EntityTravelToDimensionEvent.BUS.addListener(this::onEntityTravelToDimension);
         MobSpawnEvent.FinalizeSpawn.BUS.addListener(this::onFinalizeSpawn);
@@ -190,6 +194,51 @@ public class RealmEventHandler {
     }
 
     // -------------------------------------------------------------------------
+    // The ward's ceiling: no building at the top two rows
+    // -------------------------------------------------------------------------
+
+    /** Nothing is built at the top two rows of a realm, so nobody can stand above the ward's ceiling. */
+    private boolean onPlaceAboveCeiling(BlockEvent.EntityPlaceEvent event) {
+        return inRealm(event.getLevel()) && RealmWard.buildRefused(event.getPos().getY());
+    }
+
+    /** The same for beds, doors and other blocks placed as several at once. */
+    private boolean onMultiPlaceAboveCeiling(BlockEvent.EntityMultiPlaceEvent event) {
+        return inRealm(event.getLevel())
+                && event.getReplacedBlockSnapshots().stream().anyMatch(s -> RealmWard.buildRefused(s.getPos().getY()));
+    }
+
+    private static boolean inRealm(net.minecraft.world.level.LevelAccessor level) {
+        return level instanceof net.minecraft.world.level.Level l && l.dimension().equals(PocketDimensionsMod.REALM_DIM);
+    }
+
+    /**
+     * Puts a player who got above the ward's ceiling back under it, on a free spot (a block pushed up to the top of the
+     * world must not trap them), mount and all: a rider is moved with their mount, keeping their height above it.
+     */
+    private void holdUnderCeiling(ServerPlayer player, RealmManager.PlayerRealmInfo info, double x, double z, float yaw, float pitch) {
+        ServerLevel realm = (ServerLevel) player.level();
+        double y = RealmWard.CEILING_Y;
+        BlockPos at = BlockPos.containing(x, y, z);
+        if (!SafeSpot.isFreeToStandIn(realm, at) || !SafeSpot.isFreeToStandIn(realm, at.above())) {
+            BlockPos min = new BlockPos(Math.max(info.minX + 1, at.getX() - 8), realm.getMinY() + 1, Math.max(info.minZ + 1, at.getZ() - 8));
+            BlockPos max = new BlockPos(Math.min(info.maxX - 2, at.getX() + 8), RealmWard.CEILING_Y, Math.min(info.maxZ - 2, at.getZ() + 8));
+            BlockPos safe = SafeSpot.nearest(realm, at, min, max, q -> false);
+            if (safe != null) { x = safe.getX() + 0.5; y = safe.getY(); z = safe.getZ() + 0.5; }
+        }
+        net.minecraft.world.entity.Entity mount = player.getRootVehicle();
+        if (mount != player && !(mount instanceof Player)) {
+            double above = player.getY() - mount.getY();
+            player.stopRiding();
+            mount.teleportTo(x, y - above, z);
+            player.connection.teleport(x, y, z, yaw, pitch);
+            player.startRiding(mount, true, false);
+        } else {
+            player.connection.teleport(x, y, z, yaw, pitch);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // PlayerTickEvent - realm entry + border enforcement
     // -------------------------------------------------------------------------
 
@@ -262,6 +311,12 @@ public class RealmEventHandler {
         float yaw = serverPlayer.getYRot();
         float pitch = serverPlayer.getXRot();
         long gameTime = serverPlayer.level().getGameTime();
+
+        // The ward's ceiling: checked every tick (one comparison), unlike the border below
+        if (RealmWard.serverMustHold(y)) {
+            holdUnderCeiling(serverPlayer, info, x, z, yaw, pitch);
+            return;
+        }
 
         int cx = ((int) Math.floor(x)) >> 4;
         int cz = ((int) Math.floor(z)) >> 4;
