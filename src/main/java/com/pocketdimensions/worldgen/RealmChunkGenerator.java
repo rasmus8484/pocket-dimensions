@@ -1,6 +1,10 @@
 package com.pocketdimensions.worldgen;
 
 import com.mojang.datafixers.util.Pair;
+import com.pocketdimensions.block.VeilBlock;
+import com.pocketdimensions.init.ModBlocks;
+import com.pocketdimensions.manager.RealmManager;
+import com.pocketdimensions.manager.VeilLayout;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
@@ -17,6 +21,7 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelHeightAccessor;
@@ -26,12 +31,14 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeGenerationSettings;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.FeatureSorter;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
+import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.RandomSupport;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
@@ -110,6 +117,37 @@ public class RealmChunkGenerator extends NoiseBasedChunkGenerator {
                 .filter(h -> RealmWorldRules.structureAllowed(registry, h.value())).toList();
         if (allowed.isEmpty()) return null;
         return super.findNearestMapStructure(level, HolderSet.direct(allowed), pos, radius, skipKnownStructures);
+    }
+
+    // -------------------------------------------------------------------------
+    // The Veil
+    // -------------------------------------------------------------------------
+
+    /** Vanilla's surface, then the Veil in any of this chunk's columns that lie on a plot's ring (VeilLayout). */
+    @Override
+    public void buildSurface(WorldGenRegion region, StructureManager structureManager, RandomState random, ChunkAccess chunk) {
+        super.buildSurface(region, structureManager, random, chunk);
+        raiseVeil(chunk);
+    }
+
+    /**
+     * Fills each Veil column from the bottom of the world to the top. Carvers and features run after the surface, and
+     * the Veil is in features_cannot_replace (and the carvers' replaceable tag doesn't have it), so nothing cuts it.
+     */
+    private static void raiseVeil(ChunkAccess chunk) {
+        int side = RealmManager.sideBlocks(), cell = RealmManager.cellBlocks();
+        int minY = chunk.getMinY(), height = chunk.getHeight();
+        VeilBlock veil = (VeilBlock) ModBlocks.VEIL.get();
+        BlockState[] bands = new BlockState[VeilLayout.BANDS];
+        for (int b = 0; b < bands.length; b++) bands[b] = veil.state(b);
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int x0 = chunk.getPos().getMinBlockX(), z0 = chunk.getPos().getMinBlockZ();
+        for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++) {
+            int x = x0 + dx, z = z0 + dz;
+            if (!VeilLayout.isVeilColumn(x, z, side, cell)) continue;
+            for (int y = minY; y < minY + height; y++)
+                chunk.setBlockState(pos.set(x, y, z), bands[VeilLayout.band(y, minY, height)], 0);
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -57,8 +57,9 @@ public class PocketDimensionsConfig {
         REALM_PADDING_CHUNKS = builder
                 .comment("Dead-space gap between adjacent realm plots in chunks.",
                          "Prevents terrain bleed between neighbours.",
-                         "Default: 1.")
-                .defineInRange("realm_padding_chunks", 1, 0, 10000);
+                         "Default: 1.",
+                         "At least 1: the Veil stands in the gap.")
+                .defineInRange("realm_padding_chunks", 1, 1, 10000);
 
         MAX_SPAWN_SEARCH_CHUNKS = builder
                 .comment("How far out from a new realm's centre (in chunks) the World Core's search for dry land may go.",

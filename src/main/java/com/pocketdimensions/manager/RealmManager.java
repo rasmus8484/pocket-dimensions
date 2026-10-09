@@ -60,6 +60,9 @@ public class RealmManager extends SavedData {
     private static int paddingChunks()   { return PocketDimensionsConfig.REALM_PADDING_CHUNKS.get(); }
     private static int sideChunks()      { return 2 * radiusChunks() - 1; }
     private static int cellChunks()      { return sideChunks() + paddingChunks(); }
+    /** Blocks across one plot, and between the starts of neighbouring plots (the plot plus the gap). */
+    public static int sideBlocks()       { return sideChunks() * 16; }
+    public static int cellBlocks()       { return cellChunks() * 16; }
     private static int maxSearchChunks() { return PocketDimensionsConfig.MAX_SPAWN_SEARCH_CHUNKS.get(); }
 
     // -------------------------------------------------------------------------
