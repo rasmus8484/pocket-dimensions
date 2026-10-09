@@ -10,3 +10,8 @@ export function lineTexture() {
   }
   return rgba;
 }
+
+/** 16 x 16 RGBA, opaque white: the ward field's texture (each corner's colour and opacity does the rest). */
+export function fieldTexture() {
+  return new Uint8Array(16 * 16 * 4).fill(255);
+}

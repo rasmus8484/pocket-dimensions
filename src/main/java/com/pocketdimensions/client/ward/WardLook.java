@@ -2,15 +2,12 @@ package com.pocketdimensions.client.ward;
 
 /**
  * How the ward's sigil looks: its colour for the siege (the World Core beam's colours), its brightness (the Core's
- * lapis, day and night), which pieces show (an open breach cracks it, a lost anchor breaks it) and the pulses running
- * out along its spokes. Plain logic, unit tested; WardSigilRenderer draws with it.
+ * lapis, day and night) and which pieces show (an open breach cracks it, a lost anchor breaks it and stills it).
+ * Plain logic, unit tested; WardSigilRenderer draws with it.
  */
 public final class WardLook {
 
     public static final int NORMAL = 0, BREACHING = 1, BREAKING = 2, LOST = 3;
-    /** Blocks per tick a pulse runs outward along the spokes. */
-    public static final double PULSE_SPEED = 2.0;
-    private static final double PULSE_GAP = 160;           // blocks between pulses
 
     private WardLook() {}
 
@@ -42,13 +39,6 @@ public final class WardLook {
 
     /** Whether the rings turn: not once the anchor is lost. */
     public static boolean turns(int siege) { return siege != LOST; }
-
-    /** 0..1 brightness boost of a pulse at `radius` blocks out, at `ticks`. */
-    public static float pulse(double radius, double ticks) {
-        double phase = ((radius - ticks * PULSE_SPEED) % PULSE_GAP + PULSE_GAP) % PULSE_GAP / PULSE_GAP;   // 0..1
-        double p = Math.max(0, 1 - Math.abs(phase - 0.5) * 8);                                             // a narrow band
-        return (float) p;
-    }
 
     private static double hash(int i) {
         int n = i * 374761393;

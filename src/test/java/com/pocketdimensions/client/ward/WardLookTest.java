@@ -49,13 +49,4 @@ class WardLookTest {
         assertTrue(hidden > 100, "hidden " + hidden);
         assertFalse(WardLook.turns(3));
     }
-
-    @Test
-    void pulsesRunOutward() {
-        // a pulse at radius r and time t is at radius r + speed * dt later
-        float now = WardLook.pulse(100, 0);
-        float later = WardLook.pulse(100 + WardLook.PULSE_SPEED * 10, 10);
-        assertEquals(now, later, 1e-5);
-        for (int r = 0; r < 500; r += 7) { float p = WardLook.pulse(r, 3.5); assertTrue(p >= 0 && p <= 1); }
-    }
 }

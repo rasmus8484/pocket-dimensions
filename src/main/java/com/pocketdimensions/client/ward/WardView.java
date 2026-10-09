@@ -6,12 +6,12 @@ import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The ward of the realm the player is in, as last sent by the server, with its sigil laid out once. It belongs to the
+ * The ward of the realm the player is in, as last sent by the server, with its Vaulted Ward laid out once. It belongs to the
  * level it arrived in: after any dimension change it is forgotten until the next sync.
  */
 public final class WardView {
 
-    public record State(WardSyncS2C sync, SigilLayout.Sigil sigil) {}
+    public record State(WardSyncS2C sync, Vault.Layout layout) {}
 
     private static @Nullable State state;
     private static @Nullable Level level;
@@ -21,9 +21,9 @@ public final class WardView {
     public static void receive(WardSyncS2C m) {
         Minecraft mc = Minecraft.getInstance();
         if (!m.present()) { state = null; return; }
-        SigilLayout.Sigil sigil = state != null && sameShape(state.sync(), m) ? state.sigil()
-                : SigilLayout.build(m.coreX() + 0.5, m.coreZ() + 0.5, m.minX(), m.minZ(), m.maxX(), m.maxZ());
-        state = new State(m, sigil);
+        Vault.Layout layout = state != null && sameShape(state.sync(), m) ? state.layout()
+                : Vault.build(m.coreX() + 0.5, m.coreZ() + 0.5, m.minX(), m.minZ(), m.maxX(), m.maxZ());
+        state = new State(m, layout);
         level = mc.level;
     }
 
