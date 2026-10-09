@@ -61,6 +61,7 @@ public class PocketDimensionsMod {
         new PocketEventHandler();
         new com.pocketdimensions.event.AnchorMiningHandler();
         new RealmEventHandler();
+        new com.pocketdimensions.event.WardSync();
         new com.pocketdimensions.event.PocketSleepHandler();
         RegisterCommandsEvent.BUS.addListener(event ->
                 PocketDimensionsCommand.register(event.getDispatcher()));

@@ -46,6 +46,8 @@ public class ModNetworking {
                 .encoder(CoreSyncS2C::encode).decoder(CoreSyncS2C::decode).consumerMainThread(CoreSyncS2C::handle).add();
         CHANNEL.messageBuilder(SiegeBarS2C.class, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(SiegeBarS2C::encode).decoder(SiegeBarS2C::decode).consumerMainThread(SiegeBarS2C::handle).add();
+        CHANNEL.messageBuilder(WardSyncS2C.class, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(WardSyncS2C::encode).decoder(WardSyncS2C::decode).consumerMainThread(WardSyncS2C::handle).add();
         CHANNEL.build();
     }
 
