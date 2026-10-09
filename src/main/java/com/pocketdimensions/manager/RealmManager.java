@@ -421,13 +421,6 @@ public class RealmManager extends SavedData {
             int centerChunkZ = origChunk[1] + sideChunks() / 2;
             int searchRadius = Math.max(1, Math.min(radiusChunks() / 3, maxSearchChunks()));
 
-            // Force-load all chunks in the search area
-            for (int dx = -searchRadius; dx <= searchRadius; dx++) {
-                for (int dz = -searchRadius; dz <= searchRadius; dz++) {
-                    realmLevel.getChunk(centerChunkX + dx, centerChunkZ + dz);
-                }
-            }
-
             BlockPos landPos = findLandNearCenter(realmLevel, centerChunkX, centerChunkZ, searchRadius);
 
             if (landPos != null) {
@@ -479,59 +472,47 @@ public class RealmManager extends SavedData {
     }
 
     /**
-     * Scans chunks within searchRadius of center, sampling 4x4 points per chunk.
-     * Returns the closest BlockPos where the surface block is solid and fluid-free,
-     * or null if no such position exists in the search area.
-     * The returned Y is the surface height (first air above solid), suitable for WorldCore placement.
+     * The nearest dry land to the plot's centre: chunks are searched outward ring by ring (RingSearch), each loaded only
+     * when its turn comes, sampling 4x4 points per chunk, and the search stops one ring past the first land it finds.
+     * Returns the surface position (first air above solid ground, under any trees), or null if there is no dry land
+     * within searchRadius chunks.
      */
     @Nullable
     private BlockPos findLandNearCenter(ServerLevel level, int centerChunkX, int centerChunkZ, int searchRadius) {
         int centerBlockX = centerChunkX * 16 + 8;
         int centerBlockZ = centerChunkZ * 16 + 8;
-        BlockPos best = null;
-        double bestDistSq = Double.MAX_VALUE;
         int[] offsets = {2, 6, 10, 14};
-
-        for (int cx = centerChunkX - searchRadius; cx <= centerChunkX + searchRadius; cx++) {
-            for (int cz = centerChunkZ - searchRadius; cz <= centerChunkZ + searchRadius; cz++) {
-                int baseX = cx * 16;
-                int baseZ = cz * 16;
-                for (int ox : offsets) {
-                    for (int oz : offsets) {
-                        int x = baseX + ox;
-                        int z = baseZ + oz;
-                        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
-                        if (y > level.getMinY()) {
-                            BlockPos surfaceBlock = new BlockPos(x, y - 1, z);
-                            BlockState surfaceState = level.getBlockState(surfaceBlock);
-                            if (surfaceState.getFluidState().isEmpty() && surfaceState.isSolid()) {
-                                // If the surface is leaves or logs, scan downward for the forest floor
-                                int placementY = y;
-                                if (surfaceState.is(BlockTags.LEAVES) || surfaceState.is(BlockTags.LOGS)
-                                        || surfaceState.is(BlockTags.REPLACEABLE)) {
-                                    for (int scanY = y - 2; scanY >= level.getMinY(); scanY--) {
-                                        BlockState scanState = level.getBlockState(new BlockPos(x, scanY, z));
-                                        if (!scanState.is(BlockTags.LEAVES) && !scanState.is(BlockTags.LOGS)
-                                                && !scanState.is(BlockTags.REPLACEABLE)) {
-                                            placementY = scanY + 1;
-                                            break;
-                                        }
-                                    }
-                                }
-                                double distSq = (x - centerBlockX) * (x - centerBlockX)
-                                        + (z - centerBlockZ) * (z - centerBlockZ);
-                                if (distSq < bestDistSq) {
-                                    bestDistSq = distSq;
-                                    best = new BlockPos(x, placementY, z);
-                                }
+        return RingSearch.nearest(searchRadius, (dcx, dcz) -> {
+            int cx = centerChunkX + dcx, cz = centerChunkZ + dcz;
+            level.getChunk(cx, cz);                                   // generate it now, and only now
+            RingSearch.Hit<BlockPos> best = null;
+            for (int ox : offsets) {
+                for (int oz : offsets) {
+                    int x = cx * 16 + ox;
+                    int z = cz * 16 + oz;
+                    int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+                    if (y <= level.getMinY()) continue;
+                    BlockState surfaceState = level.getBlockState(new BlockPos(x, y - 1, z));
+                    if (!surfaceState.getFluidState().isEmpty() || !surfaceState.isSolid()) continue;
+                    // If the surface is leaves or logs, scan downward for the forest floor
+                    int placementY = y;
+                    if (surfaceState.is(BlockTags.LEAVES) || surfaceState.is(BlockTags.LOGS)
+                            || surfaceState.is(BlockTags.REPLACEABLE)) {
+                        for (int scanY = y - 2; scanY >= level.getMinY(); scanY--) {
+                            BlockState scanState = level.getBlockState(new BlockPos(x, scanY, z));
+                            if (!scanState.is(BlockTags.LEAVES) && !scanState.is(BlockTags.LOGS)
+                                    && !scanState.is(BlockTags.REPLACEABLE)) {
+                                placementY = scanY + 1;
+                                break;
                             }
                         }
                     }
+                    double distSq = (double) (x - centerBlockX) * (x - centerBlockX) + (double) (z - centerBlockZ) * (z - centerBlockZ);
+                    if (best == null || distSq < best.distSq()) best = new RingSearch.Hit<>(new BlockPos(x, placementY, z), distSq);
                 }
             }
-        }
-
-        return best;
+            return best;
+        });
     }
 
     // -------------------------------------------------------------------------

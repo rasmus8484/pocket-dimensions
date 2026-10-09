@@ -50,8 +50,9 @@ public class PocketDimensionsConfig {
 
         REALM_RADIUS_CHUNKS = builder
                 .comment("Realm radius in chunks. Side length per plot = 2*radius-1 chunks.",
-                         "Default: 2 -> 3x3 chunk plot (48x48 blocks). Change before first world launch.")
-                .defineInRange("realm_radius_chunks", 2, 1, 10000);
+                         "Default: 50 -> 99x99 chunk plot (1584x1584 blocks): a realm, not a room.",
+                         "Set it before the world first uses the mod; changing it later breaks existing realms.")
+                .defineInRange("realm_radius_chunks", 50, 1, 10000);
 
         REALM_PADDING_CHUNKS = builder
                 .comment("Dead-space gap between adjacent realm plots in chunks.",
@@ -60,9 +61,11 @@ public class PocketDimensionsConfig {
                 .defineInRange("realm_padding_chunks", 1, 0, 10000);
 
         MAX_SPAWN_SEARCH_CHUNKS = builder
-                .comment("Maximum chunk search radius when looking for dry land to place WorldCore.",
-                         "Default: 16.")
-                .defineInRange("max_spawn_search_chunks", 16, 1, 256);
+                .comment("How far out from a new realm's centre (in chunks) the World Core's search for dry land may go.",
+                         "The search goes ring by ring and stops soon after it finds land, so most realms look at a",
+                         "handful of chunks; this caps an all-ocean centre (8 -> at most 17x17 chunks), after which",
+                         "the next plot is tried. Default: 8.")
+                .defineInRange("max_spawn_search_chunks", 8, 1, 256);
 
         builder.pop();
 

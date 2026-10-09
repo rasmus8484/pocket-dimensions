@@ -165,9 +165,9 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `realm.realm_radius_chunks` | 2 | Plot size (side = 2r-1 chunks) |
+| `realm.realm_radius_chunks` | 50 | Plot size (side = 2r-1 chunks; 50 is 1,584 x 1,584 blocks). Set before first use |
 | `realm.realm_padding_chunks` | 1 | Gap between adjacent realms |
-| `realm.max_spawn_search_chunks` | 16 | WorldCore dry-land search radius |
+| `realm.max_spawn_search_chunks` | 8 | How far the WorldCore's dry-land search may go (it stops soon after finding land) |
 | `siege.breach_duration_ticks` | 12000 | World Breacher full-breach time |
 | `siege.breaker_duration_ticks` | 12000 | Anchor Breaker anchor-destroy time |
 | `siege.core_slow_factor` | 2 | Defense slowdown (progress every N ticks) |
