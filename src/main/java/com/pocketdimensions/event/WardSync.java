@@ -10,6 +10,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -32,6 +34,10 @@ public class WardSync {
 
     public WardSync() {
         TickEvent.PlayerTickEvent.Post.BUS.addListener(this::onPlayerTick);
+        // a player who logs out (and back in) gets the ward sent again: their new level has no sigil until then
+        PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(e -> sent.remove(e.getEntity().getUUID()));
+        // one WardSync serves every world opened in this game (singleplayer): nothing carries over between them
+        ServerStoppedEvent.BUS.addListener(e -> { sent.clear(); known.clear(); breach.clear(); });
     }
 
     private void onPlayerTick(TickEvent.PlayerTickEvent.Post event) {
