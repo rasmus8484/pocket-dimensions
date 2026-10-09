@@ -202,6 +202,7 @@ In every whitelist / blacklist, the blacklist wins; entries are ids (`minecraft:
 
 - A check for item duplication around chunk unloading (a precaution; nothing is known)
 - More `/pd test` tools for testing alone
+- Ports after 0.1.0: Forge 1.20.1; NeoForge 1.20.1, 1.21.1 and 1.21.11; Fabric 1.20.1, 1.21.1 and 1.21.11 (see [docs/porting-targets.md](docs/porting-targets.md))
 
 ---
 
