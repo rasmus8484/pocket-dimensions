@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Where the ward's sigil puts its pieces, flat at PLANE_Y over the realm: an inner seal round the top of the Core's
- * beam with a hexagram turning in it, four rings of runes centred on the Core (the outermost inside the nearest edge), a
+ * Where the ward's sigil puts its pieces, flat at PLANE_Y over the realm, centred on the realm (not the Core, which can
+ * stand off centre): an inner seal with a hexagram turning in it, a conduit carrying the Core's beam across to the seal
+ * when the Core is off centre, four rings of runes (the outermost inside the edge), a
  * square band of runes just inside the Veil, and four spiral arms curling out from the seal to the band like the
  * accretion disk round the Core's black hole. Rings are drawn turned by turn(ring, ticks), the arms by turnArms, the
  * hexagram by turnSeal. Plain logic, unit tested; built once per ward sync, drawn every frame.
@@ -19,7 +20,7 @@ public final class SigilLayout {
     /** How fast a spiral arm's radius grows per radian it turns (r = r0 * e^(GROWTH * angle)). */
     private static final double GROWTH = 1.75;
 
-    public enum Kind { SEAL, RING, ARM, STAR, BAND }
+    public enum Kind { SEAL, RING, ARM, STAR, BAND, CONDUIT }
     public record Rune(Kind kind, int ring, double x, double z, double size, double angle, int glyph, double radius) {}
     /** A stroke; `ring` is the ring for RING lines and the arm for ARM lines; `fade` 1..0.3 dims an arm toward its end,
      *  `along` is how far along its arm a segment starts (for the pulses). */
@@ -28,7 +29,9 @@ public final class SigilLayout {
 
     private SigilLayout() {}
 
-    public static Sigil build(double cx, double cz, int minX, int minZ, int maxX, int maxZ) {
+    /** The sigil over the plot [minX, maxX) x [minZ, maxZ), whose World Core's beam rises at (coreX, coreZ). */
+    public static Sigil build(double coreX, double coreZ, int minX, int minZ, int maxX, int maxZ) {
+        double cx = (minX + maxX) / 2.0, cz = (minZ + maxZ) / 2.0;
         List<Rune> runes = new ArrayList<>();
         List<Line> lines = new ArrayList<>();
         double edge = Math.min(Math.min(cx - minX, maxX - cx), Math.min(cz - minZ, maxZ - cz)) - EDGE_MARGIN;
@@ -67,6 +70,16 @@ public final class SigilLayout {
         for (double z = bz0 + step; z <= bz1 - step + 1e-9; z += step) {
             runes.add(new Rune(Kind.BAND, -2, bx0, z, size, -Math.PI / 2, glyph++ % 6, 0));
             runes.add(new Rune(Kind.BAND, -2, bx1, z, size, Math.PI / 2, glyph++ % 6, 0));
+        }
+
+        // the conduit: the Core's beam, reaching the sigil's plane off centre, carried across to the seal
+        double toCore = Math.hypot(coreX - cx, coreZ - cz), sealEdge = seal + size;
+        if (toCore > sealEdge) {
+            double ux = (cx - coreX) / toCore, uz = (cz - coreZ) / toCore, len = toCore - sealEdge, piece = Math.max(4, size);
+            for (double d = 0; d < len; d += piece) {
+                double e = Math.min(len, d + piece);
+                lines.add(new Line(Kind.CONDUIT, -5, coreX + ux * d, coreZ + uz * d, coreX + ux * e, coreZ + uz * e, size * 0.12, 1, d));
+            }
         }
 
         // a hexagram turning in the seal: two triangles

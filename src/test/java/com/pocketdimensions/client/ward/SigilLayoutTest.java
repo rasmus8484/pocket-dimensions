@@ -108,6 +108,31 @@ class SigilLayoutTest {
     }
 
     @Test
+    void theSigilIsCentredOnTheRealmWhereverTheCoreStands() {
+        SigilLayout.Sigil s = SigilLayout.build(392 + 128, 392 - 128, MIN, MIN, MAX, MAX);
+        assertEquals(392, s.cx(), 1e-9);
+        assertEquals(392, s.cz(), 1e-9);
+    }
+
+    @Test
+    void anOffCentreCoresBeamIsJoinedToTheSeal() {
+        SigilLayout.Sigil s = SigilLayout.build(392 + 128, 392 - 128, MIN, MIN, MAX, MAX);
+        var conduit = s.lines().stream().filter(l -> l.kind() == SigilLayout.Kind.CONDUIT).toList();
+        assertFalse(conduit.isEmpty());
+        var first = conduit.get(0);
+        assertEquals(392 + 128 + 0.0, first.x1(), 1e-9, "starts at the top of the Core's beam");
+        assertEquals(392 - 128 + 0.0, first.z1(), 1e-9);
+        var last = conduit.get(conduit.size() - 1);
+        assertTrue(Math.hypot(last.x2() - 392, last.z2() - 392) < 40, "ends at the seal");
+    }
+
+    @Test
+    void aCentredCoreNeedsNoConduit() {
+        SigilLayout.Sigil s = SigilLayout.build(392, 392, MIN, MIN, MAX, MAX);
+        assertTrue(s.lines().stream().noneMatch(l -> l.kind() == SigilLayout.Kind.CONDUIT));
+    }
+
+    @Test
     void ringsTurnInAlternatingDirections() {
         assertTrue(SigilLayout.turn(0, 100) > 0);
         assertTrue(SigilLayout.turn(1, 100) < 0);

@@ -114,7 +114,7 @@ public final class WardSigilRenderer {
         double[] p = turned(s, l.x1(), l.z1(), turn), q = turned(s, l.x2(), l.z2(), turn);
         double mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2;
         double len = Math.hypot(q[0] - p[0], q[1] - p[1]), a = Math.atan2(q[1] - p[1], q[0] - p[0]);
-        float boost = l.kind() == SigilLayout.Kind.ARM ? WardLook.pulse(l.along(), f.ticks()) : 0;
+        float boost = l.kind() == SigilLayout.Kind.ARM || l.kind() == SigilLayout.Kind.CONDUIT ? WardLook.pulse(l.along(), f.ticks()) : 0;
         quad(b, f, mx, mz, len / 2, l.width() * 2, a, f.bright() * (float) l.fade() * (0.6f + 0.4f * boost), 1 + boost);
     }
 
