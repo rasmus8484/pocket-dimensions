@@ -75,6 +75,14 @@ Players in the realm must not cross into other players' regions via:
 
 Server enforces hard region boundaries (implementation choice), but the rule is absolute.
 
+### The Veil and the ceiling (the ward made visible)
+
+- Every realm is walled by the Veil: a full-height wall (bedrock to the build limit) of drifting mist in the column just outside the plot, generated with the realm. It can't be broken, blown up, pushed or replaced by world generation, and it hides whatever lies beyond, so nobody can see into a neighbouring realm, with or without Distant Horizons.
+- Its colour follows height: dark indigo underground, pale mist at ground level, the realm's fog and sky colours at the top, so from far away it reads as horizon haze.
+- Overhead the ward holds players with their feet at or below y 318 (eyes stay under the Veil's top), and no block can be placed at y 318 or 319. The player's own game clamps them so the ceiling feels solid; the server holds anyone more than a block past it.
+- The gap between plots must be at least one chunk (`realm_padding_chunks` >= 1).
+- Planned: a great rune sigil overhead centred on the World Core, showing the siege state, and rune ripples where the Veil or the ceiling is touched (spec: `docs/superpowers/specs/2026-10-09-realm-ward-design.md`).
+
 ---
 
 # WorldAnchor + WorldSeed (creation and rekey)
