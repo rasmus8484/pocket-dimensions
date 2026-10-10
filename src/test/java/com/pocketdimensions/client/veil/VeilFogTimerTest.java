@@ -44,6 +44,25 @@ class VeilFogTimerTest {
     }
 
     @Test
+    void framesSkippedWhileAnotherGpuTimerRunsAreExplained() {
+        VeilFogTimer t = new VeilFogTimer();
+        t.start(1, 0);
+        for (int i = 0; i < 5; i++) t.skipped();
+        VeilFogTimer.Report r = t.poll(2 * S);
+        assertEquals(0, r.frames());
+        assertEquals(5, r.skipped());
+        assertTrue(r.describe().contains("F3"), r.describe());
+    }
+
+    @Test
+    void skippingIsIgnoredOutsideAWindow() {
+        VeilFogTimer t = new VeilFogTimer();
+        t.skipped();
+        t.start(1, 0);
+        assertEquals(0, t.poll(2 * S).skipped());
+    }
+
+    @Test
     void theReportGivesTheShareOfASixtyFpsFrame() {
         VeilFogTimer t = new VeilFogTimer();
         t.start(1, 0);

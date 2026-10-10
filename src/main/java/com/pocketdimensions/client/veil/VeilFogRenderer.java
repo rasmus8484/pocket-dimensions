@@ -15,6 +15,7 @@ import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.GpuQuery;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.TimerQuery;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
@@ -150,7 +151,7 @@ public final class VeilFogRenderer {
                     .putVec4((float) VeilFogMath.fadeStart(minY, height), (float) VeilFogMath.fadeEnd(minY, height),
                             PocketDimensionsClientConfig.VEIL_FOG_STEPS.get(), 0);
         }
-        GpuQuery query = timer.measuring() && pending.size() < 8 ? encoder.timerQueryBegin() : null;
+        GpuQuery query = beginTiming(encoder);
         try (RenderPass pass = encoder.createRenderPass(() -> "Veil fog", main.getColorTextureView(), OptionalInt.empty(),
                 null, OptionalDouble.empty())) {
             pass.setPipeline(PIPELINE);
@@ -159,12 +160,33 @@ public final class VeilFogRenderer {
             pass.bindTexture("DepthSampler", main.getDepthTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
             pass.bindTexture("NoiseSampler", noiseView, RenderSystem.getSamplerCache().getRepeat(FilterMode.LINEAR));
             pass.draw(0, 3);
-        }
-        if (query != null) {
-            encoder.timerQueryEnd(query);
-            pending.add(query);
+        } finally {
+            // always close our timer: the encoder is shared, and vanilla's next GPU timer would throw on an open one
+            if (query != null) {
+                encoder.timerQueryEnd(query);
+                pending.add(query);
+            }
         }
         ubo.rotate();
+    }
+
+    /**
+     * Starts timing this frame's pass for /pd test veilTime, or null when not measuring. Only one GPU timer can run at
+     * a time: while vanilla's is running (the F3 GPU display, the F3+L profiler) the frame is counted as skipped, and a
+     * timer that fails to start never touches the fog itself.
+     */
+    private static @Nullable GpuQuery beginTiming(CommandEncoder encoder) {
+        if (!timer.measuring() || pending.size() >= 8) return null;
+        if (TimerQuery.getInstance().isRecording()) {
+            timer.skipped();
+            return null;
+        }
+        try {
+            return encoder.timerQueryBegin();
+        } catch (IllegalStateException e) {
+            timer.skipped();
+            return null;
+        }
     }
 
     /** GPU timings arrive a frame or two late: hand over the ones that are ready. */

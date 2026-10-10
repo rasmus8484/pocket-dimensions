@@ -14,9 +14,15 @@ public final class VeilFogTimer {
 
     private static final double FRAME_60_MS = 1000.0 / 60;
 
-    /** The result: frames measured, GPU time per frame (average, 95th percentile, worst). */
-    public record Report(double seconds, int frames, double averageMs, double p95Ms, double worstMs) {
+    /**
+     * The result: frames measured, GPU time per frame (average, 95th percentile, worst), and frames that could not be
+     * timed because another GPU timer was running (the F3 GPU display or the F3+L profiler).
+     */
+    public record Report(double seconds, int frames, double averageMs, double p95Ms, double worstMs, int skipped) {
         public String describe() {
+            if (frames == 0 && skipped > 0)
+                return String.format(Locale.ROOT, "Veil fog: could not be timed in %.1f s while the F3 GPU display or the "
+                        + "F3+L profiler is running. Turn them off and measure again.", seconds);
             if (frames == 0)
                 return String.format(Locale.ROOT, "Veil fog: not drawn in %.1f s (stand in a realm with the Veil in view).", seconds);
             return String.format(Locale.ROOT,
@@ -28,7 +34,7 @@ public final class VeilFogTimer {
 
     private long[] nanos = new long[256];
     private long until;
-    private int frames;
+    private int frames, skipped;
     private double seconds;
     private boolean measuring;
 
@@ -37,6 +43,7 @@ public final class VeilFogTimer {
         this.seconds = seconds;
         until = now + (long) (seconds * 1e9);
         frames = 0;
+        skipped = 0;
         measuring = true;
     }
 
@@ -49,16 +56,21 @@ public final class VeilFogTimer {
         nanos[frames++] = gpuNanos;
     }
 
+    /** A frame drawn while another GPU timer was running, so it could not be timed. Ignored outside a window. */
+    public void skipped() {
+        if (measuring) skipped++;
+    }
+
     /** The report once the window has closed at `now`, exactly once; null before that or when nothing is measured. */
     public @Nullable Report poll(long now) {
         if (!measuring || now < until) return null;
         measuring = false;
-        if (frames == 0) return new Report(seconds, 0, 0, 0, 0);
+        if (frames == 0) return new Report(seconds, 0, 0, 0, 0, skipped);
         long[] sorted = Arrays.copyOf(nanos, frames);
         Arrays.sort(sorted);
         long sum = 0;
         for (long n : sorted) sum += n;
         int p95 = Math.max(0, (int) Math.ceil(frames * 0.95) - 1);
-        return new Report(seconds, frames, sum / 1e6 / frames, sorted[p95] / 1e6, sorted[frames - 1] / 1e6);
+        return new Report(seconds, frames, sum / 1e6 / frames, sorted[p95] / 1e6, sorted[frames - 1] / 1e6, skipped);
     }
 }
