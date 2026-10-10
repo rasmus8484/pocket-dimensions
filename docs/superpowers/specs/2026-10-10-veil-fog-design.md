@@ -19,7 +19,7 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
   falls. Against the blocks it is thick enough to hide them; it thins out toward the player over about twenty blocks.
 - Up close the smoke has depth: puffs at different distances slide past each other as the player moves.
 - Walking into it, the view goes milky; stepping back, it settles into a falling wall again.
-- It is calm blue-white by day and deep indigo-violet at night, and fades into vanilla's distance fog far off.
+- It is calm blue-white by day and deep indigo-violet at night, and thins out where vanilla's distance fog hides things, without ever taking on the fog's colour (no red smoke at sunset; changed after the second in-game look).
 - The pattern does not visibly repeat along the wall.
 - The smoke covers the Veil all the way up and only thins out over its last 16 blocks below the top of the world
   (changed after the first in-game look, 2026-10-10).
@@ -72,7 +72,7 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
 | Plot size (x and z) | From the bounds; the walls are the plot's four edges |
 | Time in seconds | Game time plus partial tick, wrapped every hour (one unseen jump per hour, keeps float precision) |
 | Night factor | From the level's sky darkening: 0 by day, 1 at night |
-| Vanilla fog colour, start, end | So far-off smoke fades into vanilla's distance fog |
+| Vanilla fog start and end (the `Fog` block) | So far-off smoke thins out with vanilla's fog; its colour is not used |
 | World bottom and height | For the top fade |
 | Step count | From `veil_fog_steps` |
 
@@ -85,15 +85,15 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
   - the near zone (x < 10): `steps` steps with interleaved-gradient jitter, path capped at 48 blocks, each step two
     atlas reads;
   - the rest of a long stretch along the wall and the thin smoke from x 10 to 24: the closed form (the integral of
-    `e^(-x/H)`), with colour and vanilla fog taken at the half-amount point;
+    `e^(-x/H)`), with colour and the vanilla fog fade taken at the half-amount point;
   - pieces are combined front to back, and so are the two walls.
-- The smoke: two noise fields falling at 3.2 and 2.0 blocks a second in the study, all motion slowed to 0.4 of that in game (60% slower, after the first in-game look), multiplied; a sideways curl; tile sizes that
+- The smoke: two noise fields falling at 3.2 and 2.0 blocks a second in the study, all motion at 0.48 of that in game (after two in-game looks), multiplied; a sideways curl; tile sizes that
   never line up (19.4 and 12 blocks across, 28 and 19.1 tall); slow sine bends that travel with each field; a broad sine
   for thicker and thinner stretches of wall. Contrast as in the study.
 - Thin right around the camera: `mix(0.55, 1, smoothstep(0, 3, t))`.
 - Fades out only over the last 16 blocks below the top of the world (y 304 to 320 in the realm).
-- Colours: the study's deep and lit colours for night and day, darkened slightly with height, then mixed toward the
-  vanilla fog colour between fog start and end.
+- Colours: the study's deep and lit colours for night and day, darkened slightly with height. Where vanilla's fog
+  hides things the smoke's opacity fades with it; it is never tinted toward the fog colour.
 
 ### The noise atlas
 

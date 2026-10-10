@@ -26,7 +26,7 @@ const float XMAX = 24.0;      // nothing worth drawing further out
 const float NEAR = 10.0;      // stepped within this distance of the wall, closed form beyond
 const float NEAR_PATH = 48.0; // at most this much of a view is stepped
 const float SKY = 450.0;      // how far a sky pixel counts as
-const float SPEED = 0.4;      // all of the smoke's motion runs at this share of the study's (falls about 1.3 blocks a second)
+const float SPEED = 0.48;     // all of the smoke's motion runs at this share of the study's (falls about 1.5 blocks a second)
 const float TILE = 34.0, ATLAS_W = 1088.0, SLICES = 32.0;
 
 // ---- the noise atlas: 32 slices side by side, each pixel holding its slice and the next ----
@@ -74,12 +74,12 @@ vec2 clipD(float lo, float hi, float dc, float rx, float ta, float tb) {
 }
 float top(float y) { return 1.0 - smoothstep(Shape.x, Shape.y, y); }
 
-// vanilla's distance fog over a point t blocks along the view
-vec3 vanilla(vec3 c, float t, vec3 rd) {
+// How much of the smoke still shows t blocks along the view: where vanilla's fog hides things, the smoke thins out
+// with it (so it ends with the render distance), but it never takes on the fog's colour (red at sunset).
+float shows(float t, vec3 rd) {
     vec3 p = rd * t;
-    float v = total_fog_value(t, max(length(p.xz), abs(p.y)), FogEnvironmentalStart, FogEnvironmentalEnd,
-                              FogRenderDistanceStart, FogRenderDistanceEnd);
-    return mix(c, FogColor.rgb, v * FogColor.a);
+    return 1.0 - total_fog_value(t, max(length(p.xz), abs(p.y)), FogEnvironmentalStart, FogEnvironmentalEnd,
+                                 FogRenderDistanceStart, FogRenderDistanceEnd);
 }
 
 // ---- one wall: dc, rx as in VeilFogMath; ac, ar the same for the coordinate along the wall ----
@@ -106,9 +106,9 @@ vec4 wall(float dc, float rx, float ac, float ar, vec3 rd, float tEnd, float j, 
             float out_ = d - 1.2 - 0.7 * sin(al / 8.0 + (y + time * 3.0) / 9.0) - (b - 0.4) * 5.0;  // thick smoke stands further out
             float sigma = SIGMA * exp(-max(out_, -3.0) / H) * smoothstep(0.25, 0.6, b) * top(y)
                         * mix(0.55, 1.0, smoothstep(0.0, 3.0, t));                                // thinner right around you
-            float a = 1.0 - exp(-sigma * dt);
+            float a = (1.0 - exp(-sigma * dt)) * shows(t, rd);
             vec3 c = mix(deep, lit, smoothstep(0.35, 0.8, b)) * mix(1.0, 0.75, smoothstep(0.0, 200.0, y));
-            Ln += Tn * a * vanilla(c, t, rd);
+            Ln += Tn * a * c;
             Tn *= 1.0 - a;
         }
     }
@@ -116,10 +116,10 @@ vec4 wall(float dc, float rx, float ac, float ar, vec3 rd, float tEnd, float j, 
     float k = SIGMA * exp(1.2 / H) * 0.5;
     vec3 avg = mix(deep, lit, 0.3);
     float tr = middle(dc, rx, nEnd, n.y), tf = middle(dc, rx, f.x, f.y);
-    float Tr = exp(-k * amount(dc, rx, nEnd, n.y) * top(Camera.y + rd.y * tr));
-    float Tf = exp(-k * amount(dc, rx, f.x, f.y) * top(Camera.y + rd.y * tf));
-    vec3 Lr = vanilla(avg, tr, rd) * (1.0 - Tr);
-    vec3 Lf = vanilla(avg, tf, rd) * (1.0 - Tf);
+    float Tr = 1.0 - (1.0 - exp(-k * amount(dc, rx, nEnd, n.y) * top(Camera.y + rd.y * tr))) * shows(tr, rd);
+    float Tf = 1.0 - (1.0 - exp(-k * amount(dc, rx, f.x, f.y) * top(Camera.y + rd.y * tf))) * shows(tf, rd);
+    vec3 Lr = avg * (1.0 - Tr);
+    vec3 Lf = avg * (1.0 - Tf);
     vec3 L = Ln + Tn * Lr; float T = Tn * Tr;                  // near, then its rest
     if (f.x < n.x) { L = Lf + Tf * L; } else { L = L + T * Lf; } // the outer smoke in front or behind
     T *= Tf;
