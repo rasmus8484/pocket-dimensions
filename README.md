@@ -72,7 +72,7 @@ Each player can own one realm: a region of overworld-like terrain inside the sha
 
 A linked World Anchor is indestructible by normal mining: it can only be removed through the siege system. An unlinked one (no World Seed in it) can be mined with a diamond-tier pickaxe in 3 seconds (`world_anchor_mine_seconds`) and drops itself. Players inside a realm are confined to their region boundaries. Portals are blocked. Anyone arriving some other way (another mod's teleport, `/home`) without having come in through an anchor is sent back out. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
-**The Veil and the ceiling:** every realm is walled by the **Veil**, the realm's ward made visible: a wall of drifting mist along every edge, from bedrock to the build limit, that can't be broken, blown up or moved. It hides whatever lies beyond, so nobody sees into another realm (Distant Horizons included). Overhead the ward holds you with your feet at y 318, and nothing can be built at y 318 or 319, so nobody can look over the Veil.
+**The Veil and the ceiling:** every realm is walled by the **Veil**, the realm's ward made visible: a wall of drifting mist along every edge, from bedrock to the build limit, that can't be broken, blown up or moved. It hides whatever lies beyond, so nobody sees into another realm (Distant Horizons included). Overhead the ward holds you with your feet at y 318, and nothing can be built at y 318 or 319, so nobody can look over the Veil. Along every edge, glowing smoke pours slowly down the Veil, thick against the wall and thinning out over about twenty blocks; players can turn it off or make it cheaper in the client config (veil_fog, veil_fog_steps), and /pd test veilTime measures its cost.
 
 **The ward's sigil:** high over every realm hangs the ward, a vault of glowing runes: a crown of three rings where the World Core's beam rises in, three tiers of runes curving down over the realm like a dome, each carrying small spinning worlds of runes that turn with it, and a band of runes over the Veil. Beneath it the ward's power streams outward from the crown as a soft, flowing field of light, clear near the crown and very faint toward the Veil. It shows the realm's state to everyone inside: blue at peace, pink while a World Breacher works, cracked once the breach is complete, red while an Anchor Breaker works, dim red, broken and still once the anchor is lost. It shines brightly while the Core holds lapis and dims without it, and it is faint by day and glows at night. It looks the same at every render distance.
 
@@ -195,6 +195,13 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 | `realm.mobs.spawn_friendly_mobs` | true | Whether every other kind spawns naturally (animals, bats, fish, ...) |
 | `realm.mobs.categories.<category>` | "group" | Per mob category: "group" follows the switch above, "true" / "false" overrides it |
 | `realm.mobs.exceptions.mob_whitelist` / `mob_blacklist` | [] | Single mobs or tags that always / never spawn naturally |
+
+Per-player display settings live in `config/pocketdimensions-client.toml`:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `veil.veil_fog` | true | Draw the falling smoke along the Veil (off: a plain wall of mist blocks) |
+| `veil.veil_fog_steps` | 12 | Samples the smoke takes near the wall (4-16; 6 halves its cost near the wall) |
 
 Mining times are fixed: enchantments, Haste and mining fatigue don't change them. 0 means the block breaks instantly.
 
