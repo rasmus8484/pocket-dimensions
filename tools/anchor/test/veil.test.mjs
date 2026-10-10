@@ -8,10 +8,11 @@ const avg = rgba => {
   return s / (rgba.length / 4) / 3;
 };
 
-test('each band is a 16 x 16 strip of animation frames, fully opaque', () => {
+test('each band is one still 16 x 16 frame, fully opaque', () => {
+  assert.equal(FRAMES, 1);
   for (let b = 0; b < 8; b++) {
     const rgba = veilTexture(b);
-    assert.equal(rgba.length, 16 * 16 * FRAMES * 4);
+    assert.equal(rgba.length, 16 * 16 * 4);
     for (let i = 3; i < rgba.length; i += 4) assert.equal(rgba[i], 255, `band ${b} pixel ${(i - 3) / 4}`);
   }
 });
@@ -23,17 +24,18 @@ test('eight bands, dark at the bottom, the realm sky colour at the top', () => {
   assert.deepEqual(BAND_COLOURS[5], [192, 216, 255], 'a high band is the realm fog #c0d8ff');
 });
 
-test('the mist moves: consecutive frames differ', () => {
-  const rgba = veilTexture(3), frame = 16 * 16 * 4;
-  let diff = 0;
-  for (let i = 0; i < frame; i++) diff += Math.abs(rgba[i] - rgba[frame + i]);
-  assert.ok(diff > 0);
+test('plain: every pixel stays within a few percent of the band colour (no glints, no drifting mist)', () => {
+  for (let b = 0; b < 8; b++) {
+    const rgba = veilTexture(b), base = BAND_COLOURS[b];
+    for (let i = 0; i < rgba.length; i += 4)
+      for (let c = 0; c < 3; c++) assert.ok(Math.abs(rgba[i + c] - base[c]) <= Math.ceil(base[c] * 0.06) + 1, `band ${b} pixel ${i / 4}`);
+  }
 });
 
 test('the texture tiles: the left and right columns are close in colour', () => {
   const rgba = veilTexture(3);
   for (let y = 0; y < 16; y++) {
     const l = (y * 16) * 4, r = (y * 16 + 15) * 4;
-    assert.ok(Math.abs(rgba[l] - rgba[r]) < 40, `row ${y}`);
+    assert.ok(Math.abs(rgba[l] - rgba[r]) < 12, `row ${y}`);
   }
 });
