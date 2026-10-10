@@ -50,6 +50,8 @@ public class ModNetworking {
                 .encoder(WardSyncS2C::encode).decoder(WardSyncS2C::decode).consumerMainThread(WardSyncS2C::handle).add();
         CHANNEL.messageBuilder(WardTimeS2C.class, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(WardTimeS2C::encode).decoder(WardTimeS2C::decode).consumerMainThread(WardTimeS2C::handle).add();
+        CHANNEL.messageBuilder(VeilTimeS2C.class, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(VeilTimeS2C::encode).decoder(VeilTimeS2C::decode).consumerMainThread(VeilTimeS2C::handle).add();
         CHANNEL.build();
     }
 
