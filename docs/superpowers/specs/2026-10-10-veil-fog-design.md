@@ -29,7 +29,7 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
 
 | Question | Decision | Why |
 |---|---|---|
-| The Veil blocks | Keep them as a plain backdrop in one pale mist colour (#b6c8ec) all the way up, with no animation, drifting mist or rune glints (one colour instead of the height gradient: changed after the first in-game look) | The fog covers them up close; if the fog is off or fails, the wall is still a soft wall and never a view into the next plot |
+| The Veil blocks | Keep them as a plain backdrop in one deep violet (#7672b0) all the way up, darker than the smoke so gaps in it read as deeper smoke, lit like ordinary blocks (no glow, so they darken with the smoke at night), with no animation, drifting mist or rune glints (changed after the first and fourth in-game looks) | The fog covers them up close; if the fog is off or fails, the wall is still a soft wall and never a view into the next plot |
 | Where the pass runs | Once, at the end of `LevelRenderer.renderLevel` | After any shader mod's final pass (Iris and its Oculus ports overwrite the screen at the end of `renderLevel`), so the fog is never wiped; one path for every setup, nothing to detect |
 | Shader mod detection | None | One drawing point works with and without shader packs; less to break on updates |
 | Player settings | Client config `veil_fog` (on/off) and `veil_fog_steps` (12, range 4 to 16) | Weak PCs can halve the near-wall cost; off falls back to the backdrop blocks |

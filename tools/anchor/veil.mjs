@@ -1,11 +1,12 @@
 // The Veil: the ward's wall around every realm, now a plain backdrop behind the Veil fog (client/veil): one still frame,
-// no animation, no glints, and one pale mist colour all the way up. The block keeps its eight height bands (the
-// blockstate and world generation use them), but every band gets the same texture.
+// no animation, no glints, and one deep violet all the way up, darker than the smoke, so wherever the smoke thins the
+// wall reads as deeper smoke. Lit like ordinary blocks (no glow), so it darkens with the smoke at night. The block keeps
+// its eight height bands (the blockstate and world generation use them), but every band gets the same texture.
 import { hash3 } from './runebound.mjs';
 
 export const FRAMES = 1;
-// the pale mist the wall had at ground level, #b6c8ec
-export const COLOUR = [182, 200, 236];
+// a deep violet, darker than the smoke's shadowed colour by day, #7672b0
+export const COLOUR = [118, 114, 176];
 
 // smooth value noise on a 4 x 4 lattice that wraps every 16 pixels, so the texture tiles and the loop is seamless
 const lattice = (i, j, seed) => hash3(((i % 4) + 4) % 4, ((j % 4) + 4) % 4, seed);

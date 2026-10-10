@@ -12,7 +12,7 @@ test('each band is one still 16 x 16 frame, fully opaque', () => {
 });
 
 test('one colour all the way up: every band is the same texture', () => {
-  assert.deepEqual(COLOUR, [182, 200, 236], 'the pale ground-level mist #b6c8ec');
+  assert.deepEqual(COLOUR, [118, 114, 176], 'a deep violet, darker than the smoke, so gaps read as deeper smoke #7672b0');
   for (let b = 1; b < 8; b++) assert.deepEqual(veilTexture(b), veilTexture(0), `band ${b}`);
 });
 

@@ -246,7 +246,7 @@ for (const [name, im] of [['core_slab', slab()], ['core_polished', polished()], 
 
 console.log(report.join('\n'));
 
-// The Veil: one full-bright cube model and one still texture per height band (the backdrop behind the Veil fog)
+// The Veil: one cube model, lit like ordinary blocks, and one still texture per height band (the backdrop behind the Veil fog)
 const veilVariants = {};
 for (let b = 0; b < 8; b++) {
   write(`textures/block/veil_${b}.png`, encodePNG(16, 16 * VEIL_FRAMES, veilTexture(b)));
@@ -254,7 +254,7 @@ for (let b = 0; b < 8; b++) {
   write(`models/block/veil_${b}.json`, json({
     ambientocclusion: false,
     textures: { all: `pocketdimensions:block/veil_${b}`, particle: `pocketdimensions:block/veil_${b}` },
-    elements: [{ from: [0, 0, 0], to: [16, 16, 16], shade: false, light_emission: 15,
+    elements: [{ from: [0, 0, 0], to: [16, 16, 16], shade: false,
       faces: { north: face('north'), south: face('south'), east: face('east'), west: face('west'), up: face('up'), down: face('down') } }],
   }));
   veilVariants[`band=${b}`] = { model: `pocketdimensions:block/veil_${b}` };
