@@ -16,11 +16,13 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.LevelRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.TickEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +34,7 @@ import java.util.List;
  * rune sprite). Every quad is pulled toward the camera by one factor (CameraPull), which leaves its picture unchanged
  * while keeping it inside the fog-free zone, so the ward looks the same at every render distance. Colour, brightness
  * and cracks come from WardLook. Not drawn when vanilla would not draw the sky (blindness, darkness, lava, powder snow).
+ * /pd test wardTime measures it (WardTimer).
  */
 public final class WardSigilRenderer {
 
@@ -48,8 +51,28 @@ public final class WardSigilRenderer {
     private static FieldGrid grid;
     private static Vault.Layout gridFor;
     private static float[] fieldAlpha = new float[0];
+    private static final WardTimer timer = new WardTimer();
+    private static int vertices;
 
     private WardSigilRenderer() {}
+
+    /** Reports /pd test wardTime in chat once its window closes. */
+    public static void register() {
+        TickEvent.ClientTickEvent.Post.BUS.addListener(e -> {
+            WardTimer.Report report = timer.poll(System.nanoTime());
+            Minecraft mc = Minecraft.getInstance();
+            if (report != null && mc.player != null) mc.player.displayClientMessage(Component.literal(report.describe()), false);
+        });
+    }
+
+    /** /pd test wardTime: measure the next `seconds` of frames. */
+    public static void measure(float seconds) {
+        timer.start(seconds, System.nanoTime());
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null)
+            mc.player.displayClientMessage(Component.literal(String.format(java.util.Locale.ROOT,
+                    "Measuring the ward sigil for %.1f s. Look around as you normally would.", seconds)), false);
+    }
 
     public static void addPass(FrameGraphBuilder builder, LevelTargetBundle targets, LevelRenderState state, GpuBufferSlice fog) {
         Minecraft mc = Minecraft.getInstance();
@@ -60,8 +83,11 @@ public final class WardSigilRenderer {
         FramePass pass = builder.addPass("pocketdimensions_ward_sigil");
         targets.main = pass.readsAndWrites(targets.main);
         pass.executes(() -> {
+            long start = System.nanoTime();
+            vertices = 0;
             RenderSystem.setShaderFog(fog);
             draw(ward, stars);
+            timer.frame(System.nanoTime() - start, vertices);
         });
     }
 
@@ -124,6 +150,7 @@ public final class WardSigilRenderer {
     }
 
     private static void vertex(BufferBuilder b, double x, double y, double z, int rgb, int alpha, float u, float v) {
+        vertices++;
         b.addVertex((float) x, (float) y, (float) z).setColor(rgb >> 16 & 0xFF, rgb >> 8 & 0xFF, rgb & 0xFF, alpha).setUv(u, v)
                 .setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(0, -1, 0);
     }

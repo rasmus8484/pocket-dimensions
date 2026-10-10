@@ -31,6 +31,7 @@ public class ClientSetup {
         com.pocketdimensions.client.siegebar.SiegeBarClient.register();
         ItemTooltips.register();
         WardClient.register();
+        com.pocketdimensions.client.ward.WardSigilRenderer.register();
         RegisterParticleProvidersEvent.BUS.addListener(e -> {
             e.registerSpriteSet(ModParticles.RUNE.get(), s -> new RuneParticle.Provider(s, RuneParticle.CYAN));
             e.registerSpriteSet(ModParticles.RUNE_PINK.get(), s -> new RuneParticle.Provider(s, RuneParticle.PINK));

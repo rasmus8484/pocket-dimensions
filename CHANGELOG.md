@@ -76,6 +76,7 @@ The first release, for Minecraft Java 1.21.11 with Forge 61.1.0 or later. Server
 | `/pd regenCore` | Rebuild a broken World Core where it stood |
 | `/pd regenAnchor <player>` | Put a lost World Anchor back where it stood |
 | `/pd test mineAnchor [seconds]` | Mine the anchor of the room you're in, for testing alone |
+| `/pd test wardTime [seconds]` | Your client measures the ward sigil's time per frame and reports it in chat |
 
 ### Also
 
