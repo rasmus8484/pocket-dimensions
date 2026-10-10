@@ -5,7 +5,7 @@ import java.util.function.IntPredicate;
 
 /**
  * Where every rune of the Vaulted Ward is at a moment in time: the crown's three rings, each tier's main track (with a
- * gap where each world sits), its worlds (carried round with it, each spinning, the outer ones with a moon), the band
+ * gap where each world sits), its worlds (carried round with it, each spinning), the band
  * over the Veil, and a conduit from an off-centre Core's beam to the crown. Positions are in world coordinates; sizes and the reference speeds come from
  * design/ward-sigil-studies.html. Plain logic, unit tested; WardSigilRenderer draws the result.
  */
@@ -68,10 +68,6 @@ public final class VaultFrame {
             ring(out, hidden, wx, wz, wy, wr, (big ? 6.5 : 5.5) * s, (big ? 9 : 8) * s, t * 0.12 * (i % 2 == 0 ? 1 : -1), id, 1);
             ring(out, hidden, wx, wz, wy, wr * 0.55, (big ? 4.5 : 3.5) * s, (big ? 7 : 6) * s, -t * 0.2, id + 50, 0.8);
             if (!hidden.test(id + 90)) out.add(new Rune(id + 90, wx, wy, wz, tier.heart(), a, glyph(i), 1));
-            if (tier.moons() && !hidden.test(id + 95)) {
-                double m = t * 0.5 + i, mr = wr + 10 * s;
-                out.add(new Rune(id + 95, wx + Math.cos(m) * mr, wy, wz + Math.sin(m) * mr, 5 * s, m, glyph(i + 2), 1));
-            }
         }
     }
 

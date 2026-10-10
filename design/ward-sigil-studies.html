@@ -88,7 +88,7 @@
   const STUDIES = [
     { id: 'vault', name: 'Vaulted Ward', tag: 'Dome with worlds',
       line: 'A dome of ornate rune tiers rising to a crowning seal, with the orrery\'s spinning ring-worlds riding the tiers.',
-      idea: 'The ward as a vault over the realm, now without ribs. Three ornate tiers of runes hang at rising heights toward a crown of three nested rings, and set into each tier are worlds from the orrery: spinning rings of runes carried round with their tier, sitting in gaps in its runes (four on the inner tier, three large ones on the middle, eight on the outer). The outer worlds have a tiny rune moon.',
+      idea: 'The ward as a vault over the realm, now without ribs. Three ornate tiers of runes hang at rising heights toward a crown of three nested rings, and set into each tier are worlds from the orrery: spinning rings of runes carried round with their tier, sitting in gaps in its runes (four on the inner tier, three large ones on the middle, eight on the outer).',
       sky: 'From the Core you look up into the crown with the worlds drifting round it on their tiers. From halfway out the tiers separate into a dome and the worlds turn with them at their own heights.',
       feel: 'The vault gives the grand shape and the depth, the worlds give it life. Ornate without any lines reaching out from the centre.',
       cost: 'About 1,300 small runes. Fine for the game.' },
@@ -378,7 +378,7 @@
       ringOf(0, 0, 383, 17, 5.5, 8, -tt * 0.03, 40, hide);
       ringOf(0, 0, 382, 27, 6.5, 10, tt * 0.02, 80, hide);
       // three tiers, each an ornate track with ring-worlds riding it
-      const tiers = [{ f: 0.36, n: 4, wr: 14 }, { f: 0.62, n: 3, wr: 32, heart: 13 }, { f: 0.88, n: 8, wr: 22, moon: true }];
+      const tiers = [{ f: 0.36, n: 4, wr: 14 }, { f: 0.62, n: 3, wr: 32, heart: 13 }, { f: 0.88, n: 8, wr: 22 }];
       if (ui.power === 'field' && !frozen) {
         const sinks = [];
         tiers.forEach((tr, k) => {
@@ -405,7 +405,6 @@
           ringOf(cx, cz, wy, tr.wr, tr.wr > 25 ? 6.5 : 5.5, tr.wr > 25 ? 9 : 8, tt * 0.12 * (i % 2 ? -1 : 1), id, hide);
           ringOf(cx, cz, wy, tr.wr * 0.55, tr.wr > 25 ? 4.5 : 3.5, tr.wr > 25 ? 7 : 6, -tt * 0.2, id + 50, hide, 0.8);
           if (!hide(id + 90)) runeAt(cx, wy, cz, tr.heart || 8, a, i % 6);
-          if (tr.moon && !hide(id + 95)) { const m = tt * 0.5 + i; runeAt(cx + Math.cos(m) * (tr.wr + 10), wy, cz + Math.sin(m) * (tr.wr + 10), 5, m, (i + 2) % 6); }
         });
       });
       band(dome(OUTER + 24), 10, hide);

@@ -16,8 +16,8 @@ public final class Vault {
     public static final double CROWN_Y = 384, CROWN_REACH = 35;
     private static final double MIN_OUTER = 60, TURN = 0.008;              // TURN: radians per second for the inner tier
 
-    /** A tier: its radius and height, its worlds (count, radius, heart rune size, moons) and its index (0 innermost). */
-    public record Tier(int index, double radius, double height, int worlds, double worldRadius, double heart, boolean moons) {}
+    /** A tier: its radius and height, its worlds (count, radius, heart rune size) and its index (0 innermost). */
+    public record Tier(int index, double radius, double height, int worlds, double worldRadius, double heart) {}
 
     /**
      * The layout: the plot's centre and half-width, the outer tier's radius, the size scale, the Core's position (its
@@ -49,9 +49,9 @@ public final class Vault {
         Layout bare = new Layout(cx, cz, half, outer, s, coreX, coreZ, List.of());
         double r0 = outer * 0.36, r1 = outer * 0.62, r2 = outer * 0.88;
         return new Layout(cx, cz, half, outer, s, coreX, coreZ, List.of(
-                new Tier(0, r0, bare.dome(r0), 4, 14 * s, 8 * s, false),
-                new Tier(1, r1, bare.dome(r1), 3, 32 * s, 13 * s, false),
-                new Tier(2, r2, bare.dome(r2), 8, 22 * s, 8 * s, true)));
+                new Tier(0, r0, bare.dome(r0), 4, 14 * s, 8 * s),
+                new Tier(1, r1, bare.dome(r1), 3, 32 * s, 13 * s),
+                new Tier(2, r2, bare.dome(r2), 8, 22 * s, 8 * s)));
     }
 
     /** Radians tier `index` has turned after `seconds`: neighbouring tiers in opposite directions, inner ones faster. */

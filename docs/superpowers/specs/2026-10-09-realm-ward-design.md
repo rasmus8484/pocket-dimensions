@@ -123,7 +123,8 @@ beam is joined to the crown by a conduit of runes. `OUTER` is the outer tier's r
   direction, inner tiers faster). A tier is:
   - a **main track** of runes (10 blocks, every 15 blocks), with a gap wherever a world sits;
   - **worlds** set into it and carried round with it: on the inner tier 4 (radius 14), on the middle tier 3 large ones
-    (radius 32, a larger rune at the heart), on the outer tier 8 (radius 22) each with a small rune moon circling it.
+    (radius 32, a larger rune at the heart), on the outer tier 8 (radius 22). (The outer
+    worlds had a small rune moon circling each; dropped after the in-game check, 2026-10-10.)
     A world is a ring of runes spinning on itself, a smaller ring inside turning the other way, and a rune at its heart;
   - (The tiers had two outlines of tiny runes wrapping round the worlds; dropped after the in-game check, 2026-10-10,
     as too busy.)

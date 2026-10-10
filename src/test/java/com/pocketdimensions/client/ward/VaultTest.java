@@ -85,6 +85,12 @@ class VaultTest {
     }
 
     @Test
+    void theWorldsHaveNoMoons() {
+        for (VaultFrame.Rune r : runes(r25(), 8.2, true))
+            assertFalse(r.id() >= 50000 && r.id() < 70000 && r.id() % 100 == 95, "moon " + r);
+    }
+
+    @Test
     void theBeamEndsWhereTheConduitStarts() {
         Vault.Layout off = Vault.build(392.5 + 128, 392.5 - 90, 0, 0, 784, 784);
         double d = Math.hypot(128.5, -89.5);
