@@ -25,7 +25,7 @@ const float SIGMA = 0.8;      // density at the face
 const float XMAX = 24.0;      // nothing worth drawing further out
 const float NEAR = 10.0;      // stepped within this distance of the wall, closed form beyond
 const float NEAR_PATH = 48.0; // at most this much of a view is stepped
-const float SKY = 450.0;      // how far a sky pixel counts as
+const float BEYOND = 64.0;    // past the render distance the smoke fades out over this many blocks
 const float SPEED = 0.48;     // all of the smoke's motion runs at this share of the study's (falls about 1.5 blocks a second)
 const float TILE = 34.0, ATLAS_W = 1088.0, SLICES = 32.0;
 
@@ -74,12 +74,14 @@ vec2 clipD(float lo, float hi, float dc, float rx, float ta, float tb) {
 }
 float top(float y) { return 1.0 - smoothstep(Shape.x, Shape.y, y); }
 
-// How much of the smoke still shows t blocks along the view: where vanilla's fog hides things, the smoke thins out
-// with it (so it ends with the render distance), but it never takes on the fog's colour (red at sunset).
+// How much of the smoke still shows t blocks along the view. It stays whole up to the end of the render distance
+// (vanilla's distance fog would otherwise thin it while the Veil blocks behind still show, laying bare the wall's
+// straight edge) and fades out over the next BEYOND blocks, over the sky; close-range fog (water, lava, rain) thins it
+// like anything else. It never takes on the fog's colour (red at sunset).
 float shows(float t, vec3 rd) {
     vec3 p = rd * t;
-    return 1.0 - total_fog_value(t, max(length(p.xz), abs(p.y)), FogEnvironmentalStart, FogEnvironmentalEnd,
-                                 FogRenderDistanceStart, FogRenderDistanceEnd);
+    float far = smoothstep(FogRenderDistanceEnd, FogRenderDistanceEnd + BEYOND, max(length(p.xz), abs(p.y)));
+    return (1.0 - linear_fog_value(t, FogEnvironmentalStart, FogEnvironmentalEnd)) * (1.0 - far);
 }
 
 // ---- one wall: dc, rx as in VeilFogMath; ac, ar the same for the coordinate along the wall ----
@@ -130,7 +132,7 @@ void main() {
     float z = texture(DepthSampler, texCoord).r;
     vec4 v = InvViewProj * vec4(texCoord * 2.0 - 1.0, z * 2.0 - 1.0, 1.0);
     vec3 rel = v.xyz / v.w;
-    float tEnd = z >= 1.0 ? SKY : length(rel);
+    float tEnd = z >= 1.0 ? FogRenderDistanceEnd + BEYOND : length(rel);   // sky: as far as the smoke can show
     vec3 rd = normalize(rel);
 
     float night = Plot.w;

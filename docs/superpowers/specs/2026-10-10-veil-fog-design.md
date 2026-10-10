@@ -19,7 +19,7 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
   falls. Against the blocks it is thick enough to hide them; it thins out toward the player over about twenty blocks.
 - Up close the smoke has depth: puffs at different distances slide past each other as the player moves.
 - Walking into it, the view goes milky; stepping back, it settles into a falling wall again.
-- It is calm blue-white by day and deep indigo-violet at night, and thins out where vanilla's distance fog hides things, without ever taking on the fog's colour (no red smoke at sunset; changed after the second in-game look).
+- It is calm blue-white by day and deep indigo-violet at night, and stays whole up to the end of the render distance (covering the Veil blocks' straight edge), fading out over the next 64 blocks; close-range fog (water, lava, rain) thins it; it never takes on the fog's colour (no red smoke at sunset; changed after the second and third in-game looks).
 - The pattern does not visibly repeat along the wall.
 - The smoke covers the Veil all the way up and only thins out over its last 16 blocks below the top of the world
   (changed after the first in-game look, 2026-10-10).
@@ -78,7 +78,7 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
 
 ### The shader (ported from the approved study)
 
-- Rebuilds the pixel's position from depth. Sky pixels count as 450 blocks away.
+- Rebuilds the pixel's position from depth. Sky pixels count as 64 blocks past the end of the render distance.
 - Per pixel, at most two walls: the x wall and the z wall the view runs toward. Each is treated like the study's wall,
   with x the distance from the wall's face measured into the realm:
   - density `SIGMA * exp(-max(x - face - (b - 0.4) * 5, -3) / H)`, H = 2.4, SIGMA = 0.8, out to XMAX = 24 blocks;
@@ -92,8 +92,9 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
   for thicker and thinner stretches of wall. Contrast as in the study.
 - Thin right around the camera: `mix(0.55, 1, smoothstep(0, 3, t))`.
 - Fades out only over the last 16 blocks below the top of the world (y 304 to 320 in the realm).
-- Colours: the study's deep and lit colours for night and day, darkened slightly with height. Where vanilla's fog
-  hides things the smoke's opacity fades with it; it is never tinted toward the fog colour.
+- Colours: the study's deep and lit colours for night and day, darkened slightly with height. The smoke stays whole
+  up to the render distance's end and fades over the next 64 blocks (sky pixels count as that far); vanilla's close-range
+  (environmental) fog fades its opacity; it is never tinted toward the fog colour.
 
 ### The noise atlas
 
