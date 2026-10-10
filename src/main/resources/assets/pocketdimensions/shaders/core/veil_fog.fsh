@@ -26,6 +26,7 @@ const float XMAX = 24.0;      // nothing worth drawing further out
 const float NEAR = 10.0;      // stepped within this distance of the wall, closed form beyond
 const float NEAR_PATH = 48.0; // at most this much of a view is stepped
 const float SKY = 450.0;      // how far a sky pixel counts as
+const float SPEED = 0.4;      // all of the smoke's motion runs at this share of the study's (falls about 1.3 blocks a second)
 const float TILE = 34.0, ATLAS_W = 1088.0, SLICES = 32.0;
 
 // ---- the noise atlas: 32 slices side by side, each pixel holding its slice and the next ----
@@ -88,7 +89,7 @@ vec4 wall(float dc, float rx, float ac, float ar, vec3 rd, float tEnd, float j, 
     vec2 r = clipD(0.0, XMAX, dc, rx, 0.0, tEnd);
     if (r.y <= r.x) return vec4(0.0, 0.0, 0.0, 1.0);
     tin = r.x;
-    float time = Plot.z;
+    float time = Plot.z * SPEED;
     vec2 n = clipD(0.0, NEAR, dc, rx, r.x, r.y), f = clipD(NEAR, XMAX, dc, rx, r.x, r.y);
     float nEnd = min(n.y, n.x + NEAR_PATH);
 

@@ -35,9 +35,11 @@ public final class VeilFogMath {
         return new double[] {Math.max(ta, Math.min(a, b)), Math.min(tb, Math.max(a, b))};
     }
 
-    /** The smoke starts thinning out here: the study's y 170 in a world from 0 to 320, scaled to this world. */
-    public static double fadeStart(int minY, int height) { return minY + height * 170.0 / 320; }
+    /** The smoke covers the whole Veil and only thins out over its last blocks, starting here. */
+    public static double fadeStart(int minY, int height) { return minY + height - TOP_FADE; }
 
-    /** And is gone here (the study's y 290). */
-    public static double fadeEnd(int minY, int height) { return minY + height * 290.0 / 320; }
+    /** And is gone at the Veil's top, the top of the world. */
+    public static double fadeEnd(int minY, int height) { return minY + height; }
+
+    private static final double TOP_FADE = 16;
 }

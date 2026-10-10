@@ -21,15 +21,15 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
 - Walking into it, the view goes milky; stepping back, it settles into a falling wall again.
 - It is calm blue-white by day and deep indigo-violet at night, and fades into vanilla's distance fog far off.
 - The pattern does not visibly repeat along the wall.
-- Toward the top of the world the smoke thins out, so from far away the Veil's banded blocks show as haze on the
-  horizon (as they do today, including in Distant Horizons).
+- The smoke covers the Veil all the way up and only thins out over its last 16 blocks below the top of the world
+  (changed after the first in-game look, 2026-10-10).
 - With the fog turned off (client config), the Veil is a soft plain wall of mist blocks.
 
 ## Decisions taken
 
 | Question | Decision | Why |
 |---|---|---|
-| The Veil blocks | Keep them as a plain backdrop: the eight height bands keep their colours, but lose the animation, the drifting mist and the rune glints | The fog covers them up close; if the fog is off or fails, the wall is still a soft wall and never a view into the next plot |
+| The Veil blocks | Keep them as a plain backdrop in one pale mist colour (#b6c8ec) all the way up, with no animation, drifting mist or rune glints (one colour instead of the height gradient: changed after the first in-game look) | The fog covers them up close; if the fog is off or fails, the wall is still a soft wall and never a view into the next plot |
 | Where the pass runs | Once, at the end of `LevelRenderer.renderLevel` | After any shader mod's final pass (Iris and its Oculus ports overwrite the screen at the end of `renderLevel`), so the fog is never wiped; one path for every setup, nothing to detect |
 | Shader mod detection | None | One drawing point works with and without shader packs; less to break on updates |
 | Player settings | Client config `veil_fog` (on/off) and `veil_fog_steps` (12, range 4 to 16) | Weak PCs can halve the near-wall cost; off falls back to the backdrop blocks |
@@ -87,11 +87,11 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
   - the rest of a long stretch along the wall and the thin smoke from x 10 to 24: the closed form (the integral of
     `e^(-x/H)`), with colour and vanilla fog taken at the half-amount point;
   - pieces are combined front to back, and so are the two walls.
-- The smoke: two noise fields falling at 3.2 and 2.0 blocks a second, multiplied; a sideways curl; tile sizes that
+- The smoke: two noise fields falling at 3.2 and 2.0 blocks a second in the study, all motion slowed to 0.4 of that in game (60% slower, after the first in-game look), multiplied; a sideways curl; tile sizes that
   never line up (19.4 and 12 blocks across, 28 and 19.1 tall); slow sine bends that travel with each field; a broad sine
   for thicker and thinner stretches of wall. Contrast as in the study.
 - Thin right around the camera: `mix(0.55, 1, smoothstep(0, 3, t))`.
-- Fades out toward the top: the study's y 170 to 290 in a world from 0 to 320, scaled to the realm's -64 to 319.
+- Fades out only over the last 16 blocks below the top of the world (y 304 to 320 in the realm).
 - Colours: the study's deep and lit colours for night and day, darkened slightly with height, then mixed toward the
   vanilla fog colour between fog start and end.
 

@@ -1,12 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FRAMES, BAND_COLOURS, veilTexture } from '../veil.mjs';
-
-const avg = rgba => {
-  let s = 0;
-  for (let i = 0; i < rgba.length; i += 4) s += rgba[i] + rgba[i + 1] + rgba[i + 2];
-  return s / (rgba.length / 4) / 3;
-};
+import { FRAMES, COLOUR, veilTexture } from '../veil.mjs';
 
 test('each band is one still 16 x 16 frame, fully opaque', () => {
   assert.equal(FRAMES, 1);
@@ -17,16 +11,14 @@ test('each band is one still 16 x 16 frame, fully opaque', () => {
   }
 });
 
-test('eight bands, dark at the bottom, the realm sky colour at the top', () => {
-  assert.equal(BAND_COLOURS.length, 8);
-  assert.ok(avg(veilTexture(0)) < avg(veilTexture(2)), 'underground is darker than ground level');
-  assert.deepEqual(BAND_COLOURS[7], [120, 167, 255], 'top band is the realm sky #78a7ff');
-  assert.deepEqual(BAND_COLOURS[5], [192, 216, 255], 'a high band is the realm fog #c0d8ff');
+test('one colour all the way up: every band is the same texture', () => {
+  assert.deepEqual(COLOUR, [182, 200, 236], 'the pale ground-level mist #b6c8ec');
+  for (let b = 1; b < 8; b++) assert.deepEqual(veilTexture(b), veilTexture(0), `band ${b}`);
 });
 
 test('plain: every pixel stays within a few percent of the band colour (no glints, no drifting mist)', () => {
   for (let b = 0; b < 8; b++) {
-    const rgba = veilTexture(b), base = BAND_COLOURS[b];
+    const rgba = veilTexture(b), base = COLOUR;
     for (let i = 0; i < rgba.length; i += 4)
       for (let c = 0; c < 3; c++) assert.ok(Math.abs(rgba[i + c] - base[c]) <= Math.ceil(base[c] * 0.06) + 1, `band ${b} pixel ${i / 4}`);
   }

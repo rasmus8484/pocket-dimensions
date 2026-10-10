@@ -74,10 +74,10 @@ class VeilFogMathTest {
     }
 
     @Test
-    void theTopFadeIsScaledToTheRealmsHeight() {
-        assertEquals(170, VeilFogMath.fadeStart(0, 320), 1e-9);
-        assertEquals(290, VeilFogMath.fadeEnd(0, 320), 1e-9);
-        assertEquals(140, VeilFogMath.fadeStart(-64, 384), 1e-9);
-        assertEquals(284, VeilFogMath.fadeEnd(-64, 384), 1e-9);
+    void theSmokeGoesAllTheWayUpAndFadesOnlyInTheLastBlocksBelowTheTop() {
+        assertEquals(304, VeilFogMath.fadeStart(-64, 384), 1e-9);
+        assertEquals(320, VeilFogMath.fadeEnd(-64, 384), 1e-9);
+        assertEquals(240, VeilFogMath.fadeStart(0, 256), 1e-9);
+        assertEquals(256, VeilFogMath.fadeEnd(0, 256), 1e-9);
     }
 }
