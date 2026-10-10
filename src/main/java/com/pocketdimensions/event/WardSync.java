@@ -36,6 +36,8 @@ public class WardSync {
         TickEvent.PlayerTickEvent.Post.BUS.addListener(this::onPlayerTick);
         // a player who logs out (and back in) gets the ward sent again: their new level has no sigil until then
         PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(e -> sent.remove(e.getEntity().getUUID()));
+        // so does one changing dimension, even out and back between two of its ticks
+        PlayerEvent.PlayerChangedDimensionEvent.BUS.addListener(e -> sent.remove(e.getEntity().getUUID()));
         // one WardSync serves every world opened in this game (singleplayer): nothing carries over between them
         ServerStoppedEvent.BUS.addListener(e -> { sent.clear(); known.clear(); breach.clear(); });
     }
