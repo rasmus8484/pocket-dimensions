@@ -125,19 +125,19 @@ beam is joined to the crown by a conduit of runes. `OUTER` is the outer tier's r
   - **worlds** set into it and carried round with it: on the inner tier 4 (radius 14), on the middle tier 3 large ones
     (radius 32, a larger rune at the heart), on the outer tier 8 (radius 22) each with a small rune moon circling it.
     A world is a ring of runes spinning on itself, a smaller ring inside turning the other way, and a rune at its heart;
-  - two **outlines** of tiny runes (4.5 blocks, every 9), 11 blocks inside and outside the track, that bulge round each
-    world to trace its circle (radius world + 7), their runes flowing along them, the inner and outer outline in
-    opposite directions.
+  - (The tiers had two outlines of tiny runes wrapping round the worlds; dropped after the in-game check, 2026-10-10,
+    as too busy.)
 - **The band**: a row of runes (10 blocks) along the top of the Veil with a row of tiny runes just inside it.
 - **The ward field** (the power), under the runes: soft light filling the square out to the band, whose walls are the
   flowing contour lines of a smooth noise field, laid out round the circle (features stretched along the radius) and
   streaming outward from the core at 9 blocks a second. Each wall is a bell-shaped swell fading to clear on either
   side. Strength falls off steeply from the core: peak opacity `0.065 * (1 + 10 * e^(-r / 38))` (45% at r 20, 20% at
   r 60, 6.5% by the outer tier and out to the band), times a slow pulse. Drawn as quads with a
-  colour per corner so the gradient is smooth.
+  colour per corner so the gradient is smooth, on a polar grid fixed per layout (`FieldGrid`: 256 sectors, 24 rings
+  crowding in by the core, outer points pulled onto the square's edge), within 20,000 vertices a frame.
 - **Sizes for other realms**: tier radii and counts follow `OUTER`; rune and world sizes are fixed in blocks, scaled
   down for realms smaller than radius 25 (`min(1, OUTER / 362)`) so small realms are not crowded. A realm too small
-  for the tiers (radius 3 or less) shows only the crown and the band.
+  for the tiers (`OUTER` under 60 blocks: radius 6 or less) shows only the crown and the band.
 
 ### How it is drawn: the pulled dome
 
@@ -155,7 +155,8 @@ distance) and cut off by the far plane at low render distances. So each element 
    same at every render distance and setting.
 
 The **beam** above the vanilla beam's reach (the Core's renderer draws up to 256 blocks above the Core, and it is
-fogged high up) is continued by the sigil renderer as pulled segments up to the crown, so the beam visibly meets it.
+fogged high up) is continued by the sigil renderer as pulled segments up to the crown, so the beam visibly meets it. An off-centre
+Core's beam ends on the dome above the Core, where the conduit starts.
 
 ### Colour and state
 
