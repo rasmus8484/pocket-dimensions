@@ -12,6 +12,8 @@ public final class Vault {
 
     /** The outer tier's radius in the radius 25 realm the design was drawn for. */
     public static final double REF_OUTER = 362;
+    /** The crown's height, and how far from the centre (times the scale) a Core's beam still rises into it. */
+    public static final double CROWN_Y = 384, CROWN_REACH = 35;
     private static final double MIN_OUTER = 60, TURN = 0.008;              // TURN: radians per second for the inner tier
 
     /** A tier: its radius and height, its worlds (count, radius, heart rune size, moons) and its index (0 innermost). */
@@ -25,6 +27,15 @@ public final class Vault {
         /** The dome's height r blocks from the centre: highest over the centre, flat beyond the outer tier. */
         public double dome(double r) {
             return 382 - 58 * Math.pow(Math.min(1, r / outer), 1.5);
+        }
+
+        /**
+         * Where the Core's beam ends: at the crown (y 384) when the Core stands under it, else on the dome above the
+         * Core, where the conduit carries the power on in to the crown.
+         */
+        public double beamTop() {
+            double d = Math.hypot(coreX - cx, coreZ - cz);
+            return d > CROWN_REACH * scale ? dome(d) + 1 : CROWN_Y;
         }
     }
 

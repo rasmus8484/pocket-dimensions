@@ -5,9 +5,8 @@ import java.util.function.IntPredicate;
 
 /**
  * Where every rune of the Vaulted Ward is at a moment in time: the crown's three rings, each tier's main track (with a
- * gap where each world sits), its worlds (carried round with it, each spinning, the outer ones with a moon), its two
- * outlines (bulging round the worlds, their runes flowing along them), the band over the Veil, and a conduit from an
- * off-centre Core's beam to the crown. Positions are in world coordinates; sizes and the reference speeds come from
+ * gap where each world sits), its worlds (carried round with it, each spinning, the outer ones with a moon), the band
+ * over the Veil, and a conduit from an off-centre Core's beam to the crown. Positions are in world coordinates; sizes and the reference speeds come from
  * design/ward-sigil-studies.html. Plain logic, unit tested; WardSigilRenderer draws the result.
  */
 public final class VaultFrame {
@@ -61,9 +60,6 @@ public final class VaultFrame {
             out.add(new Rune(id, l.cx() + Math.cos(a) * r, y, l.cz() + Math.sin(a) * r, 10 * s, a + Math.PI / 2, glyph(id), 1));
         }
 
-        // the two outlines, bulging round each world so they trace its circle, their runes flowing along them
-        for (int side = -1; side <= 1; side += 2) outline(out, hidden, l, tier, worlds, side, t);
-
         // the worlds, carried round with the tier, each spinning on itself
         boolean big = wr > 25 * s;
         for (int i = 0; i < worlds.length; i++) {
@@ -76,36 +72,6 @@ public final class VaultFrame {
                 double m = t * 0.5 + i, mr = wr + 10 * s;
                 out.add(new Rune(id + 95, wx + Math.cos(m) * mr, wy, wz + Math.sin(m) * mr, 5 * s, m, glyph(i + 2), 1));
             }
-        }
-    }
-
-    private static void outline(List<Rune> out, IntPredicate hidden, Vault.Layout l, Vault.Tier tier, double[] worlds, int side, double t) {
-        int k = tier.index();
-        double s = l.scale(), r = tier.radius(), y = tier.height(), off = 11 * s, bulge = tier.worldRadius() + 7 * s;
-        double step = 1.5 * s, spacing = 9 * s;
-        double flow = (((k % 2 == 0 ? -1 : 1) * side * 6 * s * t) % spacing + spacing) % spacing;
-        int samples = (int) Math.ceil(TAU * r / step);
-        double px = 0, pz = 0, along = 0, next = flow;
-        int idn = 0;
-        for (int q = 0; q <= samples; q++) {
-            double a = q * TAU / samples, lat = off;
-            for (double wa : worlds) {
-                double arc = Math.atan2(Math.sin(a - wa), Math.cos(a - wa)) * r;
-                if (Math.abs(arc) < bulge) lat = Math.max(lat, Math.sqrt(bulge * bulge - arc * arc));
-            }
-            double rr = r + side * lat, x = Math.cos(a) * rr, z = Math.sin(a) * rr;
-            if (q > 0) {
-                double dx = x - px, dz = z - pz, len = Math.hypot(dx, dz);
-                while (len > 0 && next <= along + len) {
-                    double f = (next - along) / len;
-                    int id = 3000 + k * 10000 + (side + 1) * 1000 + idn++;
-                    if (!hidden.test(id))
-                        out.add(new Rune(id, l.cx() + px + dx * f, y, l.cz() + pz + dz * f, 4.5 * s, Math.atan2(dz, dx), glyph(id), 0.8));
-                    next += spacing;
-                }
-                along += len;
-            }
-            px = x; pz = z;
         }
     }
 
@@ -135,7 +101,7 @@ public final class VaultFrame {
 
     /** An off-centre Core's beam reaches the dome away from the crown: runes flow from there in to the crown. */
     private static void conduit(List<Rune> out, IntPredicate hidden, Vault.Layout l, double t) {
-        double s = l.scale(), dx = l.cx() - l.coreX(), dz = l.cz() - l.coreZ(), dist = Math.hypot(dx, dz), crown = 35 * s;
+        double s = l.scale(), dx = l.cx() - l.coreX(), dz = l.cz() - l.coreZ(), dist = Math.hypot(dx, dz), crown = Vault.CROWN_REACH * s;
         if (dist <= crown) return;
         double ux = dx / dist, uz = dz / dist, len = dist - crown, spacing = 10 * s, flow = (6 * s * t) % spacing;
         int id = 70000;

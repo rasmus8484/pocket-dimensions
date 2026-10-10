@@ -77,21 +77,20 @@ class VaultTest {
     }
 
     @Test
-    void outlinesWrapRoundTheWorlds() {
-        Vault.Layout l = r25();
-        double t = 8.2;
-        for (Vault.Tier tier : l.tiers()) {
-            double[][] worlds = VaultFrame.worldCentres(l, tier, t, true);
-            int base = 3000 + tier.index() * 10000;
-            int count = 0;
-            for (VaultFrame.Rune r : runes(l, t, true)) {
-                if (r.id() < base || r.id() >= base + 3000) continue;
-                count++;
-                for (double[] w : worlds)
-                    assertTrue(Math.hypot(r.x() - w[0], r.z() - w[1]) >= tier.worldRadius() + 5, "outline clear of world " + r);
-            }
-            assertTrue(count > 50, "outline runes " + count);
+    void theTiersHaveNoOutlines() {
+        for (VaultFrame.Rune r : runes(r25(), 8.2, true)) {
+            int inTier = r.id() % 10000;
+            assertFalse(r.id() < 50000 && inTier >= 3000 && inTier < 6000, "outline rune " + r);
         }
+    }
+
+    @Test
+    void theBeamEndsWhereTheConduitStarts() {
+        Vault.Layout off = Vault.build(392.5 + 128, 392.5 - 90, 0, 0, 784, 784);
+        double d = Math.hypot(128.5, -89.5);
+        assertEquals(off.dome(d) + 1, off.beamTop(), 1e-9, "on the dome above the Core");
+        assertTrue(off.beamTop() < 384);
+        assertEquals(384, r25().beamTop(), 1e-9, "a centred Core's beam rises to the crown");
     }
 
     @Test

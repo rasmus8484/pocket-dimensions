@@ -400,32 +400,6 @@
           }
         };
         track(r, 10, 15, trackTurn, 1000 + k * 10000, 1, 8);
-        // the thin outlines: just inside and outside the tier, bulging round each world so they trace its circle,
-        // their runes flowing along them (and so round the worlds)
-        for (const side of [-1, 1]) {
-          const off = 11, R = tr.wr + 7, step = 1.5, pts = [];
-          const n = Math.ceil(TAU * r / step);
-          for (let q = 0; q <= n; q++) {
-            const ang = q / n * TAU;
-            let lat = off;
-            for (const wa of worlds) {
-              const sArc = Math.atan2(Math.sin(ang - wa), Math.cos(ang - wa)) * r;
-              if (Math.abs(sArc) < R) lat = Math.max(lat, Math.sqrt(R * R - sArc * sArc));
-            }
-            const rr = r + side * lat; pts.push([Math.cos(ang) * rr, Math.sin(ang) * rr]);
-          }
-          const spacing = 9, flow = ((frozen ? 0 : tt * 6 * (k % 2 ? 1 : -1) * side) % spacing + spacing) % spacing;
-          let along = 0, next = flow, idn = 0;
-          for (let q = 1; q < pts.length; q++) {
-            const dx = pts[q][0] - pts[q - 1][0], dz = pts[q][1] - pts[q - 1][1], len = Math.hypot(dx, dz);
-            while (len > 0 && next <= along + len) {
-              const f = (next - along) / len, x = pts[q - 1][0] + dx * f, z = pts[q - 1][1] + dz * f, id = 3000 + k * 10000 + (side + 1) * 1000 + idn++;
-              if (!hide(id)) runeAt(x, y, z, 4.5, Math.atan2(dz, dx), id % 6, 0.8);
-              next += spacing;
-            }
-            along += len;
-          }
-        }
         worlds.forEach((a, i) => {
           const cx = Math.cos(a) * r, cz = Math.sin(a) * r, id = 20000 + k * 1000 + i * 100, wy = y + 2;
           ringOf(cx, cz, wy, tr.wr, tr.wr > 25 ? 6.5 : 5.5, tr.wr > 25 ? 9 : 8, tt * 0.12 * (i % 2 ? -1 : 1), id, hide);
