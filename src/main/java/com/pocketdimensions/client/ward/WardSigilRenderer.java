@@ -91,8 +91,8 @@ public final class WardSigilRenderer {
         });
     }
 
-    /** Vanilla leaves the sky out in lava and powder snow and under blindness or darkness; so does the ward. */
-    private static boolean skyHidden(Camera camera) {
+    /** Vanilla leaves the sky out in lava and powder snow and under blindness or darkness; so do the ward and the Veil fog. */
+    public static boolean skyHidden(Camera camera) {
         FogType fluid = camera.getFluidInCamera();
         if (fluid == FogType.LAVA || fluid == FogType.POWDER_SNOW) return true;
         return camera.entity() instanceof LivingEntity e && (e.hasEffect(MobEffects.BLINDNESS) || e.hasEffect(MobEffects.DARKNESS));

@@ -32,6 +32,7 @@ public class ClientSetup {
         ItemTooltips.register();
         WardClient.register();
         com.pocketdimensions.client.ward.WardSigilRenderer.register();
+        com.pocketdimensions.client.veil.VeilFogRenderer.register();
         RegisterParticleProvidersEvent.BUS.addListener(e -> {
             e.registerSpriteSet(ModParticles.RUNE.get(), s -> new RuneParticle.Provider(s, RuneParticle.CYAN));
             e.registerSpriteSet(ModParticles.RUNE_PINK.get(), s -> new RuneParticle.Provider(s, RuneParticle.PINK));

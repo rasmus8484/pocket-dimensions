@@ -44,6 +44,8 @@ public class PocketDimensionsMod {
                 "pocketdimensions-common.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, PocketDimensionsServerConfig.SPEC,
                 "pocketdimensions-server.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, PocketDimensionsClientConfig.SPEC,
+                "pocketdimensions-client.toml");
 
         var modBusGroup = context.getModBusGroup();
         ModBlocks.BLOCKS.register(modBusGroup);
