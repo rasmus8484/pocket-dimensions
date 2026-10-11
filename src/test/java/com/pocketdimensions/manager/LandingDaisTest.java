@@ -171,4 +171,16 @@ class LandingDaisTest {
             assertTrue(under, "plot " + plot);
         }
     }
+
+    @Test
+    void nothingEverReachesOutOfTheCoresChunk() {
+        // the Core's column is block 8 of its chunk, so 7 out either way is the chunk's edge
+        for (int plot = 0; plot < 20000; plot++) {
+            LandingDais.Plan p = LandingDais.plan(plot, FLAT);
+            for (LandingDais.Block b : p.roots())
+                assertTrue(Math.abs(b.dx()) <= 7 && Math.abs(b.dz()) <= 7, "plot " + plot + ": " + b);
+            for (LandingDais.Block b : p.blocks())
+                assertTrue(Math.abs(b.dx()) <= 7 && Math.abs(b.dz()) <= 7, "plot " + plot + ": " + b);
+        }
+    }
 }

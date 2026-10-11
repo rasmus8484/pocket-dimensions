@@ -39,6 +39,8 @@ public final class LandingDais {
 
     /** Roots reach less than this far below the floor. */
     public static final int ROOT_DEPTH = 8;
+    /** How far out a root may wander: the Core's column is block 8 of its chunk, so 7 either way stays in it. */
+    public static final int ROOT_REACH = 7;
 
     private LandingDais() {}
 
@@ -137,8 +139,8 @@ public final class LandingDais {
                 for (int d = 1; d <= depth; d++) {
                     if (hsh(seed, d, 2, 96) < 0.35) {                                    // a step aside
                         int dir = (int) (hsh(seed, d, 3, 96) * 4);
-                        x += dir == 0 ? 1 : dir == 1 ? -1 : 0;
-                        z += dir == 2 ? 1 : dir == 3 ? -1 : 0;
+                        int nx = x + (dir == 0 ? 1 : dir == 1 ? -1 : 0), nz = z + (dir == 2 ? 1 : dir == 3 ? -1 : 0);
+                        if (Math.abs(nx) <= ROOT_REACH && Math.abs(nz) <= ROOT_REACH) { x = nx; z = nz; }   // never out of the chunk
                     }
                     if (inDais(x, -d, z)) blocks.put(key(x, -d, z), Kind.AURORA_STONE);
                     else below.put(key(x, -d, z), Kind.AURORA_STONE);
