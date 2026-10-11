@@ -93,6 +93,25 @@ class LandingDaisTest {
     }
 
     @Test
+    void groundIsAnythingSolidThatDoesNotBurnOrAFluid() {
+        assertTrue(LandingDais.isGround(false, true, false), "stone, dirt, sand");
+        assertTrue(LandingDais.isGround(true, false, false), "water and lava: the dais floats on them");
+        assertFalse(LandingDais.isGround(false, true, true), "logs, leaves, bamboo, huge mushrooms, bee nests: the forest floor is below");
+        assertFalse(LandingDais.isGround(false, false, false), "air, flowers, grass, snow layers");
+    }
+
+    @Test
+    void theWallRingSealsFluidsJustOutsideTheOpenCylinder() {
+        assertFalse(LandingDais.inWall(5, 2), "inside the open cylinder (5.39 < 5.5)");
+        assertTrue(LandingDais.inWall(5, 3), "the ring just outside it (5.83)");
+        assertTrue(LandingDais.inWall(6, 0));
+        assertFalse(LandingDais.inWall(7, 0), "beyond the ring");
+        for (int dx = -7; dx <= 7; dx++)
+            for (int dz = -7; dz <= 7; dz++)
+                if (LandingDais.inWall(dx, dz)) assertTrue(Math.abs(dx) <= LandingDais.WALL_REACH && Math.abs(dz) <= LandingDais.WALL_REACH);
+    }
+
+    @Test
     void firstAirCountsWaterAsGround() {
         // an ocean column: sand up to 40, water from 41 to 62; RealmManager's isGround says yes to both
         assertEquals(63, LandingDais.firstAir(63, -64, y -> y <= 62));

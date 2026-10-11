@@ -11,7 +11,6 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -425,38 +424,46 @@ public class RealmManager extends SavedData {
     }
 
     /**
-     * The Stone Dais at the column (cx, cz): the open cylinder above it cleared to the sky, then its heartstone and
-     * aurora stone set. Blocks are set without neighbour updates, so nothing pours or collapses while it is built.
+     * The Stone Dais at the column (cx, cz): any fluid standing above the floor just outside the open cylinder sealed
+     * in heartstone, the cylinder cleared to the sky, then the dais's heartstone and aurora stone set. Blocks are set
+     * as world generation sets them (no neighbour or shape updates), so nothing pours or collapses while it is built.
      * Returns where the Core stands: on the pool, one above the floor.
      */
     private static BlockPos buildDais(ServerLevel level, int cx, int cz, int plot) {
-        level.getChunk(cx >> 4, cz >> 4);              // the centre is block 8 of its chunk, so all of it (3..13) is here
+        level.getChunk(cx >> 4, cz >> 4);              // the centre is block 8 of its chunk, so all of it (2..14) is here
         LandingDais.Plan plan = LandingDais.plan(plot, (dx, dz) -> firstAirAboveGround(level, cx + dx, cz + dz));
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int dx = -LandingDais.REACH; dx <= LandingDais.REACH; dx++)
-            for (int dz = -LandingDais.REACH; dz <= LandingDais.REACH; dz++) {
-                if (Math.hypot(dx, dz) >= LandingDais.CLEAR) continue;
+        BlockState rock = ModBlocks.HEARTSTONE.get().defaultBlockState();
+        for (int dx = -LandingDais.WALL_REACH; dx <= LandingDais.WALL_REACH; dx++)
+            for (int dz = -LandingDais.WALL_REACH; dz <= LandingDais.WALL_REACH; dz++) {
+                boolean open = Math.hypot(dx, dz) < LandingDais.CLEAR, wall = LandingDais.inWall(dx, dz);
+                if (!open && !wall) continue;
                 int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, cx + dx, cz + dz);
-                for (int y = plan.floor() + 1; y < top; y++)
-                    level.setBlock(p.set(cx + dx, y, cz + dz), Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                for (int y = plan.floor() + 1; y < top; y++) {
+                    p.set(cx + dx, y, cz + dz);
+                    if (open) level.setBlock(p, Blocks.AIR.defaultBlockState(), DAIS_FLAGS);
+                    else if (!level.getFluidState(p).isEmpty()) level.setBlock(p, rock, DAIS_FLAGS);
+                }
             }
         for (LandingDais.Block b : plan.blocks()) {
             Block block = (b.kind() == LandingDais.Kind.AURORA_STONE ? ModBlocks.AURORA_STONE : ModBlocks.HEARTSTONE).get();
-            level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), block.defaultBlockState(), Block.UPDATE_CLIENTS);
+            level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), block.defaultBlockState(), DAIS_FLAGS);
         }
         return new BlockPos(cx, plan.floor() + 1, cz);
     }
 
-    /** The height of the first air above the ground in column (x, z): see isGround. */
+    /** How the dais's blocks are set: sent to players, but no neighbour or shape updates, as world generation does. */
+    private static final int DAIS_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
+    /** The height of the first air above the ground in column (x, z): see LandingDais.isGround. */
     private static int firstAirAboveGround(ServerLevel level, int x, int z) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         return LandingDais.firstAir(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), level.getMinY(),
                 y -> isGround(level.getBlockState(p.set(x, y, z))));
     }
 
-    /** What the dais rests on: anything solid but leaves and logs, and any fluid (on the ocean it floats on the water). */
     private static boolean isGround(BlockState s) {
-        return !s.getFluidState().isEmpty() || (s.isSolid() && !s.is(BlockTags.LEAVES) && !s.is(BlockTags.LOGS));
+        return LandingDais.isGround(!s.getFluidState().isEmpty(), s.isSolid(), s.ignitedByLava());
     }
 
     /** A World Core at corePos for ownerUUID's realm: two blocks tall, its block entity on the lower half. */

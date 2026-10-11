@@ -21,6 +21,10 @@ public final class LandingDais {
     public static final int VINES = 6;
     /** How far out (in whole blocks) the dais or its open cylinder reaches from the Core's column. */
     public static final int REACH = 5;
+    /** The ring just outside the open cylinder where standing fluid is sealed in, so it can't pour onto the dais. */
+    public static final double WALL = CLEAR + 1;
+    /** How far out (in whole blocks) the sealing ring reaches: the centre is block 8 of its chunk, so 2..14 stay in it. */
+    public static final int WALL_REACH = 6;
 
     public enum Kind { HEARTSTONE, AURORA_STONE }
 
@@ -56,6 +60,20 @@ public final class LandingDais {
     public static int firstAir(int top, int minY, IntPredicate ground) {
         for (int y = top - 1; y >= minY; y--) if (ground.test(y)) return y + 1;
         return minY;
+    }
+
+    /**
+     * What the dais rests on: a fluid (on the ocean it floats on the water), or anything solid that does not burn.
+     * Burning rules out logs, leaves, bamboo, huge mushrooms and bee nests, so in a forest the floor is the forest floor.
+     */
+    public static boolean isGround(boolean fluid, boolean solid, boolean burns) {
+        return fluid || (solid && !burns);
+    }
+
+    /** Whether column (dx, dz) is in the ring just outside the open cylinder, where fluids above the floor are sealed. */
+    public static boolean inWall(int dx, int dz) {
+        double r = Math.hypot(dx, dz);
+        return r >= CLEAR && r < WALL;
     }
 
     /** The floor's height: the average height of the first air above the ground under the disc, rounded. */

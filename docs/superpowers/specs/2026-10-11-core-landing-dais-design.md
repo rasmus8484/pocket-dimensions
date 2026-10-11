@@ -59,8 +59,8 @@ This replaces the dry-land search entirely.
 1. **The centre.** The Core's column is the plot's centre block: `(origin + side / 2) * 16 + 8` on each axis.
    This is the column the code already uses as the centre.
 2. **The ground under the dais.** For every column of the 9-wide disc, the ground is found by scanning down from the
-   top. The scan skips air, leaves, logs and anything that isn't solid (plants, snow layers, flowers). It stops at the
-   first solid block or fluid. Water and lava count as ground: on the ocean the dais floats on the water.
+   top. The scan skips air, anything that isn't solid (plants, snow layers, flowers) and anything that burns (logs,
+   leaves, bamboo, huge mushrooms, bee nests). It stops at the first solid, unburnable block or fluid. Water and lava count as ground: on the ocean the dais floats on the water.
 3. **The floor height.** The floor's blocks sit at the average height of the first air above that ground, rounded. On
    a slope the dais cuts into the hill on one side and stands out as a ledge on the other.
 4. **The dais.** A column at offset (dx, dz) from the centre, at height y, is part of the dais when:
@@ -84,7 +84,9 @@ This replaces the dry-land search entirely.
 7. **The Core** is placed on the pool, at (centre, floor + 1, centre). The spawn spot next to it (one block east) is on
    the pool's aurora stone.
 
-Blocks are set without neighbour updates, so nothing pours or collapses while the dais is built. Leaves cut from a tree
+Any fluid standing above the floor in the ring just outside the cylinder (`5.5 ≤ hypot < 6.5`) is sealed in heartstone,
+so a lake or lava pool beside a hillside dais can't pour onto it. Blocks are set as world generation sets them (no
+neighbour or shape updates), so nothing pours or collapses while the dais is built. Leaves cut from a tree
 decay as usual later.
 
 ### What goes
