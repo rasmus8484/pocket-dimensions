@@ -175,6 +175,9 @@ public class AnchorBreakerBlock extends BaseEntityBlock {
             if (!player.getAbilities().instabuild) stack.shrink(inserted);
             player.displayClientMessage(Component.literal(
                     "The breaker absorbs the lapis hungrily."), false);
+        } else {
+            player.displayClientMessage(Component.literal(
+                    "The breaker is gorged. It can hold no more lapis."), false);
         }
         return InteractionResult.SUCCESS;
     }
