@@ -425,15 +425,16 @@ public class RealmManager extends SavedData {
 
     /**
      * The Stone Dais at the column (cx, cz): any fluid standing above the floor just outside the open cylinder sealed
-     * in heartstone, the cylinder cleared to the sky, then the dais's heartstone and aurora stone set. Blocks are set
-     * as world generation sets them (no neighbour or shape updates), so nothing pours or collapses while it is built.
+     * in stone, the cylinder cleared to the sky, then the dais's stone and aurora stone set, and its roots run on into
+     * the ground below. Blocks are set as world generation sets them (no neighbour or shape updates), so nothing pours
+     * or collapses while it is built.
      * Returns where the Core stands: on the pool, one above the floor.
      */
     private static BlockPos buildDais(ServerLevel level, int cx, int cz, int plot) {
         level.getChunk(cx >> 4, cz >> 4);              // the centre is block 8 of its chunk, so all of it (2..14) is here
         LandingDais.Plan plan = LandingDais.plan(plot, (dx, dz) -> firstAirAboveGround(level, cx + dx, cz + dz));
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        BlockState rock = ModBlocks.HEARTSTONE.get().defaultBlockState();
+        BlockState rock = Blocks.STONE.defaultBlockState();
         for (int dx = -LandingDais.WALL_REACH; dx <= LandingDais.WALL_REACH; dx++)
             for (int dz = -LandingDais.WALL_REACH; dz <= LandingDais.WALL_REACH; dz++) {
                 boolean open = Math.hypot(dx, dz) < LandingDais.CLEAR, wall = LandingDais.inWall(dx, dz);
@@ -445,10 +446,11 @@ public class RealmManager extends SavedData {
                     else if (!level.getFluidState(p).isEmpty()) level.setBlock(p, rock, DAIS_FLAGS);
                 }
             }
-        for (LandingDais.Block b : plan.blocks()) {
-            Block block = (b.kind() == LandingDais.Kind.AURORA_STONE ? ModBlocks.AURORA_STONE : ModBlocks.HEARTSTONE).get();
-            level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), block.defaultBlockState(), DAIS_FLAGS);
-        }
+        BlockState aurora = ModBlocks.AURORA_STONE.get().defaultBlockState();
+        for (LandingDais.Block b : plan.blocks())
+            level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), b.kind() == LandingDais.Kind.AURORA_STONE ? aurora : rock, DAIS_FLAGS);
+        for (LandingDais.Block b : plan.roots())                    // roots go on down only through natural solid ground
+            if (canRootInto(level, p.set(cx + b.dx(), b.y(), cz + b.dz()))) level.setBlock(p, aurora, DAIS_FLAGS);
         return new BlockPos(cx, plan.floor() + 1, cz);
     }
 
@@ -460,6 +462,12 @@ public class RealmManager extends SavedData {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         return LandingDais.firstAir(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), level.getMinY(),
                 y -> isGround(level.getBlockState(p.set(x, y, z))));
+    }
+
+    /** Whether a root may run through this block: natural solid ground, never a fluid, air or anything with contents. */
+    private static boolean canRootInto(ServerLevel level, BlockPos pos) {
+        BlockState s = level.getBlockState(pos);
+        return s.getFluidState().isEmpty() && isGround(s) && level.getBlockEntity(pos) == null;
     }
 
     private static boolean isGround(BlockState s) {
