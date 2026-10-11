@@ -74,6 +74,7 @@ The first release, for Minecraft Java 1.21.11 with Forge 61.1.0 or later. Server
 | `/pd allow <player> [man]` / `/pd deny <player> [man]` | Edit a realm's access list and managers |
 | `/pd disown <player>` | Take a realm away |
 | `/pd regenCore` | Rebuild a broken World Core where it stood |
+| `/pd regenRoom` | Put back the walls (and the void they show) of the pocket room you're in or whose anchor you're looking at |
 | `/pd regenAnchor <player>` | Put a lost World Anchor back where it stood |
 | `/pd test mineAnchor [seconds]` | Mine the anchor of the room you're in, for testing alone |
 | `/pd test wardTime [seconds]` | Your client measures the ward sigil's time per frame and reports it in chat |
