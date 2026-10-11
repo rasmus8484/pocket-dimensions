@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -424,10 +425,10 @@ public class RealmManager extends SavedData {
     }
 
     /**
-     * The Stone Dais at the column (cx, cz): any fluid standing above the floor just outside the open cylinder sealed
-     * in stone, the cylinder cleared to the sky, then the dais's stone and aurora stone set, and its roots run on into
-     * the ground below. Blocks are set as world generation sets them (no neighbour or shape updates), so nothing pours
-     * or collapses while it is built.
+     * The Stone Dais at the column (cx, cz): the cylinder above it cleared to the sky, the dais's stone and aurora stone
+     * set, then its aurora slate casing: every solid block round and under the dais and round the cylinder fuses into
+     * aurora slate (leaves, plants, chests and water under it stay; fluids in the cylinder's wall are sealed). Blocks are
+     * set as world generation sets them (no neighbour or shape updates), so nothing pours or collapses while it is built.
      * Returns where the Core stands: on the pool, one above the floor.
      */
     private static BlockPos buildDais(ServerLevel level, int cx, int cz, int plot) {
@@ -444,6 +445,14 @@ public class RealmManager extends SavedData {
         BlockState aurora = ModBlocks.AURORA_STONE.get().defaultBlockState();
         for (LandingDais.Block b : plan.blocks())
             level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), b.kind() == LandingDais.Kind.AURORA_STONE ? aurora : rock, DAIS_FLAGS);
+        BlockState slate = ModBlocks.AURORA_SLATE.get().defaultBlockState();
+        for (LandingDais.Block b : plan.shell())                    // the casing round and under the dais
+            if (fuses(level, p.set(cx + b.dx(), b.y(), cz + b.dz()), false)) level.setBlock(p, slate, DAIS_FLAGS);
+        for (LandingDais.Column c : plan.wall()) {                  // and the wall of the cleared cylinder, to the sky
+            int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, cx + c.dx(), cz + c.dz());
+            for (int y = plan.floor() + 1; y < top; y++)
+                if (fuses(level, p.set(cx + c.dx(), y, cz + c.dz()), true)) level.setBlock(p, slate, DAIS_FLAGS);
+        }
         return new BlockPos(cx, plan.floor() + 1, cz);
     }
 
@@ -455,6 +464,13 @@ public class RealmManager extends SavedData {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         return LandingDais.firstAir(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), level.getMinY(),
                 y -> isGround(level.getBlockState(p.set(x, y, z))));
+    }
+
+    /** Whether the block at pos fuses into aurora slate (LandingDais.fuses), read from the world. */
+    private static boolean fuses(ServerLevel level, BlockPos pos, boolean wall) {
+        BlockState s = level.getBlockState(pos);
+        return LandingDais.fuses(!s.getFluidState().isEmpty(), s.isSolid(), s.is(BlockTags.LEAVES),
+                level.getBlockEntity(pos) != null, s.getDestroySpeed(level, pos) < 0, wall);
     }
 
     private static boolean isGround(BlockState s) {
