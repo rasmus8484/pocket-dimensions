@@ -4,6 +4,8 @@ A Minecraft Java 1.21.11 Forge mod for PvP sandbox servers, adding personal stor
 
 This mod is heavily written by **Claude** (Anthropic's AI coding assistant), with design direction and testing by the project owner.
 
+**Playing?** Read the **[Player Guide](GUIDE.md)**: every mechanic from the big picture down to the small rules, with a "How do I...?" section and troubleshooting. In game, `/pd help` shows a short summary and a link to it. You can also hand the guide to an AI assistant and ask it your question.
+
 ## What Is This?
 
 Pocket Dimensions adds two spatial systems to Minecraft, both designed around PvP risk:
@@ -83,6 +85,8 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 **The ward's sigil:** high over every realm hangs the ward, a vault of glowing runes: a crown of three rings where the World Core's beam rises in, three tiers of runes curving down over the realm like a dome, each carrying small spinning worlds of runes that turn with it, and a band of runes over the Veil. Beneath it the ward's power streams outward from the crown as a soft, flowing field of light, clear near the crown and very faint toward the Veil. It shows the realm's state to everyone inside: blue at peace, pink while a World Breacher works, cracked once the breach is complete, red while an Anchor Breaker works, dim red, broken and still once the anchor is lost. It shines brightly while the Core holds lapis and dims without it, and it is faint by day and glows at night. It looks the same at every render distance.
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
+
+**Help:** anyone can run `/pd help` for a short summary in chat and a link to the [Player Guide](GUIDE.md). Every other `/pd` command is for operators, and suggests player names as you type.
 
 **Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it; someone who already owns a realm can't be given a second), or at a placed Pocket Anchor to record its room as theirs.
 
