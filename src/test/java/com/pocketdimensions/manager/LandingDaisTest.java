@@ -245,4 +245,14 @@ class LandingDaisTest {
         assertFalse(LandingDais.fuses(true, false, false, false, false, false), "water under the dais stays");
         assertTrue(LandingDais.fuses(true, false, false, false, false, true), "a lake in the wall is sealed");
     }
+
+    @Test
+    void fluidsAreSealedFromTheFloorUpButNotUnderIt() {
+        // the ring round the rim at floor level opens onto the cleared cylinder, so a lake or lava reaching it is sealed;
+        // under the floor (the ocean under a floating dais) fluids stay
+        assertTrue(LandingDais.sealsFluids(0), "the ring at floor level");
+        assertTrue(LandingDais.sealsFluids(5), "the wall above it");
+        assertFalse(LandingDais.sealsFluids(-1), "under the floor");
+        assertFalse(LandingDais.sealsFluids(-3));
+    }
 }

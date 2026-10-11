@@ -427,7 +427,7 @@ public class RealmManager extends SavedData {
     /**
      * The Stone Dais at the column (cx, cz): the cylinder above it cleared to the sky, the dais's stone and aurora stone
      * set, then its aurora slate casing: every solid block round and under the dais and round the cylinder fuses into
-     * aurora slate (leaves, plants, chests and water under it stay; fluids in the cylinder's wall are sealed). Blocks are
+     * aurora slate (leaves, plants, chests and water under it stay; fluids from the floor up are sealed). Blocks are
      * set as world generation sets them (no neighbour or shape updates), so nothing pours or collapses while it is built.
      * Returns where the Core stands: on the pool, one above the floor.
      */
@@ -447,11 +447,11 @@ public class RealmManager extends SavedData {
             level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), b.kind() == LandingDais.Kind.AURORA_STONE ? aurora : rock, DAIS_FLAGS);
         BlockState slate = ModBlocks.AURORA_SLATE.get().defaultBlockState();
         for (LandingDais.Block b : plan.shell())                    // the casing round and under the dais
-            if (fuses(level, p.set(cx + b.dx(), b.y(), cz + b.dz()), false)) level.setBlock(p, slate, DAIS_FLAGS);
+            if (fuses(level, p.set(cx + b.dx(), b.y(), cz + b.dz()), LandingDais.sealsFluids(b.y() - plan.floor()))) level.setBlock(p, slate, DAIS_FLAGS);
         for (LandingDais.Column c : plan.wall()) {                  // and the wall of the cleared cylinder, to the sky
             int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, cx + c.dx(), cz + c.dz());
             for (int y = plan.floor() + 1; y < top; y++)
-                if (fuses(level, p.set(cx + c.dx(), y, cz + c.dz()), true)) level.setBlock(p, slate, DAIS_FLAGS);
+                if (fuses(level, p.set(cx + c.dx(), y, cz + c.dz()), LandingDais.sealsFluids(y - plan.floor()))) level.setBlock(p, slate, DAIS_FLAGS);
         }
         return new BlockPos(cx, plan.floor() + 1, cz);
     }
@@ -467,10 +467,10 @@ public class RealmManager extends SavedData {
     }
 
     /** Whether the block at pos fuses into aurora slate (LandingDais.fuses), read from the world. */
-    private static boolean fuses(ServerLevel level, BlockPos pos, boolean wall) {
+    private static boolean fuses(ServerLevel level, BlockPos pos, boolean sealFluids) {
         BlockState s = level.getBlockState(pos);
         return LandingDais.fuses(!s.getFluidState().isEmpty(), s.isSolid(), s.is(BlockTags.LEAVES),
-                level.getBlockEntity(pos) != null, s.getDestroySpeed(level, pos) < 0, wall);
+                level.getBlockEntity(pos) != null, s.getDestroySpeed(level, pos) < 0, sealFluids);
     }
 
     private static boolean isGround(BlockState s) {

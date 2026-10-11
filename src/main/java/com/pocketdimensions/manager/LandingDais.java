@@ -127,6 +127,15 @@ public final class LandingDais {
         return solid && !leaves;
     }
 
+    /**
+     * Whether a fluid in the casing `rel` blocks above the floor is sealed in aurora slate: from the floor up (the ring
+     * round the rim and the wall open onto the cleared cylinder, so a lake or lava there would pour in or lie at the
+     * rim), but not under the floor (the sea under a floating dais stays sea).
+     */
+    public static boolean sealsFluids(int rel) {
+        return rel >= 0;
+    }
+
     /** Whether column (dx, dz) is in the casing's wall above the floor: a band one block thick round the open cylinder. */
     public static boolean inWall(int dx, int dz) {
         double r = Math.hypot(dx, dz);

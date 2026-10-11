@@ -168,8 +168,8 @@ inside its chunk.
 **What becomes aurora slate.** Every casing block that is solid and not decoration: earth, stone, sand, gravel, logs.
 Left as they are:
 - leaves, plants, carpets, snow layers (anything not solid, and leaves);
-- fluids (water and lava), except in the wall above the floor, where they are sealed in aurora slate so they cannot pour
-  into the cleared cylinder;
+- fluids (water and lava) under the floor; from the floor up (the ring round the rim and the wall) they are sealed in
+  aurora slate, so they cannot pour into the cleared cylinder or lie at the rim (a floating dais on the sea keeps its sea);
 - blocks with a block entity (a chest keeps its contents);
 - unbreakable blocks (bedrock).
 
