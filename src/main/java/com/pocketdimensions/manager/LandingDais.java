@@ -8,7 +8,7 @@ import java.util.function.IntBinaryOperator;
 import java.util.function.IntPredicate;
 
 /**
- * The Stone Dais the World Core lands on (RL-024): a flat disc of heartstone 9 blocks across with a rounded underside 3
+ * The Stone Dais the World Core lands on (RL-024): a flat disc of stone 9 blocks across with a rounded underside 3
  * deep, and six vines of aurora stone winding out from a pool under the Core to the edge and down its side. Offsets are
  * from the Core's column; heights are world y. Plain logic, unit tested; RealmManager reads the ground and sets the
  * blocks. Ported from the approved studies page (core-landing-studies.html, version 18, "Stone Dais").
@@ -26,13 +26,19 @@ public final class LandingDais {
     /** How far out (in whole blocks) the sealing ring reaches: the centre is block 8 of its chunk, so 2..14 stay in it. */
     public static final int WALL_REACH = 6;
 
-    public enum Kind { HEARTSTONE, AURORA_STONE }
+    public enum Kind { STONE, AURORA_STONE }
 
     /** One block of the dais: offset from the Core's column, world y, and what it is. */
     public record Block(int dx, int y, int dz, Kind kind) {}
 
-    /** The floor's height (the Core stands at floor + 1) and every block of the dais. */
-    public record Plan(int floor, List<Block> blocks) {}
+    /**
+     * The floor's height (the Core stands at floor + 1), every block of the dais, and the roots: aurora stone running on
+     * down below the dais into the ground, set only where the ground there is natural solid ground.
+     */
+    public record Plan(int floor, List<Block> blocks, List<Block> roots) {}
+
+    /** Roots reach less than this far below the floor. */
+    public static final int ROOT_DEPTH = 8;
 
     private LandingDais() {}
 
@@ -46,11 +52,15 @@ public final class LandingDais {
         for (int dx = -REACH; dx <= REACH; dx++)
             for (int dz = -REACH; dz <= REACH; dz++)
                 for (int below = -(int) DEPTH; below <= 0; below++)
-                    if (inDais(dx, below, dz)) blocks.put(key(dx, below, dz), Kind.HEARTSTONE);
-        new Vines(blocks, plot).grow();
-        List<Block> out = new ArrayList<>(blocks.size());
+                    if (inDais(dx, below, dz)) blocks.put(key(dx, below, dz), Kind.STONE);
+        Map<Long, Kind> roots = new LinkedHashMap<>();
+        Vines v = new Vines(blocks, plot);
+        v.grow();
+        v.roots(roots);
+        List<Block> out = new ArrayList<>(blocks.size()), down = new ArrayList<>(roots.size());
         blocks.forEach((k, kind) -> out.add(new Block(unX(k), unBelow(k) + floor, unZ(k), kind)));
-        return new Plan(floor, out);
+        roots.forEach((k, kind) -> down.add(new Block(unX(k), unBelow(k) + floor, unZ(k), kind)));
+        return new Plan(floor, out, down);
     }
 
     /**
@@ -108,6 +118,36 @@ public final class LandingDais {
             }
         }
 
+        /**
+         * Roots: from the floor's aurora stone (the pool's centre, and about one floor block in four) a vein runs down
+         * through the dais, now and then stepping one block aside, 3 to 7 blocks deep. Inside the dais it turns its
+         * stone to aurora stone; below the dais it goes into `below`, for the ground beneath.
+         */
+        void roots(Map<Long, Kind> below) {
+            List<int[]> starts = new ArrayList<>();
+            for (Map.Entry<Long, Kind> e : blocks.entrySet()) {
+                long k = e.getKey();
+                if (e.getValue() != Kind.AURORA_STONE || unBelow(k) != 0) continue;
+                int dx = unX(k), dz = unZ(k);
+                if ((dx == 0 && dz == 0) || hsh(dx, dz, plot, 97) < 0.25) starts.add(new int[]{dx, dz});
+            }
+            for (int[] s : starts) {
+                int x = s[0], z = s[1], seed = hashInt(s[0], s[1], plot);
+                int depth = 3 + (int) (hsh(seed, 0, 1, 96) * 5);
+                for (int d = 1; d <= depth; d++) {
+                    if (hsh(seed, d, 2, 96) < 0.35) {                                    // a step aside
+                        int dir = (int) (hsh(seed, d, 3, 96) * 4);
+                        x += dir == 0 ? 1 : dir == 1 ? -1 : 0;
+                        z += dir == 2 ? 1 : dir == 3 ? -1 : 0;
+                    }
+                    if (inDais(x, -d, z)) blocks.put(key(x, -d, z), Kind.AURORA_STONE);
+                    else below.put(key(x, -d, z), Kind.AURORA_STONE);
+                }
+            }
+        }
+
+        private static int hashInt(int a, int b, int c) { return (int) (hsh(a, b, c, 95) * Integer.MAX_VALUE); }
+
         private void vine(int dx, int dz) { if (inDais(dx, 0, dz)) blocks.put(key(dx, 0, dz), Kind.AURORA_STONE); }
 
         private void walk(double x, double z, double h, boolean wide, int seed, int branches) {
@@ -134,7 +174,7 @@ public final class LandingDais {
         private void spill(int dx, int dz, double h) {
             int ox = (int) Math.round(Math.cos(h)), oz = (int) Math.round(Math.sin(h));
             for (int below = -1; below >= -(int) DEPTH; below--)
-                if (blocks.get(key(dx, below, dz)) == Kind.HEARTSTONE && !inDais(dx + ox, below, dz + oz))
+                if (blocks.get(key(dx, below, dz)) == Kind.STONE && !inDais(dx + ox, below, dz + oz))
                     blocks.put(key(dx, below, dz), Kind.AURORA_STONE);
         }
     }

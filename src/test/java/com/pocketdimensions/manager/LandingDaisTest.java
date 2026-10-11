@@ -118,4 +118,57 @@ class LandingDaisTest {
         int floor = LandingDais.plan(1, (dx, dz) -> 63).floor();
         assertEquals(63, floor, "the floor sits one above the water's surface (y 62)");
     }
+
+    private static final int[][] HERE_OR_BESIDE = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+    /** Every aurora stone block of a plan, dais and roots, as "dx,depth below the floor,dz". */
+    private static Set<String> aurora(LandingDais.Plan p) {
+        Set<String> s = new HashSet<>();
+        for (LandingDais.Block b : p.blocks()) if (b.kind() == LandingDais.Kind.AURORA_STONE) s.add(b.dx() + "," + (p.floor() - b.y()) + "," + b.dz());
+        for (LandingDais.Block b : p.roots()) s.add(b.dx() + "," + (p.floor() - b.y()) + "," + b.dz());
+        return s;
+    }
+
+    @Test
+    void theDaisIsStone() {
+        LandingDais.Plan p = LandingDais.plan(1, FLAT);
+        assertTrue(p.blocks().stream().anyMatch(b -> b.kind() == LandingDais.Kind.STONE));
+        assertTrue(p.blocks().stream().allMatch(b -> b.kind() == LandingDais.Kind.STONE || b.kind() == LandingDais.Kind.AURORA_STONE));
+    }
+
+    @Test
+    void rootsRunDownFromTheFloorJoinedBlockToBlock() {
+        for (int plot = 0; plot < 300; plot++) {
+            LandingDais.Plan p = LandingDais.plan(plot, FLAT);
+            Set<String> aur = aurora(p);
+            assertFalse(p.roots().isEmpty(), "plot " + plot + " has roots below the dais");
+            for (LandingDais.Block b : p.roots()) {
+                int d = p.floor() - b.y();
+                assertEquals(LandingDais.Kind.AURORA_STONE, b.kind());
+                assertTrue(d >= 1 && d < LandingDais.ROOT_DEPTH, "plot " + plot + " root depth " + d);
+                assertTrue(Math.abs(b.dx()) <= 7 && Math.abs(b.dz()) <= 7, "plot " + plot + " stays in the Core's chunk: " + b);
+                assertFalse(LandingDais.inDais(b.dx(), -d, b.dz()), "roots in the dais are dais blocks: " + b);
+                boolean joined = false;
+                for (int[] o : HERE_OR_BESIDE) joined |= aur.contains((b.dx() + o[0]) + "," + (d - 1) + "," + (b.dz() + o[1]));
+                assertTrue(joined, "plot " + plot + ": " + b + " hangs from the vein above it");
+            }
+        }
+    }
+
+    @Test
+    void rootsTurnTheDaisItselfToAuroraStoneOnTheirWayDown() {
+        LandingDais.Plan p = LandingDais.plan(1, FLAT);
+        long inside = p.blocks().stream().filter(b -> b.kind() == LandingDais.Kind.AURORA_STONE && b.y() < p.floor()).count();
+        assertTrue(inside >= 8, "aurora stone inside the dais below the floor: " + inside);
+    }
+
+    @Test
+    void aRootRunsDownUnderThePool() {
+        for (int plot = 0; plot < 300; plot++) {
+            Set<String> aur = aurora(LandingDais.plan(plot, FLAT));
+            boolean under = false;
+            for (int[] o : HERE_OR_BESIDE) under |= aur.contains(o[0] + ",1," + o[1]);
+            assertTrue(under, "plot " + plot);
+        }
+    }
 }
