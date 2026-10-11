@@ -10,6 +10,7 @@ import { shape as pocketShape, paint as pocketPaint, glowSprite } from './pocket
 import { sprite as seedSprite } from './seed.mjs';
 import { veilTexture, FRAMES as VEIL_FRAMES } from './veil.mjs';
 import { lineTexture, fieldTexture } from './sigil.mjs';
+import { heartstone, strip as daisStrip, FRAMES as DAIS_FRAMES, FRAMETIME as DAIS_FRAMETIME } from './dais.mjs';
 import { slab, polished, hollow, tablet } from './gui.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
@@ -260,6 +261,33 @@ for (let b = 0; b < 8; b++) {
   veilVariants[`band=${b}`] = { model: `pocketdimensions:block/veil_${b}` };
 }
 write('blockstates/veil.json', json({ variants: veilVariants }));
+
+// The Stone Dais under the World Core (RL-024): heartstone, and aurora stone (heartstone with two animated overlays,
+// the veins at full brightness and their stained rim glowing a little, so the veins shine at night and the rock darkens)
+const cubeFaces = (tex, extra = {}) => ({
+  from: [0, 0, 0], to: [16, 16, 16], ...extra,
+  faces: Object.fromEntries(['down', 'up', 'north', 'south', 'west', 'east'].map(d => [d, { uv: [0, 0, 16, 16], texture: tex, cullface: d }])),
+});
+write('textures/block/heartstone.png', encodePNG(16, 16, heartstone()));
+for (const layer of ['veins', 'rim']) {
+  write(`textures/block/aurora_stone_${layer}.png`, encodePNG(16, 16 * DAIS_FRAMES, daisStrip(layer)));
+  write(`textures/block/aurora_stone_${layer}.png.mcmeta`, json({ animation: { frametime: DAIS_FRAMETIME, interpolate: true } }));
+}
+write('models/block/heartstone.json', json({ parent: 'minecraft:block/cube_all', textures: { all: 'pocketdimensions:block/heartstone' } }));
+write('models/block/aurora_stone.json', json({
+  parent: 'minecraft:block/block',
+  render_type: 'minecraft:cutout',
+  textures: {
+    particle: 'pocketdimensions:block/heartstone', rock: 'pocketdimensions:block/heartstone',
+    rim: 'pocketdimensions:block/aurora_stone_rim', veins: 'pocketdimensions:block/aurora_stone_veins',
+  },
+  elements: [cubeFaces('#rock'), cubeFaces('#rim', { shade: false, light_emission: 6 }), cubeFaces('#veins', { shade: false, light_emission: 15 })],
+}));
+for (const name of ['heartstone', 'aurora_stone']) {
+  write(`blockstates/${name}.json`, json({ variants: { '': { model: `pocketdimensions:block/${name}` } } }));
+  write(`items/${name}.json`, json({ model: { type: 'minecraft:model', model: `pocketdimensions:block/${name}` } }));
+}
+console.log(`dais: heartstone, aurora_stone (veins + rim, ${DAIS_FRAMES} frames)`);
 
 // The ward sigil's line and beam stroke
 write('textures/misc/ward_line.png', encodePNG(16, 16, lineTexture()));
