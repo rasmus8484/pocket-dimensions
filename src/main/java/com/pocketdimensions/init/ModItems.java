@@ -43,6 +43,14 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.WORLD_CORE.get(),
                     new Item.Properties().setId(ITEMS.key("world_core"))));
 
+    public static final RegistryObject<Item> HEARTSTONE_ITEM = ITEMS.register("heartstone",
+            () -> new BlockItem(ModBlocks.HEARTSTONE.get(),
+                    new Item.Properties().setId(ITEMS.key("heartstone")).useBlockDescriptionPrefix()));
+
+    public static final RegistryObject<Item> AURORA_STONE_ITEM = ITEMS.register("aurora_stone",
+            () -> new BlockItem(ModBlocks.AURORA_STONE.get(),
+                    new Item.Properties().setId(ITEMS.key("aurora_stone")).useBlockDescriptionPrefix()));
+
     // ---- Functional items ----
 
     public static final RegistryObject<Item> WORLD_SEED = ITEMS.register("world_seed",

@@ -3,6 +3,8 @@
     "pocketdimensions:pocket_anchor",
     "pocketdimensions:world_breacher",
     "pocketdimensions:anchor_breaker",
-    "pocketdimensions:world_anchor"
+    "pocketdimensions:world_anchor",
+    "pocketdimensions:heartstone",
+    "pocketdimensions:aurora_stone"
   ]
 }
