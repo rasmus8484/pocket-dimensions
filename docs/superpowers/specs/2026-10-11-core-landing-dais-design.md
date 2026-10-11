@@ -7,14 +7,18 @@ first look in game (round 2):
 - aurora stone is vanilla stone with the veins on top;
 - veins also run downward through the dais and into the ground.
 
+Revised again after the story studies (round 3, version 24 of the studies page, "The Journey" with "Slate casing"):
+- the dais and the cleared cylinder above it are cased in a new block, **aurora slate**;
+- the roots stay inside the dais.
+
 ## What the player sees
 
 Every World Core stands at the exact centre of its realm, whatever the land there is: plains, forest, a hillside or open
 ocean. Under it lies a small round dais of plain stone, 9 blocks across, its floor level and its edge
 cleanly cut, with a shallow rounded underside 3 blocks deep. Out of a small pool under the Core, six vines of
 **aurora stone** wind outward through the floor, flush with it, now and then splitting, and where they reach the edge
-they trickle down the dais's side. From the vines, roots of aurora stone run on downward through the dais and a few
-blocks into the ground beneath it, so the veins are not only on the surface. Above the dais the sky is open: a cylinder is cleared straight up, so nothing (trees,
+they trickle down the dais's side. From the vines, roots of aurora stone run on downward through the dais, so the veins are not only
+on the surface. The dais and the path the beam cleared above it are cased in aurora slate (see below). Above the dais the sky is open: a cylinder is cleared straight up, so nothing (trees,
 a hill, an overhang) hangs over the Core or its beam.
 
 Aurora stone is to stone what crying obsidian is to obsidian: the same rock, with thin branching veins of power
@@ -86,10 +90,8 @@ This replaces the dry-land search entirely.
 
    - **The roots.** Roots start from the pool's centre and from about one in four of the floor's aurora stone blocks.
      From each start a vein runs straight down, 3 to 7 blocks below the floor, now and then stepping one block aside.
-     - Inside the dais, the stone it passes through becomes aurora stone.
-     - Below the dais, it replaces the ground only where that block is natural solid ground (`isGround`, not a fluid,
-       no block entity), and skips anything else (caves, water, a chest).
-     - Roots reach at most 7 blocks out from the centre, so they stay in the Core's chunk.
+     - The stone it passes through becomes aurora stone.
+     - A root stops where it would leave the dais, so the veins stay in the dais and the casing is unbroken.
 
    The noise is seeded by the plot index, so each realm's vines and roots are its own and are the same every time.
 6. **The open sky.** Every block in the cylinder `hypot(dx, dz) < 5.5` above the floor is set to air, up to the highest
@@ -98,8 +100,8 @@ This replaces the dry-land search entirely.
 7. **The Core** is placed on the pool, at (centre, floor + 1, centre). The spawn spot next to it (one block east) is on
    the pool's aurora stone.
 
-Any fluid standing above the floor in the ring just outside the cylinder (`5.5 ≤ hypot < 6.5`) is sealed in stone,
-so a lake or lava pool beside a hillside dais can't pour onto it. Blocks are set as world generation sets them (no
+Any fluid standing in the casing's wall above the floor (see the casing) is sealed in aurora slate, so a lake or lava
+pool beside a hillside dais can't pour onto it. Blocks are set as world generation sets them (no
 neighbour or shape updates), so nothing pours or collapses while the dais is built. Leaves cut from a tree
 decay as usual later.
 
@@ -132,6 +134,45 @@ Nothing is rebuilt when a player gets back to the **same** realm:
 Realms already generated keep their Core where it stands; nothing is moved or rebuilt. A relocation grows the new realm
 with a dais. `/pd regenCore` still puts a broken Core back where it stood, without rebuilding the dais.
 
+## The aurora slate casing (round 3)
+
+The story: the beam that cleared the dais's path down, and the force that drove the dais into place, fused everything
+they touched. The dais is the tip of a bullet standing on its tip, and the cleared cylinder above it to the sky is the
+bullet's body. The casing of that bullet is aurora slate.
+
+**The block.**
+
+| Block | Id | Look | Behaviour |
+|---|---|---|---|
+| Aurora Slate | `aurora_slate` | Vanilla deepslate with flecks of the aurora caught in it | Like deepslate: strength 3 / 6, pickaxe, drops itself, `SoundType.DEEPSLATE`; no light of its own |
+
+- The model is deepslate's own textures (`minecraft:block/deepslate` on the sides, `deepslate_top` on the ends) with
+  one overlay: an animated fleck texture with `"light_emission": 15`, render type cutout.
+- About one pixel in twenty is a fleck; a few more around them are a dim halo, mixed half and half with deepslate's
+  average grey (80, 80, 83).
+- The flecks take aurora stone's colours (dancing teal with swatches of pink, blue and purple) and each twinkles
+  slowly (a 4 s cycle, so the 32 s strip still loops).
+- Generated by `tools/anchor/dais.mjs` like the other dais textures.
+
+**The shape.** "Inside" is the dais plus the cylinder above the floor (`hypot(dx, dz) < 5.5`, y > floor, to the top
+of the world). The casing is every block outside that shape that is:
+1. in a band one block thick round it: above the floor `hypot < 6.5`; at and below the floor
+   `hypot(hypot(dx, dz) / 5.5, (floor - y) / 4) < 1`; or
+2. touching the inside on a face (this makes it airtight); or
+3. at or below the floor, touching the dais along an edge (this closes the seams where the curve steps).
+
+Above the floor the casing is a set of columns (the wall), the same at every height; at and below it, a fixed set of
+blocks (the shell, including the ring round the rim at floor level). Both lie within 6 blocks of the Core's column, so
+inside its chunk.
+
+**What becomes aurora slate.** Every casing block that is solid and not decoration: earth, stone, sand, gravel, logs.
+Left as they are:
+- leaves, plants, carpets, snow layers (anything not solid, and leaves);
+- fluids (water and lava), except in the wall above the floor, where they are sealed in aurora slate so they cannot pour
+  into the cleared cylinder;
+- blocks with a block entity (a chest keeps its contents);
+- unbreakable blocks (bedrock).
+
 ## The ward: the conduit goes
 
 The line of runes that flowed from an off-centre Core's beam top in to the crown is removed (`VaultFrame.conduit`, rune
@@ -146,7 +187,7 @@ An old off-centre Core's beam still ends on the dome above it (`Vault.Layout.bea
   height, returns:
   - the floor height;
   - every dais block, as an offset and a kind (stone or aurora stone);
-  - the roots below the dais;
+  - the casing: the shell blocks (at and below the floor) and the wall columns (above it);
   - the clearing radius.
 
   The studies page's hash and value noise move here as plain Java.
@@ -170,7 +211,10 @@ An old off-centre Core's beam still ends on the dome above it (`Vault.Layout.bea
   - the pool sits under the Core;
   - every vine block is on the floor or its edge spill, never outside the dais;
   - six vines reach the rim;
-  - roots run down from the floor, joined block to block, at most 7 deep and 7 out;
+  - roots run down from the floor, joined block to block, and never leave the dais;
+  - the casing: airtight (every block touching the inside on a face is casing), one block thick (every casing block
+    touches the inside at least at a corner, or lies in the band), never inside the shape, the rim ring complete, and
+    within 6 blocks of the Core's column;
   - the plan is the same for the same seed and differs between seeds;
   - on water the floor sits one above the surface.
 - **`VaultFrameTest`:** no rune in the 70000 range for an off-centre Core.
