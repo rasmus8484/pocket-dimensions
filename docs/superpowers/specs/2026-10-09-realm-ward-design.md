@@ -113,8 +113,7 @@ realm. The design rules the user set: no drawn lines or strokes; every shape is 
 curves); smaller runes, ornate, layered at different heights; power shown as a soft flowing field, not as particles,
 veins or channels.
 
-Everything is centred on the plot's centre (not the Core, until RL-024 always centres the Core); an off-centre Core's
-beam is joined to the crown by a conduit of runes. `OUTER` is the outer tier's radius: `half - 6 - 24` blocks
+Everything is centred on the plot's centre, where the Core stands (RL-024). `OUTER` is the outer tier's radius: `half - 6 - 24` blocks
 (362 for radius 25). Heights follow a dome over the realm: `y(r) = 382 - 58 * (r / OUTER)^1.5`.
 
 - **The crown**: three nested rings of small runes at the top of the dome (radius 9, 17, 27; y 384 to 382), turning
@@ -156,8 +155,8 @@ distance) and cut off by the far plane at low render distances. So each element 
    same at every render distance and setting.
 
 The **beam** above the vanilla beam's reach (the Core's renderer draws up to 256 blocks above the Core, and it is
-fogged high up) is continued by the sigil renderer as pulled segments up to the crown, so the beam visibly meets it. An off-centre
-Core's beam ends on the dome above the Core, where the conduit starts.
+fogged high up) is continued by the sigil renderer as pulled segments up to the crown, so the beam visibly meets it. An older realm's
+off-centre Core's beam ends on the dome above the Core.
 
 ### Colour and state
 

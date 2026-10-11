@@ -56,7 +56,7 @@ Each player can own one realm: a region of overworld-like terrain inside the sha
 1. Place a **World Anchor** (two blocks tall, so it needs headroom; the block above that must be breakable, where a siege block would go). It can't be used from inside a pocket room or the realm itself
 2. Use a **World Seed** on the anchor: the seed crumbles into the anchor and condenses a dimensional tunnel to your realm
 3. **Right-click** the linked anchor to enter your realm: the owner always has access, players on the realm's access list too, and anyone else only after a successful breach
-4. **Right-click** the **World Core** (indestructible block at your realm's center) to exit back to where you entered
+4. **Right-click** the **World Core** (indestructible block at your realm's center, standing on its Stone Dais) to exit back to where you entered
 5. **Crouch + right-click** the World Core to open its screen (anyone can; what you may do there depends on who you are, see below)
 
 **Safe arrival:** you arrive next to the World Core, or if a slope or something built there is in the way, at the nearest spot around the core with room to stand (never on the core itself, never outside the realm).
@@ -131,6 +131,8 @@ Two siege blocks can be placed on top of a linked World Anchor (never an empty o
 
 **The World Core (the Geode Heart):** a two-block boulder of weathered stone floating at the realm's centre, split open on four sides around a crystal-lined hollow that holds the realm's black hole (the same one as the anchor's). A shaft is bored straight down through it; the beacon rises from the black hole up the shaft, runes climb the beam in a slow double helix, crystal shards circle the black hole and drift down the shaft, faceted aurora crystals are driven through its crown and a layer of aurora crystal hangs beneath it, slowly shifting colour. A rune tablet below each opening marks where it answers you.
 
+**The Stone Dais:** every World Core lands at the realm's exact centre, on land or open water, on a small round dais of **Heartstone** (the Core's own rock), 9 blocks across, with the sky cleared above it. Vines of **Aurora Stone** run out from under the Core to the edge and down its side: the same rock with thin veins of flowing aurora, like crying obsidian, glowing at night (light 7). Both can be mined with a pickaxe and drop themselves.
+
 **Beacon indicator:** the core's colours show the realm's state from anywhere inside it:
 - **Blue**: no active siege
 - **Pink**: World Breacher is present on the anchor (the crystal, runes and beam turn pink, the black hole burns ember)
@@ -171,7 +173,6 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 |---------|---------|-------------|
 | `realm.realm_radius_chunks` | 50 | Plot size (side = 2r-1 chunks; 50 is 1,584 x 1,584 blocks). Set before first use |
 | `realm.realm_padding_chunks` | 1 | Gap between adjacent realms (at least 1: the Veil stands in it) |
-| `realm.max_spawn_search_chunks` | 8 | How far the WorldCore's dry-land search may go (it stops soon after finding land) |
 | `siege.breach_duration_ticks` | 12000 | World Breacher full-breach time |
 | `siege.breaker_duration_ticks` | 12000 | Anchor Breaker anchor-destroy time |
 | `siege.core_slow_factor` | 2 | Defense slowdown (progress every N ticks) |
