@@ -19,7 +19,6 @@ public class PocketDimensionsConfig {
     public static final ForgeConfigSpec.IntValue REALM_PADDING_CHUNKS;
 
     /** Maximum chunk search radius when scanning for dry land to place WorldCore. Default 16. */
-    public static final ForgeConfigSpec.IntValue MAX_SPAWN_SEARCH_CHUNKS;
 
     // ---- Siege config ----
 
@@ -60,13 +59,6 @@ public class PocketDimensionsConfig {
                          "Default: 1.",
                          "At least 1: the Veil stands in the gap.")
                 .defineInRange("realm_padding_chunks", 1, 1, 10000);
-
-        MAX_SPAWN_SEARCH_CHUNKS = builder
-                .comment("How far out from a new realm's centre (in chunks) the World Core's search for dry land may go.",
-                         "The search goes ring by ring and stops soon after it finds land, so most realms look at a",
-                         "handful of chunks; this caps an all-ocean centre (8 -> at most 17x17 chunks), after which",
-                         "the next plot is tried. Default: 8.")
-                .defineInRange("max_spawn_search_chunks", 8, 1, 256);
 
         builder.pop();
 
