@@ -38,7 +38,7 @@
   - they start from the pool's centre and from about one in four of the floor's aurora stone blocks;
   - each runs 3 to 7 blocks below the floor, stepping one block aside 35% of the time;
   - below the dais they replace only natural solid ground: `isGround`, not a fluid, no block entity.
-- **Do not build this plan until the user says so.** They are still checking round 1 in game.
+- The user gave the go-ahead on 2026-10-11, adding Task 2b (the aurora's colours).
 
 ## Review Focus
 
@@ -354,6 +354,114 @@ Step 1 code edit before running Gradle, and commit Tasks 2 and 3 separately. Rul
 ```bash
 git add -A tools/anchor src/main/resources src/main/java/com/pocketdimensions/init src/test/java/com/pocketdimensions/init
 git commit -m "Aurora stone is vanilla stone with the veins on top; the heartstone block is gone"
+```
+
+---
+
+### Task 2b: The aurora's colours: dancing teal with swatches
+
+The user's ask (after round 1): "mainly dancing teal with swatches of the pink, blue and purple like a real aurora,
+instead of cycling between the solid colours".
+
+The new colour rule:
+- The veins' body is teal, rippling between a deep and a bright teal along the veins.
+- Three accents (pink, blue, purple) drift through as soft swatches. Each is a travelling wave that is periodic in 16
+  px (so blocks tile seamlessly) and in 32 s (so the strip loops).
+- Each accent fades in and out over the loop.
+
+At any moment about two thirds of the vein is plain teal (checked before writing this: 0.67 on the studies pattern).
+
+**Files:**
+- Modify: `tools/anchor/dais.mjs` (replace `AURORA`/`aurora` with `TEAL`, `ACCENTS`, `accents`, `auroraAt`; use
+  `auroraAt` in `frame`)
+- Test: `tools/anchor/test/dais.test.mjs`
+
+- [ ] **Step 1: Write the failing tests**
+
+Add `TEAL, accents` to the import, and add:
+
+```js
+test('the aurora is mainly teal: most of the vein, most of the time, shows no accent', () => {
+  let n = 0, teal = 0;
+  for (let k = 0; k < FRAMES; k++) for (let i = 0; i < 256; i++) if (VEINS.mask[i] === 1) {
+    n++; if (accents(i % 16, i >> 4, k * LOOP_SECONDS / FRAMES).reduce((a, b) => a + b) < 0.2) teal++;
+  }
+  assert.ok(teal / n >= 0.6, `teal share ${(teal / n).toFixed(2)}`);
+  assert.ok(TEAL.every(c => c[1] > c[0] && c[2] > c[0]), 'teal: more green and blue than red');
+});
+
+test('swatches of pink, blue and purple each show strongly somewhere in the loop', () => {
+  const peak = [0, 0, 0];
+  for (let k = 0; k < FRAMES; k++) for (let i = 0; i < 256; i++) if (VEINS.mask[i] === 1)
+    accents(i % 16, i >> 4, k * LOOP_SECONDS / FRAMES).forEach((w, c) => { peak[c] = Math.max(peak[c], w); });
+  peak.forEach((p, c) => assert.ok(p > 0.6, `accent ${c} peaks at ${p.toFixed(2)}`));
+});
+
+test('the swatches tile across blocks and loop in time', () => {
+  for (const [x, y, t] of [[3, 5, 1.5], [0, 15, 20], [11, 2, 31]]) {
+    assert.deepEqual(accents(x + 16, y, t).map(v => v.toFixed(9)), accents(x, y, t).map(v => v.toFixed(9)));
+    assert.deepEqual(accents(x, y + 16, t).map(v => v.toFixed(9)), accents(x, y, t).map(v => v.toFixed(9)));
+    assert.deepEqual(accents(x, y, t + LOOP_SECONDS).map(v => v.toFixed(9)), accents(x, y, t).map(v => v.toFixed(9)));
+  }
+});
+```
+
+- [ ] **Step 2: Run them to verify they fail**
+
+Run: `node --test tools/anchor/test/dais.test.mjs`
+Expected: FAIL with "does not provide an export named 'TEAL'" (or `accents`).
+
+- [ ] **Step 3: Implement**
+
+In `dais.mjs`, replace the `AURORA` constant and the `aurora` function with:
+
+```js
+export const TEAL = [[20, 190, 160], [90, 255, 215]];                       // deep and bright teal: the aurora's body
+const ACCENTS = [                                                           // swatches drifting through it
+  { c: [255, 110, 210], k: [1, 2, 3], ph: 0.0 },                           // pink
+  { c: [80, 150, 255], k: [2, -1, -2], ph: 0.37 },                         // blue
+  { c: [185, 110, 255], k: [-1, 1, 4], ph: 0.71 },                         // purple
+];
+const smoothstep = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/**
+ * How strongly each accent (pink, blue, purple) shows at pixel (x, y), t seconds in: a wave travelling across the
+ * block (whole cycles per 16 px, so blocks tile, and per loop, so the strip loops), only its crest showing, and each
+ * colour coming and going over the loop. Mostly 0: the aurora is mainly teal.
+ */
+export function accents(x, y, t) {
+  return ACCENTS.map(({ k, ph }) => {
+    const wave = 0.5 + 0.5 * Math.sin(TAU * (k[0] * x / 16 + k[1] * y / 16 + k[2] * t / LOOP_SECONDS + ph));
+    const gate = 0.5 + 0.5 * Math.sin(TAU * (t / LOOP_SECONDS + ph * 2));
+    return smoothstep(0.82, 0.99, wave) * gate * gate;
+  });
+}
+
+/** The aurora's colour at pixel (x, y), `along` its vein, t seconds in: dancing teal with swatches of pink, blue, purple. */
+export function auroraAt(x, y, along, t) {
+  const shimmer = 0.5 + 0.5 * Math.sin(TAU * (along * 2 + x / 16 - 3 * t / LOOP_SECONDS));   // teal rippling deep to bright
+  let c = TEAL[0].map((v, i) => v + (TEAL[1][i] - v) * shimmer);
+  accents(x, y, t).forEach((w, i) => { c = c.map((v, ch) => v + (ACCENTS[i].c[ch] - v) * w); });
+  return c;
+}
+```
+
+(`TAU` must be declared before these. Move the line `const TAU = Math.PI * 2, clamp = ...` above them.)
+
+In `frame`, the colour line becomes `au = auroraAt(x, y, a, t)`.
+
+Update the module's header comment: the veins are "dancing teal with drifting swatches of pink, blue and purple".
+
+- [ ] **Step 4: Run, regenerate, look**
+
+Run: `node --test tools/anchor/test/dais.test.mjs && node tools/anchor/build.mjs`
+Expected: all dais tests pass; `aurora_stone_veins.png` and `aurora_stone_rim.png` change.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/anchor/dais.mjs tools/anchor/test/dais.test.mjs src/main/resources/assets/pocketdimensions/textures/block
+git commit -m "Aurora stone's veins dance in teal with drifting swatches of pink, blue and purple, like a real aurora, instead of cycling through solid colours"
 ```
 
 ---
