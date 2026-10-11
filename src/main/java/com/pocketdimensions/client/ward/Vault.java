@@ -30,8 +30,8 @@ public final class Vault {
         }
 
         /**
-         * Where the Core's beam ends: at the crown (y 384) when the Core stands under it, else on the dome above the
-         * Core, where the conduit carries the power on in to the crown.
+         * Where the Core's beam ends: at the crown (y 384) when the Core stands under it (every Core grown since RL-024
+         * stands at the centre), else on the dome above the Core.
          */
         public double beamTop() {
             double d = Math.hypot(coreX - cx, coreZ - cz);

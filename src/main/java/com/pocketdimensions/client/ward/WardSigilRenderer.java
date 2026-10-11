@@ -190,8 +190,8 @@ public final class WardSigilRenderer {
     }
 
     /**
-     * The Core's beam above where the vanilla beam shows, up to the crown (or, for an off-centre Core, to the dome
-     * where the conduit takes over): two crossed thin quads per 16-block segment,
+     * The Core's beam above where the vanilla beam shows, up to the crown (or, for an off-centre Core of an older realm, to the dome
+     * above it): two crossed thin quads per 16-block segment,
      * each drawn with both windings so it shows from every side, the line texture's soft band across its width. Only
      * where the Core's own renderer can't draw it (pulled segments, or above its 256-block reach).
      */

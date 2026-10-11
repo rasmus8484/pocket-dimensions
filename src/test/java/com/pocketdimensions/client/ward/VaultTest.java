@@ -123,10 +123,9 @@ class VaultTest {
     }
 
     @Test
-    void anOffCentreCoreGetsAConduit() {
+    void noConduitRunsToTheCrownEvenForAnOffCentreCore() {
         Vault.Layout off = Vault.build(392.5 + 128, 392.5 - 90, 0, 0, 784, 784);
-        long conduit = runes(off, 4, true).stream().filter(r -> r.id() >= 70000 && r.id() < 80000).count();
-        assertTrue(conduit > 5, "conduit runes " + conduit);
+        assertEquals(0, runes(off, 4, true).stream().filter(r -> r.id() >= 70000 && r.id() < 80000).count());
         assertEquals(0, runes(r25(), 4, true).stream().filter(r -> r.id() >= 70000 && r.id() < 80000).count());
     }
 }

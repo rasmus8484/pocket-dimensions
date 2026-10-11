@@ -5,8 +5,8 @@ import java.util.function.IntPredicate;
 
 /**
  * Where every rune of the Vaulted Ward is at a moment in time: the crown's three rings, each tier's main track (with a
- * gap where each world sits), its worlds (carried round with it, each spinning), the band
- * over the Veil, and a conduit from an off-centre Core's beam to the crown. Positions are in world coordinates; sizes and the reference speeds come from
+ * gap where each world sits), its worlds (carried round with it, each spinning), and the band
+ * over the Veil. Positions are in world coordinates; sizes and the reference speeds come from
  * design/ward-sigil-studies.html. Plain logic, unit tested; WardSigilRenderer draws the result.
  */
 public final class VaultFrame {
@@ -31,7 +31,6 @@ public final class VaultFrame {
 
         for (Vault.Tier tier : l.tiers()) tier(out, hidden, l, tier, t);
         band(out, hidden, l);
-        conduit(out, hidden, l, t);
     }
 
     /** The centres (x, z) of a tier's worlds at `seconds`: evenly spaced, carried round with the tier. */
@@ -92,19 +91,6 @@ public final class VaultFrame {
         for (double z = -f + st; z <= f - st + 1e-9; z += st) {
             id = add(out, hidden, id, l.cx() - f, y, l.cz() + z, tiny, 0, 0.7);
             id = add(out, hidden, id, l.cx() + f, y, l.cz() + z, tiny, 0, 0.7);
-        }
-    }
-
-    /** An off-centre Core's beam reaches the dome away from the crown: runes flow from there in to the crown. */
-    private static void conduit(List<Rune> out, IntPredicate hidden, Vault.Layout l, double t) {
-        double s = l.scale(), dx = l.cx() - l.coreX(), dz = l.cz() - l.coreZ(), dist = Math.hypot(dx, dz), crown = Vault.CROWN_REACH * s;
-        if (dist <= crown) return;
-        double ux = dx / dist, uz = dz / dist, len = dist - crown, spacing = 10 * s, flow = (6 * s * t) % spacing;
-        int id = 70000;
-        for (double d = flow; d < len; d += spacing) {
-            double x = l.coreX() + ux * d, z = l.coreZ() + uz * d, r = Math.hypot(x - l.cx(), z - l.cz());
-            if (!hidden.test(id)) out.add(new Rune(id, x, l.dome(r) + 1, z, 5 * s, Math.atan2(uz, ux), glyph(id), 1));
-            id++;
         }
     }
 
