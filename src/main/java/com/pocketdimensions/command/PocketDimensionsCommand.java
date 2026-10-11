@@ -60,6 +60,7 @@ import java.util.UUID;
  *                                                    for a while (default 10 s) and reports it in your chat
  *   /pd test veilTime [seconds]                    - testing: your client times the Veil fog on the graphics card
  *                                                    for a while (default 10 s) and reports it in your chat
+ *   /pd help                                       - anyone: a short summary and a link to GUIDE.md
  *
  * The argument is auto-detected: if it parses as a UUID it is used directly;
  * otherwise it is treated as a player name and resolved via:
@@ -68,39 +69,73 @@ import java.util.UUID;
  *   3. Whitelist (covers previously-joined whitelisted players)
  *   4. Forge's username cache (anyone who has ever joined)
  *
- * All sub-commands require OP level 2 (GAMEMASTERS).
+ * Player names are suggested as you type (online players; for deny, anyone on an access list too; for disown and
+ * regenAnchor, realm owners), but any name or UUID is accepted.
+ *
+ * Every sub-command but help requires OP level 2 (GAMEMASTERS).
  */
 public class PocketDimensionsCommand {
+
+    /** Where /pd help points: the player guide on the repository's main branch. */
+    public static final String GUIDE_URL = "https://github.com/rasmus8484/pocket-dimensions/blob/main/GUIDE.md";
+
+    private static final java.util.function.Predicate<CommandSourceStack> OPS =
+            src -> src.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS));
+
+    // Name suggestions as you type, like vanilla's player arguments; the argument still takes any name or a UUID
+    private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> ONLINE =
+            (ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), b);
+
+    /** Online players and everyone on any realm's access list (they may be offline): who /pd deny can name. */
+    private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> LISTED = (ctx, b) -> {
+        MinecraftServer server = ctx.getSource().getServer();
+        RealmManager mgr = RealmManager.get(server);
+        java.util.Set<String> names = new java.util.TreeSet<>(java.util.List.of(server.getPlayerNames()));
+        for (UUID owner : mgr.owners()) for (UUID id : mgr.getAllowedPlayers(owner)) addName(names, id);
+        return net.minecraft.commands.SharedSuggestionProvider.suggest(names, b);
+    };
+
+    /** Everyone who owns a realm, online or not: who /pd disown and /pd regenAnchor can name. */
+    private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> REALM_OWNERS = (ctx, b) -> {
+        java.util.Set<String> names = new java.util.TreeSet<>();
+        for (UUID owner : RealmManager.get(ctx.getSource().getServer()).owners()) addName(names, owner);
+        return net.minecraft.commands.SharedSuggestionProvider.suggest(names, b);
+    };
+
+    private static void addName(java.util.Set<String> names, UUID id) {
+        String name = UsernameCache.getLastKnownUsername(id);
+        if (name != null) names.add(name);
+    }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
             Commands.literal("pd")
-                .requires(src -> src.permissions().hasPermission(
-                        new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS)))
-                .then(Commands.literal("owner")
-                    .then(Commands.argument("player", StringArgumentType.word())
+                .then(Commands.literal("help")
+                    .executes(PocketDimensionsCommand::executeHelp))
+                .then(Commands.literal("owner").requires(OPS)
+                    .then(Commands.argument("player", StringArgumentType.word()).suggests(ONLINE)
                         .executes(PocketDimensionsCommand::executeSetOwner)))
-                .then(Commands.literal("disown")
-                    .then(Commands.argument("player", StringArgumentType.word())
+                .then(Commands.literal("disown").requires(OPS)
+                    .then(Commands.argument("player", StringArgumentType.word()).suggests(REALM_OWNERS)
                         .executes(PocketDimensionsCommand::executeDisown)))
-                .then(Commands.literal("regenCore")
+                .then(Commands.literal("regenCore").requires(OPS)
                     .executes(PocketDimensionsCommand::executeRegenCore))
-                .then(Commands.literal("regenRoom")
+                .then(Commands.literal("regenRoom").requires(OPS)
                     .executes(PocketDimensionsCommand::executeRegenRoom))
-                .then(Commands.literal("regenAnchor")
-                    .then(Commands.argument("player", StringArgumentType.word())
+                .then(Commands.literal("regenAnchor").requires(OPS)
+                    .then(Commands.argument("player", StringArgumentType.word()).suggests(REALM_OWNERS)
                         .executes(PocketDimensionsCommand::executeRegenAnchor)))
-                .then(Commands.literal("allow")
-                    .then(Commands.argument("player", StringArgumentType.word())
+                .then(Commands.literal("allow").requires(OPS)
+                    .then(Commands.argument("player", StringArgumentType.word()).suggests(ONLINE)
                         .executes(ctx -> executeAccess(ctx, true, false))
                         .then(Commands.literal("man")
                             .executes(ctx -> executeAccess(ctx, true, true)))))
-                .then(Commands.literal("deny")
-                    .then(Commands.argument("player", StringArgumentType.word())
+                .then(Commands.literal("deny").requires(OPS)
+                    .then(Commands.argument("player", StringArgumentType.word()).suggests(LISTED)
                         .executes(ctx -> executeAccess(ctx, false, false))
                         .then(Commands.literal("man")
                             .executes(ctx -> executeAccess(ctx, false, true)))))
-                .then(Commands.literal("test")
+                .then(Commands.literal("test").requires(OPS)
                     .then(Commands.literal("mineAnchor")
                         .executes(ctx -> executeTestMineAnchor(ctx,
                                 com.pocketdimensions.PocketDimensionsServerConfig.POCKET_ANCHOR_MINE_SECONDS.get()))
@@ -115,6 +150,35 @@ public class PocketDimensionsCommand {
                         .then(Commands.argument("seconds", DoubleArgumentType.doubleArg(1, 120))
                             .executes(ctx -> executeTestVeilTime(ctx, DoubleArgumentType.getDouble(ctx, "seconds"))))))
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // /pd help
+    // -------------------------------------------------------------------------
+
+    /** The essentials in a few lines, and a link to the full guide. Operators also see their commands. */
+    private static int executeHelp(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        net.minecraft.ChatFormatting gold = net.minecraft.ChatFormatting.GOLD, grey = net.minecraft.ChatFormatting.GRAY;
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+        lines.add(Component.literal("Pocket Dimensions").withStyle(gold, net.minecraft.ChatFormatting.BOLD));
+        lines.add(Component.literal("Pocket rooms: ").withStyle(gold).append(Component.literal(
+                "right-click an anchor to enter. Crouch + jump to leave (riding: right-click a wall). "
+                + "Crouch + right-click a placed anchor with empty hands to take it.").withStyle(grey)));
+        lines.add(Component.literal("Realms: ").withStyle(gold).append(Component.literal(
+                "use a World Seed on a World Anchor, then right-click the anchor to enter. Right-click the World Core "
+                + "to leave; crouch + right-click it to let friends in and name your realm.").withStyle(grey)));
+        lines.add(Component.literal("Sieges: ").withStyle(gold).append(Component.literal(
+                "crouch + right-click a World Anchor with a World Breacher or Anchor Breaker, then feed it lapis. "
+                + "Lapis in the World Core slows a siege.").withStyle(grey)));
+        if (OPS.test(src))
+            lines.add(Component.literal("Operators: ").withStyle(gold).append(Component.literal(
+                    "/pd allow, deny, owner, disown, regenCore, regenRoom, regenAnchor, test").withStyle(grey)));
+        lines.add(Component.literal("Read the full guide").withStyle(s -> s.withColor(net.minecraft.ChatFormatting.AQUA)
+                .withUnderlined(true).withClickEvent(new net.minecraft.network.chat.ClickEvent.OpenUrl(java.net.URI.create(GUIDE_URL))))
+                .append(Component.literal(" (click to open)").withStyle(grey)));
+        for (Component line : lines) src.sendSuccess(() -> line, false);
+        return 1;
     }
 
     // -------------------------------------------------------------------------
