@@ -32,11 +32,11 @@ public class ModItems {
                     new Item.Properties().setId(ITEMS.key("world_anchor"))));
 
     public static final RegistryObject<Item> WORLD_BREACHER_ITEM = ITEMS.register("world_breacher",
-            () -> new BlockItem(ModBlocks.WORLD_BREACHER.get(),
+            () -> new com.pocketdimensions.item.SiegeBlockItem(ModBlocks.WORLD_BREACHER.get(),
                     new Item.Properties().setId(ITEMS.key("world_breacher"))));
 
     public static final RegistryObject<Item> ANCHOR_BREAKER_ITEM = ITEMS.register("anchor_breaker",
-            () -> new BlockItem(ModBlocks.ANCHOR_BREAKER.get(),
+            () -> new com.pocketdimensions.item.SiegeBlockItem(ModBlocks.ANCHOR_BREAKER.get(),
                     new Item.Properties().setId(ITEMS.key("anchor_breaker"))));
 
     public static final RegistryObject<Item> WORLD_CORE_ITEM = ITEMS.register("world_core",
