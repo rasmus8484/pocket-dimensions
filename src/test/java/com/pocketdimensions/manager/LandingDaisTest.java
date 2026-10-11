@@ -108,7 +108,7 @@ class LandingDaisTest {
         assertFalse(LandingDais.inWall(7, 0), "beyond the ring");
         for (int dx = -7; dx <= 7; dx++)
             for (int dz = -7; dz <= 7; dz++)
-                if (LandingDais.inWall(dx, dz)) assertTrue(Math.abs(dx) <= LandingDais.WALL_REACH && Math.abs(dz) <= LandingDais.WALL_REACH);
+                if (LandingDais.inWall(dx, dz)) assertTrue(Math.abs(dx) <= LandingDais.CASING_REACH && Math.abs(dz) <= LandingDais.CASING_REACH);
     }
 
     @Test
@@ -121,11 +121,10 @@ class LandingDaisTest {
 
     private static final int[][] HERE_OR_BESIDE = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
-    /** Every aurora stone block of a plan, dais and roots, as "dx,depth below the floor,dz". */
+    /** Every aurora stone block of a plan (the roots are in the dais), as "dx,depth below the floor,dz". */
     private static Set<String> aurora(LandingDais.Plan p) {
         Set<String> s = new HashSet<>();
         for (LandingDais.Block b : p.blocks()) if (b.kind() == LandingDais.Kind.AURORA_STONE) s.add(b.dx() + "," + (p.floor() - b.y()) + "," + b.dz());
-        for (LandingDais.Block b : p.roots()) s.add(b.dx() + "," + (p.floor() - b.y()) + "," + b.dz());
         return s;
     }
 
@@ -137,20 +136,18 @@ class LandingDaisTest {
     }
 
     @Test
-    void rootsRunDownFromTheFloorJoinedBlockToBlock() {
+    void rootsStayInTheDaisJoinedBlockToBlock() {
         for (int plot = 0; plot < 300; plot++) {
             LandingDais.Plan p = LandingDais.plan(plot, FLAT);
             Set<String> aur = aurora(p);
-            assertFalse(p.roots().isEmpty(), "plot " + plot + " has roots below the dais");
-            for (LandingDais.Block b : p.roots()) {
+            for (LandingDais.Block b : p.blocks()) {
                 int d = p.floor() - b.y();
-                assertEquals(LandingDais.Kind.AURORA_STONE, b.kind());
-                assertTrue(d >= 1 && d < LandingDais.ROOT_DEPTH, "plot " + plot + " root depth " + d);
-                assertTrue(Math.abs(b.dx()) <= 7 && Math.abs(b.dz()) <= 7, "plot " + plot + " stays in the Core's chunk: " + b);
-                assertFalse(LandingDais.inDais(b.dx(), -d, b.dz()), "roots in the dais are dais blocks: " + b);
-                boolean joined = false;
+                assertTrue(LandingDais.inDais(b.dx(), -d, b.dz()), "plot " + plot + ": everything is in the dais: " + b);
+                if (b.kind() != LandingDais.Kind.AURORA_STONE || d < 1) continue;
+                boolean joined = false, spill = false;
                 for (int[] o : HERE_OR_BESIDE) joined |= aur.contains((b.dx() + o[0]) + "," + (d - 1) + "," + (b.dz() + o[1]));
-                assertTrue(joined, "plot " + plot + ": " + b + " hangs from the vein above it");
+                for (int[] o : HERE_OR_BESIDE) spill |= !LandingDais.inDais(b.dx() + o[0], -d, b.dz() + o[1]);   // a vine down the side
+                assertTrue(joined || spill, "plot " + plot + ": " + b + " hangs from the vein above it");
             }
         }
     }
@@ -174,13 +171,78 @@ class LandingDaisTest {
 
     @Test
     void nothingEverReachesOutOfTheCoresChunk() {
-        // the Core's column is block 8 of its chunk, so 7 out either way is the chunk's edge
+        // the Core's column is block 8 of its chunk, so 7 out either way is the chunk's edge; the casing reaches 6
         for (int plot = 0; plot < 20000; plot++) {
             LandingDais.Plan p = LandingDais.plan(plot, FLAT);
-            for (LandingDais.Block b : p.roots())
-                assertTrue(Math.abs(b.dx()) <= 7 && Math.abs(b.dz()) <= 7, "plot " + plot + ": " + b);
             for (LandingDais.Block b : p.blocks())
                 assertTrue(Math.abs(b.dx()) <= 7 && Math.abs(b.dz()) <= 7, "plot " + plot + ": " + b);
+            if (plot > 0) continue;                                    // the casing is the same shape for every plot
+            for (LandingDais.Block b : p.shell())
+                assertTrue(Math.abs(b.dx()) <= LandingDais.CASING_REACH && Math.abs(b.dz()) <= LandingDais.CASING_REACH, b.toString());
+            for (LandingDais.Column c : p.wall())
+                assertTrue(Math.abs(c.dx()) <= LandingDais.CASING_REACH && Math.abs(c.dz()) <= LandingDais.CASING_REACH, c.toString());
         }
+    }
+
+    private static final int[][] FACES = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+
+    @Test
+    void theCasingIsAirtight() {
+        for (int plot = 0; plot < 50; plot++) {
+            LandingDais.Plan p = LandingDais.plan(plot, (dx, dz) -> 64 + (dx + dz) / 3);
+            int f = p.floor();
+            Set<String> shell = new HashSet<>(), wall = new HashSet<>();
+            p.shell().forEach(b -> shell.add(b.dx() + "," + (b.y() - f) + "," + b.dz()));
+            p.wall().forEach(c -> wall.add(c.dx() + "," + c.dz()));
+            for (int x = -8; x <= 8; x++) for (int z = -8; z <= 8; z++) for (int rel = -6; rel <= 4; rel++) {
+                if (!LandingDais.inside(x, rel, z)) continue;
+                for (int[] o : FACES) {
+                    int nx = x + o[0], nr = rel + o[1], nz = z + o[2];
+                    if (LandingDais.inside(nx, nr, nz)) continue;
+                    boolean cased = nr <= 0 ? shell.contains(nx + "," + nr + "," + nz) : wall.contains(nx + "," + nz);
+                    assertTrue(cased, "plot " + plot + ": a way out at " + nx + "," + nr + "," + nz);
+                }
+            }
+        }
+    }
+
+    @Test
+    void theCasingIsOneBlockThick() {
+        LandingDais.Plan p = LandingDais.plan(1, FLAT);
+        int f = p.floor();
+        for (LandingDais.Block b : p.shell()) {
+            int rel = b.y() - f;
+            assertFalse(LandingDais.inside(b.dx(), rel, b.dz()), "never inside the shape: " + b);
+            boolean touches = false;
+            for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++)
+                touches |= LandingDais.inside(b.dx() + x, rel + y, b.dz() + z);
+            assertTrue(touches, "touches the shape at least at a corner: " + b);
+        }
+        for (LandingDais.Column c : p.wall()) {
+            double r = Math.hypot(c.dx(), c.dz());
+            assertTrue(r >= LandingDais.CLEAR && r < LandingDais.CLEAR + 1.5, "the wall hugs the cylinder: " + c);
+        }
+    }
+
+    @Test
+    void theRimHasARingOfSlateAtFloorLevel() {
+        LandingDais.Plan p = LandingDais.plan(1, FLAT);
+        Set<String> atFloor = new HashSet<>();
+        p.shell().stream().filter(b -> b.y() == p.floor()).forEach(b -> atFloor.add(b.dx() + "," + b.dz()));
+        for (int x = -6; x <= 6; x++) for (int z = -6; z <= 6; z++) {
+            double r = Math.hypot(x, z);
+            if (r >= LandingDais.RADIUS && r < LandingDais.CLEAR) assertTrue(atFloor.contains(x + "," + z), "ring at " + x + "," + z);
+        }
+    }
+
+    @Test
+    void whatFusesIntoAuroraSlate() {
+        assertTrue(LandingDais.fuses(false, true, false, false, false, false), "stone, earth, logs");
+        assertFalse(LandingDais.fuses(false, true, true, false, false, false), "leaves stay");
+        assertFalse(LandingDais.fuses(false, false, false, false, false, false), "plants, carpets, snow layers, air stay");
+        assertFalse(LandingDais.fuses(false, true, false, true, false, false), "a chest keeps its contents");
+        assertFalse(LandingDais.fuses(false, true, false, false, true, false), "bedrock stays");
+        assertFalse(LandingDais.fuses(true, false, false, false, false, false), "water under the dais stays");
+        assertTrue(LandingDais.fuses(true, false, false, false, false, true), "a lake in the wall is sealed");
     }
 }

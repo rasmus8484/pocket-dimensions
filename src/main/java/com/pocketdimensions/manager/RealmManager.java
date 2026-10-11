@@ -435,22 +435,15 @@ public class RealmManager extends SavedData {
         LandingDais.Plan plan = LandingDais.plan(plot, (dx, dz) -> firstAirAboveGround(level, cx + dx, cz + dz));
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         BlockState rock = Blocks.STONE.defaultBlockState();
-        for (int dx = -LandingDais.WALL_REACH; dx <= LandingDais.WALL_REACH; dx++)
-            for (int dz = -LandingDais.WALL_REACH; dz <= LandingDais.WALL_REACH; dz++) {
-                boolean open = Math.hypot(dx, dz) < LandingDais.CLEAR, wall = LandingDais.inWall(dx, dz);
-                if (!open && !wall) continue;
+        for (int dx = -LandingDais.REACH; dx <= LandingDais.REACH; dx++)
+            for (int dz = -LandingDais.REACH; dz <= LandingDais.REACH; dz++) {
+                if (Math.hypot(dx, dz) >= LandingDais.CLEAR) continue;         // the open cylinder, to the sky
                 int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, cx + dx, cz + dz);
-                for (int y = plan.floor() + 1; y < top; y++) {
-                    p.set(cx + dx, y, cz + dz);
-                    if (open) level.setBlock(p, Blocks.AIR.defaultBlockState(), DAIS_FLAGS);
-                    else if (!level.getFluidState(p).isEmpty()) level.setBlock(p, rock, DAIS_FLAGS);
-                }
+                for (int y = plan.floor() + 1; y < top; y++) level.setBlock(p.set(cx + dx, y, cz + dz), Blocks.AIR.defaultBlockState(), DAIS_FLAGS);
             }
         BlockState aurora = ModBlocks.AURORA_STONE.get().defaultBlockState();
         for (LandingDais.Block b : plan.blocks())
             level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), b.kind() == LandingDais.Kind.AURORA_STONE ? aurora : rock, DAIS_FLAGS);
-        for (LandingDais.Block b : plan.roots())                    // roots go on down only through natural solid ground
-            if (canRootInto(level, p.set(cx + b.dx(), b.y(), cz + b.dz()))) level.setBlock(p, aurora, DAIS_FLAGS);
         return new BlockPos(cx, plan.floor() + 1, cz);
     }
 
@@ -462,12 +455,6 @@ public class RealmManager extends SavedData {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         return LandingDais.firstAir(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), level.getMinY(),
                 y -> isGround(level.getBlockState(p.set(x, y, z))));
-    }
-
-    /** Whether a root may run through this block: natural solid ground, never a fluid, air or anything with contents. */
-    private static boolean canRootInto(ServerLevel level, BlockPos pos) {
-        BlockState s = level.getBlockState(pos);
-        return s.getFluidState().isEmpty() && isGround(s) && level.getBlockEntity(pos) == null;
     }
 
     private static boolean isGround(BlockState s) {

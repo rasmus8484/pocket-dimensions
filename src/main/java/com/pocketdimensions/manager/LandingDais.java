@@ -9,7 +9,8 @@ import java.util.function.IntPredicate;
 
 /**
  * The Stone Dais the World Core lands on (RL-024): a flat disc of stone 9 blocks across with a rounded underside 3
- * deep, and six vines of aurora stone winding out from a pool under the Core to the edge and down its side. Offsets are
+ * deep, and six vines of aurora stone winding out from a pool under the Core to the edge and down its side, cased in
+ * aurora slate (the dais is a bullet's tip, the cylinder cleared above it the body). Offsets are
  * from the Core's column; heights are world y. Plain logic, unit tested; RealmManager reads the ground and sets the
  * blocks. Ported from the approved studies page (core-landing-studies.html, version 18, "Stone Dais").
  */
@@ -21,26 +22,22 @@ public final class LandingDais {
     public static final int VINES = 6;
     /** How far out (in whole blocks) the dais or its open cylinder reaches from the Core's column. */
     public static final int REACH = 5;
-    /** The ring just outside the open cylinder where standing fluid is sealed in, so it can't pour onto the dais. */
-    public static final double WALL = CLEAR + 1;
-    /** How far out (in whole blocks) the sealing ring reaches: the centre is block 8 of its chunk, so 2..14 stay in it. */
-    public static final int WALL_REACH = 6;
+    /** How far out (in whole blocks) the casing reaches: the centre is block 8 of its chunk, so 2..14 stay in it. */
+    public static final int CASING_REACH = 6;
 
-    public enum Kind { STONE, AURORA_STONE }
+    public enum Kind { STONE, AURORA_STONE, AURORA_SLATE }
 
     /** One block of the dais: offset from the Core's column, world y, and what it is. */
     public record Block(int dx, int y, int dz, Kind kind) {}
 
-    /**
-     * The floor's height (the Core stands at floor + 1), every block of the dais, and the roots: aurora stone running on
-     * down below the dais into the ground, set only where the ground there is natural solid ground.
-     */
-    public record Plan(int floor, List<Block> blocks, List<Block> roots) {}
+    /** A column of the casing's wall: offset from the Core's column; every block of it above the floor is casing. */
+    public record Column(int dx, int dz) {}
 
-    /** Roots reach less than this far below the floor. */
-    public static final int ROOT_DEPTH = 8;
-    /** How far out a root may wander: the Core's column is block 8 of its chunk, so 7 either way stays in it. */
-    public static final int ROOT_REACH = 7;
+    /**
+     * The floor's height (the Core stands at floor + 1), every block of the dais, and its aurora slate casing: the shell
+     * (every casing block at or below the floor, world y) and the wall (the columns cased above the floor, up to the sky).
+     */
+    public record Plan(int floor, List<Block> blocks, List<Block> shell, List<Column> wall) {}
 
     private LandingDais() {}
 
@@ -55,14 +52,20 @@ public final class LandingDais {
             for (int dz = -REACH; dz <= REACH; dz++)
                 for (int below = -(int) DEPTH; below <= 0; below++)
                     if (inDais(dx, below, dz)) blocks.put(key(dx, below, dz), Kind.STONE);
-        Map<Long, Kind> roots = new LinkedHashMap<>();
         Vines v = new Vines(blocks, plot);
         v.grow();
-        v.roots(roots);
-        List<Block> out = new ArrayList<>(blocks.size()), down = new ArrayList<>(roots.size());
+        v.roots();
+        List<Block> out = new ArrayList<>(blocks.size()), shell = new ArrayList<>();
         blocks.forEach((k, kind) -> out.add(new Block(unX(k), unBelow(k) + floor, unZ(k), kind)));
-        roots.forEach((k, kind) -> down.add(new Block(unX(k), unBelow(k) + floor, unZ(k), kind)));
-        return new Plan(floor, out, down);
+        for (int dx = -CASING_REACH; dx <= CASING_REACH; dx++)
+            for (int dz = -CASING_REACH; dz <= CASING_REACH; dz++)
+                for (int rel = -(int) DEPTH - 2; rel <= 0; rel++)
+                    if (inShell(dx, rel, dz)) shell.add(new Block(dx, floor + rel, dz, Kind.AURORA_SLATE));
+        List<Column> wall = new ArrayList<>();
+        for (int dx = -CASING_REACH; dx <= CASING_REACH; dx++)
+            for (int dz = -CASING_REACH; dz <= CASING_REACH; dz++)
+                if (inWall(dx, dz)) wall.add(new Column(dx, dz));
+        return new Plan(floor, out, shell, wall);
     }
 
     /**
@@ -82,10 +85,55 @@ public final class LandingDais {
         return fluid || (solid && !burns);
     }
 
-    /** Whether column (dx, dz) is in the ring just outside the open cylinder, where fluids above the floor are sealed. */
+    /**
+     * Whether the block at offset (dx, dz), `rel` blocks above the floor (0 = the floor, negative = under it), is inside
+     * the bullet: the dais, or the open cylinder above the floor.
+     */
+    public static boolean inside(int dx, int rel, int dz) {
+        return rel > 0 ? Math.hypot(dx, dz) < CLEAR : inDais(dx, rel, dz);
+    }
+
+    private static final int[][] FACES = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+    private static final int[][] EDGES = edges();
+
+    private static int[][] edges() {
+        List<int[]> e = new ArrayList<>();
+        for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++)
+            if (Math.abs(x) + Math.abs(y) + Math.abs(z) == 2) e.add(new int[]{x, y, z});
+        return e.toArray(new int[0][]);
+    }
+
+    /**
+     * Whether the block at offset (dx, dz), `rel` blocks above the floor (0 or below), is in the casing's shell: outside
+     * the bullet, and in a band one block thick round the dais, or touching the inside on a face (airtight), or touching
+     * the dais along an edge (no seams where the curve steps).
+     */
+    public static boolean inShell(int dx, int rel, int dz) {
+        if (rel > 0 || inside(dx, rel, dz)) return false;
+        if (Math.hypot(Math.hypot(dx, dz) / (RADIUS + 1), -rel / (DEPTH + 1)) < 1) return true;
+        for (int[] f : FACES) if (inside(dx + f[0], rel + f[1], dz + f[2])) return true;
+        for (int[] e : EDGES) if (inDais(dx + e[0], rel + e[1], dz + e[2])) return true;
+        return false;
+    }
+
+    /**
+     * Whether a block in the casing fuses into aurora slate: anything solid that is not leaves, has no block entity (a
+     * chest keeps its contents) and can be broken; a fluid only in the wall above the floor, where it is sealed in so it
+     * cannot pour into the cleared cylinder.
+     */
+    public static boolean fuses(boolean fluid, boolean solid, boolean leaves, boolean entity, boolean unbreakable, boolean wall) {
+        if (entity || unbreakable) return false;
+        if (fluid) return wall;
+        return solid && !leaves;
+    }
+
+    /** Whether column (dx, dz) is in the casing's wall above the floor: a band one block thick round the open cylinder. */
     public static boolean inWall(int dx, int dz) {
         double r = Math.hypot(dx, dz);
-        return r >= CLEAR && r < WALL;
+        if (r < CLEAR) return false;
+        if (r < CLEAR + 1) return true;
+        for (int[] f : FACES) if (f[1] == 0 && Math.hypot(dx + f[0], dz + f[2]) < CLEAR) return true;
+        return false;
     }
 
     /** The floor's height: the average height of the first air above the ground under the disc, rounded. */
@@ -122,10 +170,10 @@ public final class LandingDais {
 
         /**
          * Roots: from the floor's aurora stone (the pool's centre, and about one floor block in four) a vein runs down
-         * through the dais, now and then stepping one block aside, 3 to 7 blocks deep. Inside the dais it turns its
-         * stone to aurora stone; below the dais it goes into `below`, for the ground beneath.
+         * through the dais, now and then stepping one block aside, 3 to 7 blocks deep, turning its stone to aurora stone.
+         * It stops where it would leave the dais, so the veins stay in the dais and the casing round it is unbroken.
          */
-        void roots(Map<Long, Kind> below) {
+        void roots() {
             List<int[]> starts = new ArrayList<>();
             for (Map.Entry<Long, Kind> e : blocks.entrySet()) {
                 long k = e.getKey();
@@ -139,11 +187,11 @@ public final class LandingDais {
                 for (int d = 1; d <= depth; d++) {
                     if (hsh(seed, d, 2, 96) < 0.35) {                                    // a step aside
                         int dir = (int) (hsh(seed, d, 3, 96) * 4);
-                        int nx = x + (dir == 0 ? 1 : dir == 1 ? -1 : 0), nz = z + (dir == 2 ? 1 : dir == 3 ? -1 : 0);
-                        if (Math.abs(nx) <= ROOT_REACH && Math.abs(nz) <= ROOT_REACH) { x = nx; z = nz; }   // never out of the chunk
+                        x += dir == 0 ? 1 : dir == 1 ? -1 : 0;
+                        z += dir == 2 ? 1 : dir == 3 ? -1 : 0;
                     }
-                    if (inDais(x, -d, z)) blocks.put(key(x, -d, z), Kind.AURORA_STONE);
-                    else below.put(key(x, -d, z), Kind.AURORA_STONE);
+                    if (!inDais(x, -d, z)) break;                                    // the veins stay in the dais
+                    blocks.put(key(x, -d, z), Kind.AURORA_STONE);
                 }
             }
         }
