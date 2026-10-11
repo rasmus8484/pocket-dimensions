@@ -12,6 +12,7 @@ import com.pocketdimensions.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.resources.Identifier;
@@ -43,7 +44,7 @@ import java.util.stream.Collectors;
  *   Realm area (blocks):  originChunk*16 to (originChunk+sideChunks)*16
  *   WorldCore:   closest dry-land surface within searchRadius chunks of plot center
  *   Spawn pos:   WorldCore + (1, 0, 0)
- *   Plots with no dry land are added to invalidPlots and skipped on future allocation.
+ *   Retired plots (relocated or disowned) are kept in invalidPlots and never handed out again.
  */
 public class RealmManager extends SavedData {
 
@@ -60,7 +61,9 @@ public class RealmManager extends SavedData {
     private static int paddingChunks()   { return PocketDimensionsConfig.REALM_PADDING_CHUNKS.get(); }
     private static int sideChunks()      { return 2 * radiusChunks() - 1; }
     private static int cellChunks()      { return sideChunks() + paddingChunks(); }
-    private static int maxSearchChunks() { return PocketDimensionsConfig.MAX_SPAWN_SEARCH_CHUNKS.get(); }
+    /** Blocks across one plot, and between the starts of neighbouring plots (the plot plus the gap). */
+    public static int sideBlocks()       { return sideChunks() * 16; }
+    public static int cellBlocks()       { return cellChunks() * 16; }
 
     // -------------------------------------------------------------------------
     // Inner data classes
@@ -403,55 +406,75 @@ public class RealmManager extends SavedData {
     // Realm generation
     // -------------------------------------------------------------------------
 
+    /**
+     * Grows ownerUUID's realm the first time it is needed: the World Core lands at the plot's exact centre, whatever the
+     * land there, on its Stone Dais (LandingDais), with the sky cleared above it. Only ever once per realm: a realm
+     * reached again through a new anchor is already generated and nothing changes.
+     */
     public void ensureGenerated(UUID ownerUUID, ServerLevel realmLevel) {
         RealmData data = realms.get(ownerUUID);
         if (data == null || data.generated) return;
-
-        for (int attempt = 0; attempt < 100; attempt++) {
-            // Skip any plot previously marked as having no dry land
-            if (invalidPlots.contains(data.plotIndex)) {
-                int nextIndex = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
-                data = new RealmData(nextIndex, ownerUUID);
-                realms.put(ownerUUID, data);
-                setDirty();
-            }
-
-            int[] origChunk = plotOriginChunkXZ(data.plotIndex);
-            int centerChunkX = origChunk[0] + sideChunks() / 2;
-            int centerChunkZ = origChunk[1] + sideChunks() / 2;
-            int searchRadius = Math.max(1, Math.min(radiusChunks() / 3, maxSearchChunks()));
-
-            BlockPos landPos = findLandNearCenter(realmLevel, centerChunkX, centerChunkZ, searchRadius);
-
-            if (landPos != null) {
-                placeCore(realmLevel, landPos, ownerUUID);
-                clearColumnAbove(realmLevel, landPos);
-                data.worldCorePos = landPos;
-                data.generated = true;
-                setDirty();
-                return;
-            }
-
-            // No dry land found - mark this plot invalid and try the next one
-            invalidPlots.add(data.plotIndex);
-            int nextIndex = freePlotIndices.isEmpty() ? nextPlotIndex++ : freePlotIndices.pollFirst();
-            data = new RealmData(nextIndex, ownerUUID);
-            realms.put(ownerUUID, data);
-            setDirty();
-        }
-
-        // Extreme fallback (100 consecutive water-only plots): force-place at center surface
         int[] origChunk = plotOriginChunkXZ(data.plotIndex);
         int centerX = (origChunk[0] + sideChunks() / 2) * 16 + 8;
         int centerZ = (origChunk[1] + sideChunks() / 2) * 16 + 8;
-        realmLevel.getChunk(centerX >> 4, centerZ >> 4);
-        int surfaceY = realmLevel.getHeight(Heightmap.Types.WORLD_SURFACE, centerX, centerZ);
-        BlockPos corePos = new BlockPos(centerX, surfaceY, centerZ);
+        BlockPos corePos = buildDais(realmLevel, centerX, centerZ, data.plotIndex);
         placeCore(realmLevel, corePos, ownerUUID);
-        clearColumnAbove(realmLevel, corePos);
         data.worldCorePos = corePos;
         data.generated = true;
         setDirty();
+    }
+
+    /**
+     * The Stone Dais at the column (cx, cz): the cylinder above it cleared to the sky, the dais's stone and aurora stone
+     * set, then its aurora slate casing: every solid block round and under the dais and round the cylinder fuses into
+     * aurora slate (leaves, plants, chests and water under it stay; fluids from the floor up are sealed). Blocks are
+     * set as world generation sets them (no neighbour or shape updates), so nothing pours or collapses while it is built.
+     * Returns where the Core stands: on the pool, one above the floor.
+     */
+    private static BlockPos buildDais(ServerLevel level, int cx, int cz, int plot) {
+        level.getChunk(cx >> 4, cz >> 4);              // the centre is block 8 of its chunk, so all of it (2..14) is here
+        LandingDais.Plan plan = LandingDais.plan(plot, (dx, dz) -> firstAirAboveGround(level, cx + dx, cz + dz));
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        BlockState rock = Blocks.STONE.defaultBlockState();
+        for (int dx = -LandingDais.REACH; dx <= LandingDais.REACH; dx++)
+            for (int dz = -LandingDais.REACH; dz <= LandingDais.REACH; dz++) {
+                if (Math.hypot(dx, dz) >= LandingDais.CLEAR) continue;         // the open cylinder, to the sky
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, cx + dx, cz + dz);
+                for (int y = plan.floor() + 1; y < top; y++) level.setBlock(p.set(cx + dx, y, cz + dz), Blocks.AIR.defaultBlockState(), DAIS_FLAGS);
+            }
+        BlockState aurora = ModBlocks.AURORA_STONE.get().defaultBlockState();
+        for (LandingDais.Block b : plan.blocks())
+            level.setBlock(p.set(cx + b.dx(), b.y(), cz + b.dz()), b.kind() == LandingDais.Kind.AURORA_STONE ? aurora : rock, DAIS_FLAGS);
+        BlockState slate = ModBlocks.AURORA_SLATE.get().defaultBlockState();
+        for (LandingDais.Block b : plan.shell())                    // the casing round and under the dais
+            if (fuses(level, p.set(cx + b.dx(), b.y(), cz + b.dz()), LandingDais.sealsFluids(b.y() - plan.floor()))) level.setBlock(p, slate, DAIS_FLAGS);
+        for (LandingDais.Column c : plan.wall()) {                  // and the wall of the cleared cylinder, to the sky
+            int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, cx + c.dx(), cz + c.dz());
+            for (int y = plan.floor() + 1; y < top; y++)
+                if (fuses(level, p.set(cx + c.dx(), y, cz + c.dz()), LandingDais.sealsFluids(y - plan.floor()))) level.setBlock(p, slate, DAIS_FLAGS);
+        }
+        return new BlockPos(cx, plan.floor() + 1, cz);
+    }
+
+    /** How the dais's blocks are set: sent to players, but no neighbour or shape updates, as world generation does. */
+    private static final int DAIS_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
+    /** The height of the first air above the ground in column (x, z): see LandingDais.isGround. */
+    private static int firstAirAboveGround(ServerLevel level, int x, int z) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        return LandingDais.firstAir(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), level.getMinY(),
+                y -> isGround(level.getBlockState(p.set(x, y, z))));
+    }
+
+    /** Whether the block at pos fuses into aurora slate (LandingDais.fuses), read from the world. */
+    private static boolean fuses(ServerLevel level, BlockPos pos, boolean sealFluids) {
+        BlockState s = level.getBlockState(pos);
+        return LandingDais.fuses(!s.getFluidState().isEmpty(), s.isSolid(), s.is(BlockTags.LEAVES),
+                level.getBlockEntity(pos) != null, s.getDestroySpeed(level, pos) < 0, sealFluids);
+    }
+
+    private static boolean isGround(BlockState s) {
+        return LandingDais.isGround(!s.getFluidState().isEmpty(), s.isSolid(), s.ignitedByLava());
     }
 
     /** A World Core at corePos for ownerUUID's realm: two blocks tall, its block entity on the lower half. */
@@ -460,59 +483,6 @@ public class RealmManager extends SavedData {
         if (level.getBlockEntity(corePos) instanceof WorldCoreBlockEntity wc) wc.setOwnerUUID(ownerUUID);
         level.setBlock(corePos.above(), ModBlocks.WORLD_CORE.get().defaultBlockState()
                 .setValue(WorldCoreBlock.HALF, DoubleBlockHalf.UPPER), 3);
-    }
-
-    /** Clears all blocks in the column directly above corePos up to the world surface. */
-
-    private void clearColumnAbove(ServerLevel level, BlockPos corePos) {
-        int topY = level.getHeight(Heightmap.Types.WORLD_SURFACE, corePos.getX(), corePos.getZ());
-        for (int y = corePos.getY() + 1; y < topY; y++) {
-            level.setBlock(new BlockPos(corePos.getX(), y, corePos.getZ()), Blocks.AIR.defaultBlockState(), 3);
-        }
-    }
-
-    /**
-     * The nearest dry land to the plot's centre: chunks are searched outward ring by ring (RingSearch), each loaded only
-     * when its turn comes, sampling 4x4 points per chunk, and the search stops one ring past the first land it finds.
-     * Returns the surface position (first air above solid ground, under any trees), or null if there is no dry land
-     * within searchRadius chunks.
-     */
-    @Nullable
-    private BlockPos findLandNearCenter(ServerLevel level, int centerChunkX, int centerChunkZ, int searchRadius) {
-        int centerBlockX = centerChunkX * 16 + 8;
-        int centerBlockZ = centerChunkZ * 16 + 8;
-        int[] offsets = {2, 6, 10, 14};
-        return RingSearch.nearest(searchRadius, (dcx, dcz) -> {
-            int cx = centerChunkX + dcx, cz = centerChunkZ + dcz;
-            level.getChunk(cx, cz);                                   // generate it now, and only now
-            RingSearch.Hit<BlockPos> best = null;
-            for (int ox : offsets) {
-                for (int oz : offsets) {
-                    int x = cx * 16 + ox;
-                    int z = cz * 16 + oz;
-                    int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
-                    if (y <= level.getMinY()) continue;
-                    BlockState surfaceState = level.getBlockState(new BlockPos(x, y - 1, z));
-                    if (!surfaceState.getFluidState().isEmpty() || !surfaceState.isSolid()) continue;
-                    // If the surface is leaves or logs, scan downward for the forest floor
-                    int placementY = y;
-                    if (surfaceState.is(BlockTags.LEAVES) || surfaceState.is(BlockTags.LOGS)
-                            || surfaceState.is(BlockTags.REPLACEABLE)) {
-                        for (int scanY = y - 2; scanY >= level.getMinY(); scanY--) {
-                            BlockState scanState = level.getBlockState(new BlockPos(x, scanY, z));
-                            if (!scanState.is(BlockTags.LEAVES) && !scanState.is(BlockTags.LOGS)
-                                    && !scanState.is(BlockTags.REPLACEABLE)) {
-                                placementY = scanY + 1;
-                                break;
-                            }
-                        }
-                    }
-                    double distSq = (double) (x - centerBlockX) * (x - centerBlockX) + (double) (z - centerBlockZ) * (z - centerBlockZ);
-                    if (best == null || distSq < best.distSq()) best = new RingSearch.Hit<>(new BlockPos(x, placementY, z), distSq);
-                }
-            }
-            return best;
-        });
     }
 
     // -------------------------------------------------------------------------

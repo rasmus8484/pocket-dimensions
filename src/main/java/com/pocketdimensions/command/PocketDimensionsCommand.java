@@ -54,6 +54,10 @@ import java.util.UUID;
  *                                                    their manager status; they stay on the list)
  *   /pd test mineAnchor [seconds]                  - testing: mine the anchor of the room you're in, start to finish
  *                                                    (default: pocket_anchor_mine_seconds from the server config)
+ *   /pd test wardTime [seconds]                    - testing: your client measures the ward sigil's time per frame
+ *                                                    for a while (default 10 s) and reports it in your chat
+ *   /pd test veilTime [seconds]                    - testing: your client times the Veil fog on the graphics card
+ *                                                    for a while (default 10 s) and reports it in your chat
  *
  * The argument is auto-detected: if it parses as a UUID it is used directly;
  * otherwise it is treated as a player name and resolved via:
@@ -97,7 +101,15 @@ public class PocketDimensionsCommand {
                         .executes(ctx -> executeTestMineAnchor(ctx,
                                 com.pocketdimensions.PocketDimensionsServerConfig.POCKET_ANCHOR_MINE_SECONDS.get()))
                         .then(Commands.argument("seconds", DoubleArgumentType.doubleArg(0, 3600))
-                            .executes(ctx -> executeTestMineAnchor(ctx, DoubleArgumentType.getDouble(ctx, "seconds"))))))
+                            .executes(ctx -> executeTestMineAnchor(ctx, DoubleArgumentType.getDouble(ctx, "seconds")))))
+                    .then(Commands.literal("wardTime")
+                        .executes(ctx -> executeTestWardTime(ctx, 10))
+                        .then(Commands.argument("seconds", DoubleArgumentType.doubleArg(1, 120))
+                            .executes(ctx -> executeTestWardTime(ctx, DoubleArgumentType.getDouble(ctx, "seconds")))))
+                    .then(Commands.literal("veilTime")
+                        .executes(ctx -> executeTestVeilTime(ctx, 10))
+                        .then(Commands.argument("seconds", DoubleArgumentType.doubleArg(1, 120))
+                            .executes(ctx -> executeTestVeilTime(ctx, DoubleArgumentType.getDouble(ctx, "seconds"))))))
         );
     }
 
@@ -133,6 +145,50 @@ public class PocketDimensionsCommand {
         src.sendSuccess(() -> Component.literal(String.format(
                 "Test: mining this room's anchor at %d %d %d in %s. It breaks in %.1f s and the room is lost.",
                 pos.getX(), pos.getY(), pos.getZ(), anchor.getKey().identifier(), seconds)), false);
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pd test wardTime [seconds]
+    // -------------------------------------------------------------------------
+
+    /**
+     * Asks your client to measure how long the ward sigil takes each frame for {@code seconds}; it reports in your chat
+     * (time per frame, vertices, share of a 60 fps frame), so a player on ordinary hardware can read off a real figure.
+     */
+    private static int executeTestWardTime(CommandContext<CommandSourceStack> ctx, double seconds)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer player = src.getPlayerOrException();
+        if (!player.level().dimension().equals(PocketDimensionsMod.REALM_DIM)) {
+            src.sendFailure(Component.literal("Stand in a realm to measure its ward."));
+            return 0;
+        }
+        com.pocketdimensions.network.ModNetworking.getChannel().send(
+                new com.pocketdimensions.network.WardTimeS2C((float) seconds),
+                net.minecraftforge.network.PacketDistributor.PLAYER.with(player));
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pd test veilTime [seconds]
+    // -------------------------------------------------------------------------
+
+    /**
+     * Asks your client to time the Veil fog on the graphics card for {@code seconds}; it reports in your chat (time per
+     * frame and share of a 60 fps frame), so a player on ordinary hardware can read off a real figure.
+     */
+    private static int executeTestVeilTime(CommandContext<CommandSourceStack> ctx, double seconds)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer player = src.getPlayerOrException();
+        if (!player.level().dimension().equals(PocketDimensionsMod.REALM_DIM)) {
+            src.sendFailure(Component.literal("Stand in a realm to measure its Veil."));
+            return 0;
+        }
+        com.pocketdimensions.network.ModNetworking.getChannel().send(
+                new com.pocketdimensions.network.VeilTimeS2C((float) seconds),
+                net.minecraftforge.network.PacketDistributor.PLAYER.with(player));
         return 1;
     }
 

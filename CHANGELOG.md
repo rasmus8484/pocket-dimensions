@@ -42,6 +42,8 @@ The first release, for Minecraft Java 1.21.11 with Forge 61.1.0 or later. Server
   - you can't walk, fly, pearl or chorus out of your plot
   - portals are blocked
   - anyone arriving by another mod's teleport without having come through an anchor is sent back out
+- **The Veil**: every realm is walled by an unbreakable wall of mist along every edge, from bedrock to the build limit, and players are held under a ceiling at y 318 (no building at y 318 and 319), so nobody can see into another realm, Distant Horizons included.
+- **The ward's sigil**: a vault of glowing runes over every realm (a crown, three tiers carrying spinning rune worlds, a band over the Veil) above a soft field of power streaming out from the crown, joined to the World Core by its beam, showing the siege in its colours (blue, pink, cracked, red, broken) and dimming when the Core has no lapis.
 - **An empty (unlinked) anchor** can be mined with a diamond-tier pickaxe in 3 seconds and drops itself; a linked one can't be mined at all.
 
 ### Sieges
@@ -74,6 +76,7 @@ The first release, for Minecraft Java 1.21.11 with Forge 61.1.0 or later. Server
 | `/pd regenCore` | Rebuild a broken World Core where it stood |
 | `/pd regenAnchor <player>` | Put a lost World Anchor back where it stood |
 | `/pd test mineAnchor [seconds]` | Mine the anchor of the room you're in, for testing alone |
+| `/pd test wardTime [seconds]` | Your client measures the ward sigil's time per frame and reports it in chat |
 
 ### Also
 

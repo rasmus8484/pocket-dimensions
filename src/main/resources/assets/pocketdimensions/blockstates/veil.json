@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "band=0": {
+      "model": "pocketdimensions:block/veil_0"
+    },
+    "band=1": {
+      "model": "pocketdimensions:block/veil_1"
+    },
+    "band=2": {
+      "model": "pocketdimensions:block/veil_2"
+    },
+    "band=3": {
+      "model": "pocketdimensions:block/veil_3"
+    },
+    "band=4": {
+      "model": "pocketdimensions:block/veil_4"
+    },
+    "band=5": {
+      "model": "pocketdimensions:block/veil_5"
+    },
+    "band=6": {
+      "model": "pocketdimensions:block/veil_6"
+    },
+    "band=7": {
+      "model": "pocketdimensions:block/veil_7"
+    }
+  }
+}

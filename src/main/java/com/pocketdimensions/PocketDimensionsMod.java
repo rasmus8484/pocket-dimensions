@@ -44,6 +44,8 @@ public class PocketDimensionsMod {
                 "pocketdimensions-common.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, PocketDimensionsServerConfig.SPEC,
                 "pocketdimensions-server.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, PocketDimensionsClientConfig.SPEC,
+                "pocketdimensions-client.toml");
 
         var modBusGroup = context.getModBusGroup();
         ModBlocks.BLOCKS.register(modBusGroup);
@@ -61,6 +63,7 @@ public class PocketDimensionsMod {
         new PocketEventHandler();
         new com.pocketdimensions.event.AnchorMiningHandler();
         new RealmEventHandler();
+        new com.pocketdimensions.event.WardSync();
         new com.pocketdimensions.event.PocketSleepHandler();
         RegisterCommandsEvent.BUS.addListener(event ->
                 PocketDimensionsCommand.register(event.getDispatcher()));

@@ -56,7 +56,7 @@ Each player can own one realm: a region of overworld-like terrain inside the sha
 1. Place a **World Anchor** (two blocks tall, so it needs headroom; the block above that must be breakable, where a siege block would go). It can't be used from inside a pocket room or the realm itself
 2. Use a **World Seed** on the anchor: the seed crumbles into the anchor and condenses a dimensional tunnel to your realm
 3. **Right-click** the linked anchor to enter your realm: the owner always has access, players on the realm's access list too, and anyone else only after a successful breach
-4. **Right-click** the **World Core** (indestructible block at your realm's center) to exit back to where you entered
+4. **Right-click** the **World Core** (indestructible block at your realm's center, standing on its Stone Dais) to exit back to where you entered
 5. **Crouch + right-click** the World Core to open its screen (anyone can; what you may do there depends on who you are, see below)
 
 **Safe arrival:** you arrive next to the World Core, or if a slope or something built there is in the way, at the nearest spot around the core with room to stand (never on the core itself, never outside the realm).
@@ -72,6 +72,10 @@ Each player can own one realm: a region of overworld-like terrain inside the sha
 
 A linked World Anchor is indestructible by normal mining: it can only be removed through the siege system. An unlinked one (no World Seed in it) can be mined with a diamond-tier pickaxe in 3 seconds (`world_anchor_mine_seconds`) and drops itself. Players inside a realm are confined to their region boundaries. Portals are blocked. Anyone arriving some other way (another mod's teleport, `/home`) without having come in through an anchor is sent back out. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
+**The Veil and the ceiling:** every realm is walled by the **Veil**, the realm's ward made visible: a wall of drifting mist along every edge, from bedrock to the build limit, that can't be broken, blown up or moved. It hides whatever lies beyond, so nobody sees into another realm (Distant Horizons included). Overhead the ward holds you with your feet at y 318, and nothing can be built at y 318 or 319, so nobody can look over the Veil. Along every edge, glowing smoke pours slowly down the Veil, thick against the wall and thinning out over about twenty blocks; players can turn it off or make it cheaper in the client config (veil_fog, veil_fog_steps), and /pd test veilTime measures its cost.
+
+**The ward's sigil:** high over every realm hangs the ward, a vault of glowing runes: a crown of three rings where the World Core's beam rises in, three tiers of runes curving down over the realm like a dome, each carrying small spinning worlds of runes that turn with it, and a band of runes over the Veil. Beneath it the ward's power streams outward from the crown as a soft, flowing field of light, clear near the crown and very faint toward the Veil. It shows the realm's state to everyone inside: blue at peace, pink while a World Breacher works, cracked once the breach is complete, red while an Anchor Breaker works, dim red, broken and still once the anchor is lost. It shines brightly while the Core holds lapis and dims without it, and it is faint by day and glows at night. It looks the same at every render distance.
+
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
 **Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it; someone who already owns a realm can't be given a second), or at a placed Pocket Anchor to record its room as theirs.
@@ -84,7 +88,7 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 
 **A lost anchor:** `/pd regenAnchor <player>` puts their World Anchor back, linked, where it last stood (after an Anchor Breaker took it, or if it was broken in creative). Whatever is in those two blocks now is replaced. The owner can also link any new anchor with a World Seed, as always.
 
-**Testing tools** (ops): `/pd test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost.
+**Testing tools** (ops): `/pd test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost. `/pd test wardTime [seconds]`, run in a realm, has your own client measure the ward sigil for a while (10 s unless given) and report in your chat: time per frame (average, 95th percentile, worst), vertices, and its share of a 60 fps frame. Useful on ordinary hardware.
 
 ### Travelling with animals
 
@@ -127,6 +131,8 @@ Two siege blocks can be placed on top of a linked World Anchor (never an empty o
 
 **The World Core (the Geode Heart):** a two-block boulder of weathered stone floating at the realm's centre, split open on four sides around a crystal-lined hollow that holds the realm's black hole (the same one as the anchor's). A shaft is bored straight down through it; the beacon rises from the black hole up the shaft, runes climb the beam in a slow double helix, crystal shards circle the black hole and drift down the shaft, faceted aurora crystals are driven through its crown and a layer of aurora crystal hangs beneath it, slowly shifting colour. A rune tablet below each opening marks where it answers you.
 
+**The Stone Dais:** every World Core lands at the realm's exact centre, on land or open water, on a small round dais of plain stone, 9 blocks across, with the sky cleared above it. Vines of **Aurora Stone** run out from under the Core to the edge and down its side, and roots of it run down through the dais: stone with thin veins of aurora, like crying obsidian, dancing teal with drifting swatches of pink, blue and purple, glowing at night (light 7). The beam that cleared the dais's path down fused everything around it: the ground under and round the dais, and the walls of the cleared cylinder up to the sky (hills, tree trunks), are a casing of **Aurora Slate**, deepslate with glowing flecks of the same aurora. Both can be mined with a pickaxe and drop themselves.
+
 **Beacon indicator:** the core's colours show the realm's state from anywhere inside it:
 - **Blue**: no active siege
 - **Pink**: World Breacher is present on the anchor (the crystal, runes and beam turn pink, the black hole burns ember)
@@ -166,8 +172,7 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `realm.realm_radius_chunks` | 50 | Plot size (side = 2r-1 chunks; 50 is 1,584 x 1,584 blocks). Set before first use |
-| `realm.realm_padding_chunks` | 1 | Gap between adjacent realms |
-| `realm.max_spawn_search_chunks` | 8 | How far the WorldCore's dry-land search may go (it stops soon after finding land) |
+| `realm.realm_padding_chunks` | 1 | Gap between adjacent realms (at least 1: the Veil stands in it) |
 | `siege.breach_duration_ticks` | 12000 | World Breacher full-breach time |
 | `siege.breaker_duration_ticks` | 12000 | Anchor Breaker anchor-destroy time |
 | `siege.core_slow_factor` | 2 | Defense slowdown (progress every N ticks) |
@@ -191,6 +196,13 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 | `realm.mobs.spawn_friendly_mobs` | true | Whether every other kind spawns naturally (animals, bats, fish, ...) |
 | `realm.mobs.categories.<category>` | "group" | Per mob category: "group" follows the switch above, "true" / "false" overrides it |
 | `realm.mobs.exceptions.mob_whitelist` / `mob_blacklist` | [] | Single mobs or tags that always / never spawn naturally |
+
+Per-player display settings live in `config/pocketdimensions-client.toml`:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `veil.veil_fog` | true | Draw the falling smoke along the Veil (off: a plain wall of mist blocks) |
+| `veil.veil_fog_steps` | 12 | Samples the smoke takes near the wall (4-16; 6 halves its cost near the wall) |
 
 Mining times are fixed: enchantments, Haste and mining fatigue don't change them. 0 means the block breaks instantly.
 

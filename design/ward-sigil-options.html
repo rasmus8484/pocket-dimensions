@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ward Sigil Options</title>
+<style>
+  :root { --bg: #070b16; --panel: #0f1628; --fg: #d8e6ff; --muted: #7d8db0; --accent: #8cebff; --line: #22304f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; padding: 16px; }
+  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
+  p { margin: 0; color: var(--muted); max-width: 70ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .group { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px; flex-wrap: wrap; }
+  button { background: transparent; color: var(--muted); border: 0; border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button[aria-pressed="true"] { background: #1b2a4a; color: var(--accent); }
+  .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding: 0 6px; }
+  canvas { width: 100%; max-width: 760px; aspect-ratio: 1; display: block; margin: 0 auto; border-radius: 10px; border: 1px solid var(--line); }
+  #note { min-height: 3em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ward sigil: connections</h1>
+  <p>Top-down over a radius 25 realm (784 blocks across); the square is the Veil, the dot the World Core. "From below" tilts it the way it reads in game. Animated: rings turn, pulses run outward.</p>
+  <div class="controls">
+    <div class="group" id="opt"><span class="label">Design</span>
+      <button data-v="A">A Spokes (now)</button><button data-v="B">B Spiral arms</button><button data-v="C">C Star lattice</button><button data-v="D">D Arms + star seal</button></div>
+    <div class="group" id="core"><span class="label">Core</span>
+      <button data-v="0">Centred</button><button data-v="1">128 off</button></div>
+    <div class="group" id="fit"><span class="label">Outer ring</span>
+      <button data-v="near">Fits nearest edge (now)</button><button data-v="far">Reaches far edge, hidden behind the Veil</button></div>
+    <div class="group" id="view"><span class="label">View</span>
+      <button data-v="top">Top down</button><button data-v="below">From below</button></div>
+  </div>
+  <canvas id="c" width="1520" height="1520"></canvas>
+  <p id="note"></p>
+</main>
+<script>
+const NOTES = {
+  A: 'Now: eight straight spokes from the seal to the band. Clean, but reads as a cartwheel.',
+  B: 'Spiral arms: six arms curl out from the seal like the accretion disk round the Core\'s black hole, pulses flowing out along them. Ties the sky to the Core. Few lines, lots of motion.',
+  C: 'Star lattice: no radial lines at all. Each ring carries a star polygon drawn between its own runes (a hexagram in the seal, octagrams and a square knot further out), turning with its ring. The classic magic circle look; the most ornate.',
+  D: 'Arms + star seal: B\'s spiral arms (four of them, thinner) with a hexagram turning in the seal. Recommended: the motion of B with a focal point over the beam, still sparse.',
+};
+const state = { opt: 'D', core: '1', fit: 'far', view: 'below' };
+const cv = document.getElementById('c'), g = cv.getContext('2d'), W = cv.width;
+const PLOT = 784, S = W / (PLOT + 80), OFF = 40;
+const CYAN = [140, 235, 255];
+
+function hash(i) { let n = Math.imul(i | 0, 374761393); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967295; }
+function bind(id, key) {
+  const el = document.getElementById(id);
+  el.querySelectorAll('button').forEach(b => {
+    b.setAttribute('aria-pressed', b.dataset.v === state[key]);
+    b.onclick = () => { state[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); };
+  });
+}
+bind('opt', 'opt'); bind('core', 'core'); bind('fit', 'fit'); bind('view', 'view');
+
+// world (x, z) in blocks -> canvas, with an optional tilt for the view from below
+function P(x, z) {
+  let u = (x - PLOT / 2), v = (z - PLOT / 2);
+  if (state.view === 'below') { v = v * 0.55 - 40; const k = 1 + v / 1400; u *= k; }
+  return [W / 2 + u * S, W / 2 + v * S];
+}
+function rgba(a, c = CYAN) { return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+
+function glyph(x, z, size, angle, seed, alpha) {
+  const [px, py] = P(x, z), s = size * S * 0.5;
+  g.save(); g.translate(px, py); g.rotate(angle);
+  if (state.view === 'below') g.scale(1, 0.6);
+  g.strokeStyle = rgba(alpha); g.lineWidth = Math.max(1.2, s * 0.16); g.lineCap = 'round';
+  g.shadowColor = rgba(0.9); g.shadowBlur = s * 1.2;
+  g.beginPath();
+  g.moveTo(0, -s); g.lineTo(0, s);
+  const k = 1 + Math.floor(hash(seed) * 3);
+  for (let i = 0; i < k; i++) {
+    const y = -s + (i + 1) * (2 * s) / (k + 1), dir = hash(seed * 7 + i) > 0.5 ? 1 : -1;
+    g.moveTo(0, y); g.lineTo(dir * s * 0.7, y + (hash(seed + i) > 0.5 ? s * 0.4 : -s * 0.4));
+  }
+  if (hash(seed * 3) > 0.6) { g.moveTo(-s * 0.5, s); g.lineTo(s * 0.5, s); }
+  g.stroke(); g.restore();
+}
+function stroke(pts, alpha, width) {
+  g.beginPath();
+  pts.forEach(([x, z], i) => { const [px, py] = P(x, z); i ? g.lineTo(px, py) : g.moveTo(px, py); });
+  g.strokeStyle = rgba(alpha); g.lineWidth = width * S; g.shadowColor = rgba(0.8); g.shadowBlur = 10; g.stroke(); g.shadowBlur = 0;
+}
+function circle(cx, cz, r, alpha, width, clip) {
+  const pts = [];
+  for (let i = 0; i <= 160; i++) { const a = i / 160 * Math.PI * 2; pts.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r]); }
+  stroke(pts, alpha, width);
+}
+function polygonStar(cx, cz, r, n, step, turn, alpha, width) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) { const a = turn + (i * step % n) / n * Math.PI * 2; pts.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r]); }
+  stroke(pts, alpha, width);
+}
+
+function frame(t) {
+  const ticks = t / 50;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const sky = g.createLinearGradient(0, 0, 0, W); sky.addColorStop(0, '#04070f'); sky.addColorStop(1, '#0c1530');
+  g.fillStyle = sky; g.fillRect(0, 0, W, W);
+  for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(255,255,255,${0.2 + hash(i) * 0.5})`; g.fillRect(hash(i * 3) * W, hash(i * 5) * W, 2, 2); }
+
+  const cx = PLOT / 2 + (state.core === '1' ? 128 : 0), cz = PLOT / 2 - (state.core === '1' ? 90 : 0);
+  const margin = 6, near = Math.min(cx, PLOT - cx, cz, PLOT - cz) - margin;
+  const far = Math.max(Math.hypot(cx, cz), Math.hypot(PLOT - cx, cz), Math.hypot(cx, PLOT - cz), Math.hypot(PLOT - cx, PLOT - cz));
+  const size = 16, seal = 20;
+
+  // the Veil and its band
+  g.save();
+  stroke([[0, 0], [PLOT, 0], [PLOT, PLOT], [0, PLOT], [0, 0]], 0.35, 3);
+  const b0 = margin + size / 2, b1 = PLOT - margin - size / 2;
+  let id = 0;
+  for (let x = b0; x <= b1; x += size * 1.4) { glyph(x, b0, size, 0, id++, 0.75); glyph(x, b1, size, Math.PI, id++, 0.75); }
+  for (let z = b0 + size * 1.4; z < b1; z += size * 1.4) { glyph(b0, z, size, -Math.PI / 2, id++, 0.75); glyph(b1, z, size, Math.PI / 2, id++, 0.75); }
+  // clip to inside the band: anything reaching further passes behind the Veil
+  const [qx0, qy0] = P(b0 + size, b0 + size), [qx1, qy1] = P(b1 - size, b1 - size);
+  const [qx2, qy2] = P(b1 - size, b0 + size), [qx3, qy3] = P(b0 + size, b1 - size);
+  g.beginPath(); g.moveTo(qx0, qy0); g.lineTo(qx2, qy2); g.lineTo(qx1, qy1); g.lineTo(qx3, qy3); g.closePath(); g.clip();
+
+  // rings
+  const outer = state.fit === 'far' ? Math.min(far, near * 1.9) - size : near - size;
+  const radii = [0.28, 0.52, 0.76, 1.0].map(f => outer * f);
+  radii.forEach((r, ring) => {
+    const turn = (ring % 2 ? -1 : 1) * ticks * 0.004 / (1 + ring * 0.5);
+    circle(cx, cz, r - size * 0.75, 0.35, 0.9); circle(cx, cz, r + size * 0.75, 0.35, 0.9);
+    const n = Math.floor(2 * Math.PI * r / (size * 1.6));
+    for (let i = 0; i < n; i++) { const a = turn + i / n * Math.PI * 2; glyph(cx + Math.cos(a) * r, cz + Math.sin(a) * r, size, a + Math.PI / 2, 1000 + ring * 300 + i, 0.9); }
+    if (state.opt === 'C') {
+      const shapes = [[8, 3], [8, 3], [4, 1], [12, 5]];
+      const [k, step] = shapes[ring];
+      polygonStar(cx, cz, r - size * 0.75, k, step, turn, 0.45, 1.1);
+      if (ring === 2) polygonStar(cx, cz, r - size * 0.75, 4, 1, turn + Math.PI / 4, 0.45, 1.1);
+    }
+  });
+
+  // the seal
+  const sealTurn = ticks * 0.01;
+  circle(cx, cz, seal + 10, 0.7, 1.4);
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - sealTurn * 0.3; glyph(cx + Math.cos(a) * seal, cz + Math.sin(a) * seal, 11, a, 50 + i, 0.95); }
+  if (state.opt === 'C' || state.opt === 'D') {
+    polygonStar(cx, cz, seal + 10, 3, 1, sealTurn, 0.8, 1.2);
+    polygonStar(cx, cz, seal + 10, 3, 1, sealTurn + Math.PI, 0.8, 1.2);
+  }
+
+  // connections
+  const bandDist = (dx, dz) => {
+    const tx = dx > 0 ? (b1 - cx) / dx : dx < 0 ? (b0 - cx) / dx : Infinity;
+    const tz = dz > 0 ? (b1 - cz) / dz : dz < 0 ? (b0 - cz) / dz : Infinity;
+    return Math.min(tx, tz);
+  };
+  if (state.opt === 'A') {
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a), to = bandDist(dx, dz) - size;
+      stroke([[cx + dx * (seal + size), cz + dz * (seal + size)], [cx + dx * to, cz + dz * to]], 0.5, 1.2);
+      const p = ((ticks * 2) % 160 + 160) % 160;
+      for (let r = seal + size + p; r < to; r += 160) { const [px, py] = P(cx + dx * r, cz + dz * r); g.fillStyle = rgba(1); g.shadowBlur = 16; g.beginPath(); g.arc(px, py, 4, 0, 7); g.fill(); }
+    }
+  }
+  if (state.opt === 'B' || state.opt === 'D') {
+    const arms = state.opt === 'B' ? 6 : 4, width = state.opt === 'B' ? 1.4 : 1.0;
+    const spin = ticks * 0.0025;
+    for (let i = 0; i < arms; i++) {
+      const base = i / arms * Math.PI * 2 + spin, pts = [];
+      let end = 0;
+      for (let s = 0; s <= 240; s++) {
+        const th = s / 240 * Math.PI * 1.35, r = (seal + size) * Math.exp(th * 1.75);
+        const a = base + th, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+        if (r > bandDist(Math.cos(a), Math.sin(a)) - size) break;
+        pts.push([x, z]); end = s;
+      }
+      // fade out toward the end
+      for (let j = 1; j < pts.length; j++) stroke([pts[j - 1], pts[j]], 0.65 * (1 - j / pts.length * 0.7), width);
+      const p = ((ticks * 0.9) % 60 + 60) % 60;
+      for (let j = Math.floor(p); j < pts.length; j += 60) {
+        const [px, py] = P(pts[j][0], pts[j][1]); g.fillStyle = rgba(1); g.shadowColor = rgba(1); g.shadowBlur = 18; g.beginPath(); g.arc(px, py, 4, 0, 7); g.fill();
+      }
+    }
+  }
+  g.restore();
+  // the core and its beam's top
+  const [px, py] = P(cx, cz);
+  g.fillStyle = '#fff'; g.shadowColor = rgba(1); g.shadowBlur = 30; g.beginPath(); g.arc(px, py, 6, 0, 7); g.fill(); g.shadowBlur = 0;
+  document.getElementById('note').textContent = NOTES[state.opt] + (state.core === '1'
+    ? (state.fit === 'far' ? ' Off centre, the rings keep their size and slip behind the Veil on the near side, as if the ward reaches on past it.' : ' Off centre, the rings shrink to the nearest edge, leaving a wide empty gap on the far side.')
+    : '');
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

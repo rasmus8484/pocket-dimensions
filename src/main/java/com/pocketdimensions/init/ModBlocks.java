@@ -5,6 +5,7 @@ import com.pocketdimensions.block.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.PushReaction;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -20,6 +21,15 @@ public class ModBlocks {
                     .strength(-1.0f, 3600000.0f)
                     .sound(SoundType.STONE)
                     .requiresCorrectToolForDrops()));
+
+    public static final RegistryObject<Block> VEIL = BLOCKS.register("veil",
+            () -> new VeilBlock(BlockBehaviour.Properties.of()
+                    .setId(BLOCKS.key("veil"))
+                    .strength(-1.0f, 3600000.0f)
+                    .sound(SoundType.AMETHYST)
+                    .pushReaction(PushReaction.BLOCK)
+                    .noLootTable()
+                    .isValidSpawn((state, level, pos, type) -> false)));
 
     public static final RegistryObject<Block> POCKET_ANCHOR = BLOCKS.register("pocket_anchor",
             () -> new PocketAnchorBlock(BlockBehaviour.Properties.of()
@@ -66,5 +76,22 @@ public class ModBlocks {
                     .lightLevel(state -> state.getValue(WorldCoreBlock.SIEGE) == 3 ? 0 : 12)
                     .noOcclusion()
                     .sound(SoundType.AMETHYST)
+                    .requiresCorrectToolForDrops()));
+
+    // aurora stone, veining the Stone Dais the World Core lands on (RL-024): stone with the aurora flowing in thin veins
+    public static final RegistryObject<Block> AURORA_STONE = BLOCKS.register("aurora_stone",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .setId(BLOCKS.key("aurora_stone"))
+                    .strength(1.5f, 6.0f)
+                    .lightLevel(state -> 7)
+                    .sound(SoundType.STONE)
+                    .requiresCorrectToolForDrops()));
+
+    // aurora slate, the casing of the dais and the path the beam cleared above it: deepslate with the aurora caught in it
+    public static final RegistryObject<Block> AURORA_SLATE = BLOCKS.register("aurora_slate",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .setId(BLOCKS.key("aurora_slate"))
+                    .strength(3.0f, 6.0f)
+                    .sound(SoundType.DEEPSLATE)
                     .requiresCorrectToolForDrops()));
 }
