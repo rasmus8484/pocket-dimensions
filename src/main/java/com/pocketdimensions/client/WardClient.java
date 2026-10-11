@@ -26,7 +26,7 @@ public final class WardClient {
 
     private static Entity moverInRealm(Player player, LogicalSide side) {
         if (side != LogicalSide.CLIENT || player != Minecraft.getInstance().player) return null;
-        if (!player.level().dimension().equals(PocketDimensionsMod.REALM_DIM)) return null;
+        if (!player.level().dimension().equals(PocketDimensionsMod.REALM_DIM) || player.isSpectator()) return null;
         return player.getRootVehicle();
     }
 
