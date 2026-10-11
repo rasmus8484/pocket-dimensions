@@ -321,7 +321,7 @@ public class WorldCoreScreen extends AbstractContainerScreen<WorldCoreMenu> {
         edges(g, px, py, pw, ph, 0x99000000, LIP);
         glow(g, "Players online now", px + 6, py + 6);
         List<ModNetworking.PlayerEntry> online = menu.sync().online();
-        g.enableScissor(leftPos + px + 2, topPos + py + 18, leftPos + px + pw - 2, topPos + py + ph - 22);
+        g.enableScissor(px + 2, py + 18, px + pw - 2, py + ph - 22);   // relative: the scissor follows the pose's translate
         if (online.isEmpty()) g.drawString(font, "Everyone online already has access.", px + 6, py + 22, 0xFFA8A3B2, false);
         for (int i = 0; i < online.size(); i++) {
             ModNetworking.PlayerEntry p = online.get(i);

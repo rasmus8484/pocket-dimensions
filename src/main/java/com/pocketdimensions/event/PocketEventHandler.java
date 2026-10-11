@@ -38,8 +38,12 @@ import java.util.UUID;
  */
 public class PocketEventHandler {
 
-    /** Exit cooldown - prevents double-trigger on the same jump. */
-    private static final Map<UUID, Integer> exitCooldownExpiry = new HashMap<>();
+    /**
+     * Exit cooldown - prevents double-trigger on the same jump. Counted on the world's clock, never the player's own
+     * tickCount: respawning (death, or leaving the End) makes a new player whose tickCount starts again at 0, and an
+     * expiry stamped on the old count would lock the way out for as long as they had been online.
+     */
+    private static final Map<UUID, Long> exitCooldownExpiry = new HashMap<>();
 
     /** Riders who clicked a wall to leave (BoundaryBlock); they go on their next tick, never mid-click. */
     private static final java.util.Set<UUID> pendingWallExits = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -51,6 +55,20 @@ public class PocketEventHandler {
         PlayerEvent.PlayerLoggedOutEvent.BUS.addListener(this::onPlayerLogout);
         BlockEvent.BreakEvent.BUS.addListener((BlockEvent.BreakEvent event) -> onBlockBreak(event));
         EntityTeleportEvent.ChorusFruit.BUS.addListener(this::onChorusFruitTeleport);
+        PlayerEvent.PlayerChangedDimensionEvent.BUS.addListener(this::onLeftPocket);
+        PlayerEvent.PlayerRespawnEvent.BUS.addListener(this::onRespawn);
+    }
+
+    /** Out of the pocket dimension by any way at all (/tp included): no longer inside any room. */
+    private void onLeftPocket(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer sp) || !event.getFrom().equals(PocketDimensionsMod.POCKET_DIM)) return;
+        PocketRoomManager.get(((ServerLevel) sp.level()).getServer()).removeOccupantEverywhere(sp.getUUID());
+    }
+
+    /** Died in a room and woke up outside the pocket dimension: no longer inside it. */
+    private void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer sp) || sp.level().dimension().equals(PocketDimensionsMod.POCKET_DIM)) return;
+        PocketRoomManager.get(((ServerLevel) sp.level()).getServer()).removeOccupantEverywhere(sp.getUUID());
     }
 
     /** Cancels chorus fruit teleportation inside pocket rooms. */
@@ -86,13 +104,27 @@ public class PocketEventHandler {
 
         PocketRoomManager mgr = PocketRoomManager.get(server);
         UUID pocketId = mgr.findRoomForOccupant(uuid);
-        int now = serverPlayer.tickCount;
+        long now = server.overworld().getGameTime();
 
         if (pocketId == null) {
+            if (serverPlayer.isSpectator()) return;              // spectators fly free
             // Safety net: player is in the pocket dimension with no occupant record.
             // This happens if they respawned here (e.g. /spawnpoint set inside a room
             // that was later destroyed). Eject immediately to prevent a void death loop.
             mgr.teleportToEntryOrSpawn(serverPlayer, server, com.pocketdimensions.manager.TravelRules.Journey.FORCED);
+            return;
+        }
+
+        // -- Got past the walls somehow (a broken wall, a glitch, another mod): drawn back inside. Spectators fly free --
+        if (!serverPlayer.isSpectator() && mgr.roomExists(pocketId) && !mgr.holds(pocketId, serverPlayer.blockPosition())) {
+            ServerLevel pocketLevel = (ServerLevel) serverPlayer.level();
+            BlockPos back = mgr.findSafeSpawn(pocketId, pocketLevel);
+            serverPlayer.stopRiding();
+            serverPlayer.connection.teleport(back.getX() + 0.5, back.getY(), back.getZ() + 0.5,
+                    serverPlayer.getYRot(), serverPlayer.getXRot());
+            serverPlayer.resetFallDistance();
+            serverPlayer.displayClientMessage(
+                    Component.literal("The fold closes around you, and the room draws you back in."), true);
             return;
         }
 
@@ -104,7 +136,7 @@ public class PocketEventHandler {
         }
 
         // -- Crouch + jump exit trigger --
-        Integer expiry = exitCooldownExpiry.get(uuid);
+        Long expiry = exitCooldownExpiry.get(uuid);
         if (expiry != null && now < expiry) return; // cooldown active
 
         if (serverPlayer.isShiftKeyDown() && serverPlayer.getDeltaMovement().y > 0.1) {
@@ -134,21 +166,23 @@ public class PocketEventHandler {
                             player.getYRot(), player.getXRot(), com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
                     return;
                 }
-
-                // Anchor was stolen - find who holds the pocket item and teleport near them
-                for (ServerPlayer online : server.getPlayerList().getPlayers()) {
-                    if (online == player) continue;
-                    if (!holdsAnchorItem(online, pocketId)) continue;
-                    BlockPos safeSpot = findSafeSpotNear(online, targetLevel);
-                    Companions.travel(player, targetLevel,
-                            new Vec3(safeSpot.getX() + 0.5, safeSpot.getY(), safeSpot.getZ() + 0.5),
-                            player.getYRot(), player.getXRot(), com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
-                    return;
-                }
             }
         }
 
-        // 2. Fallback: entry location or overworld spawn
+        // 2. The anchor was picked up (which clears its location): come out next to whoever carries it, in their world
+        for (ServerPlayer online : server.getPlayerList().getPlayers()) {
+            if (online == player) continue;
+            if (!holdsAnchorItem(online, pocketId)) continue;
+            ServerLevel holderLevel = (ServerLevel) online.level();
+            if (holderLevel.dimension().equals(PocketDimensionsMod.POCKET_DIM)) continue;
+            BlockPos safeSpot = findSafeSpotNear(online, holderLevel);
+            Companions.travel(player, holderLevel,
+                    new Vec3(safeSpot.getX() + 0.5, safeSpot.getY(), safeSpot.getZ() + 0.5),
+                    player.getYRot(), player.getXRot(), com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
+            return;
+        }
+
+        // 3. Fallback: entry location or overworld spawn
         mgr.teleportToEntryOrSpawn(player, server, com.pocketdimensions.manager.TravelRules.Journey.CHOSEN);
     }
 
@@ -188,6 +222,7 @@ public class PocketEventHandler {
             if (level.getBlockEntity(placePos) instanceof com.pocketdimensions.blockentity.PocketAnchorBlockEntity be) {
                 be.setPocketId(pocketId);
                 be.setOwnerUUID(mgr.anchorOwner(pocketId, serverPlayer.getUUID()));
+                be.setCustomName(stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME));
             }
             mgr.setAnchorLocation(pocketId, level.dimension(), placePos);
             stack.shrink(1);
@@ -250,12 +285,12 @@ public class PocketEventHandler {
     }
 
     private static BlockPos findReplaceable(Level level, BlockPos start) {
-        if (level.getBlockState(start).canBeReplaced()) return start;
+        if (PocketAnchorItem.canRest(level, start)) return start;
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
                 BlockPos candidate = start.offset(dx, 0, dz);
-                if (level.getBlockState(candidate).canBeReplaced()) return candidate;
+                if (PocketAnchorItem.canRest(level, candidate)) return candidate;
             }
         }
         return null;

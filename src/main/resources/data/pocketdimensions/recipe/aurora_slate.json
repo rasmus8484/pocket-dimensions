@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    "minecraft:lapis_lazuli",
+    "minecraft:amethyst_shard",
+    "minecraft:deepslate",
+    "minecraft:deepslate"
+  ],
+  "result": {
+    "id": "pocketdimensions:aurora_slate",
+    "count": 2
+  }
+}

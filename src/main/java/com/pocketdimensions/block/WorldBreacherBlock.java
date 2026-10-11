@@ -162,6 +162,9 @@ public class WorldBreacherBlock extends BaseEntityBlock {
             if (!player.getAbilities().instabuild) stack.shrink(inserted);
             player.displayClientMessage(Component.literal(
                     "The breacher drinks in the lapis."), false);
+        } else {
+            player.displayClientMessage(Component.literal(
+                    "The breacher is sated. It can hold no more lapis."), false);
         }
         return InteractionResult.SUCCESS;
     }

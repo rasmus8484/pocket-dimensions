@@ -4,6 +4,8 @@ A Minecraft Java 1.21.11 Forge mod for PvP sandbox servers, adding personal stor
 
 This mod is heavily written by **Claude** (Anthropic's AI coding assistant), with design direction and testing by the project owner.
 
+**Playing?** Read the **[Player Guide](GUIDE.md)**: every mechanic from the big picture down to the small rules, with a "How do I...?" section and troubleshooting. In game, `/pd help` shows a short summary and a link to it. You can also hand the guide to an AI assistant and ask it your question.
+
 ## What Is This?
 
 Pocket Dimensions adds two spatial systems to Minecraft, both designed around PvP risk:
@@ -44,6 +46,10 @@ A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, sur
 
 **Liquids:** a placed anchor can't be washed away, and you can enter while standing in water or lava (the anchor goes at your feet).
 
+**The End:** an anchor can't be set on the obsidian landing platform, since every End portal arrival sweeps it clear; step off it first. If the world ever removes an anchor some other way (`/fill`, `/setblock`), it drops as an item still bound to its room.
+
+**Kept inside:** anyone who gets past a room's walls (a broken wall, a glitch) is drawn straight back into the room. Spectators fly free.
+
 **Disconnect safety:** If a player logs off while holding a stolen Pocket Anchor and others are still inside that room, the mod auto-places an anchor at their feet so occupants aren't trapped.
 
 Chorus fruit teleportation is blocked inside pocket rooms.
@@ -72,11 +78,15 @@ Each player can own one realm: a region of overworld-like terrain inside the sha
 
 A linked World Anchor is indestructible by normal mining: it can only be removed through the siege system. An unlinked one (no World Seed in it) can be mined with a diamond-tier pickaxe in 3 seconds (`world_anchor_mine_seconds`) and drops itself. Players inside a realm are confined to their region boundaries. Portals are blocked. Anyone arriving some other way (another mod's teleport, `/home`) without having come in through an anchor is sent back out. If the anchor is destroyed, the World Core falls dark and inert and players inside can still exit via the World Core, but nobody can re-enter until the owner links a new anchor.
 
+**Respawning in a realm:** a bed or respawn anchor in a realm works for its owner and anyone on its access list (and anyone while a breach holds it open); anyone else who wakes there is cast out.
+
 **The Veil and the ceiling:** every realm is walled by the **Veil**, the realm's ward made visible: a wall of drifting mist along every edge, from bedrock to the build limit, that can't be broken, blown up or moved. It hides whatever lies beyond, so nobody sees into another realm (Distant Horizons included). Overhead the ward holds you with your feet at y 318, and nothing can be built at y 318 or 319, so nobody can look over the Veil. Along every edge, glowing smoke pours slowly down the Veil, thick against the wall and thinning out over about twenty blocks; players can turn it off or make it cheaper in the client config (veil_fog, veil_fog_steps), and /pd test veilTime measures its cost.
 
 **The ward's sigil:** high over every realm hangs the ward, a vault of glowing runes: a crown of three rings where the World Core's beam rises in, three tiers of runes curving down over the realm like a dome, each carrying small spinning worlds of runes that turn with it, and a band of runes over the Veil. Beneath it the ward's power streams outward from the crown as a soft, flowing field of light, clear near the crown and very faint toward the Veil. It shows the realm's state to everyone inside: blue at peace, pink while a World Breacher works, cracked once the breach is complete, red while an Anchor Breaker works, dim red, broken and still once the anchor is lost. It shines brightly while the Core holds lapis and dims without it, and it is faint by day and glows at night. It looks the same at every render distance.
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
+
+**Help:** anyone can run `/pd help` for a short summary in chat and a link to the [Player Guide](GUIDE.md). Every other `/pd` command is for operators, and suggests player names as you type.
 
 **Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it; someone who already owns a realm can't be given a second), or at a placed Pocket Anchor to record its room as theirs.
 
@@ -85,6 +95,8 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 **Taking a realm away:** `/pd disown <player>` takes a player's realm from them: everyone inside is sent back out, the World Core is removed, their anchor is unlinked (it stays, and takes a new World Seed) and the old plot is never handed out again. They can grow a new realm with a new seed.
 
 **A broken core:** `/pd regenCore` rebuilds the World Core where it stood, for the realm you're standing in or the World Anchor you're looking at (say, after it was broken by accident in creative).
+
+**Broken room walls:** `/pd regenRoom` puts back the walls of the pocket room you're standing in, or of the Pocket Anchor you're looking at (say, after breaking them by accident in creative), and the void they show with them. Nothing inside the room is touched.
 
 **A lost anchor:** `/pd regenAnchor <player>` puts their World Anchor back, linked, where it last stood (after an Anchor Breaker took it, or if it was broken in creative). Whatever is in those two blocks now is replaced. The owner can also link any new anchor with a World Seed, as always.
 
@@ -103,7 +115,7 @@ Thrown out (sent out of a realm, or a room whose anchor was mined), you go alone
 
 ### Siege System
 
-Two siege blocks can be placed on top of a linked World Anchor (never an empty one; on its upper half; **crouch** while placing so you don't enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
+Two siege blocks can be placed on top of a linked World Anchor (never an empty one): hold one and **crouch** + right-click the anchor anywhere, either half and any side, and it is set on top (without crouching you would enter the realm instead). Only one block fits there, so an anchor can host one siege block at a time. Both are fueled by lapis lazuli:
 
 **World Breacher** (`world_breacher`, the "Mandible": an iron head whose mandibles hook under the anchor's gold band)
 - Can only be placed while someone who belongs to the realm (its owner or anyone on its access list) is inside it; the owner can place one on their own anchor at any time (to open the realm to the public, say)
@@ -158,6 +170,15 @@ Everything can be gathered once you reach the Nether; nothing needs the End. The
 | Anchor Breaker | iron ingot, hopper, iron ingot | netherite scrap, magma block, netherite scrap | eye of ender, blaze rod, eye of ender |
 
 All five appear in the recipe book the first time you enter the Nether. They can be crafted before that if you know them.
+
+The two building blocks are shapeless (any slots, no pattern) and make two at a time:
+
+| Block | Ingredients | Makes |
+|-------|-------------|-------|
+| Aurora Stone | lapis lazuli, amethyst shard, 2 stone | 2 |
+| Aurora Slate | lapis lazuli, amethyst shard, 2 deepslate | 2 |
+
+Both appear in the recipe book once you pick up an amethyst shard.
 
 The World Core and Boundary Block have no recipe: the realm places its core, and the mod builds the room walls.
 

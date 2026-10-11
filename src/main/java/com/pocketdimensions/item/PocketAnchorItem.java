@@ -94,6 +94,10 @@ public class PocketAnchorItem extends BlockItem {
                         Component.literal("The ground here is too solid. The anchor cannot take root."), false);
                 return InteractionResult.FAIL;
             }
+            if (sweptAway(level, placePos)) {
+                player.displayClientMessage(Component.literal(LANDING_REFUSAL), false);
+                return InteractionResult.FAIL;
+            }
 
             UUID pocketId = getPocketId(stack);
             if (pocketId == null) {
@@ -107,6 +111,7 @@ public class PocketAnchorItem extends BlockItem {
                 be.setPocketId(pocketId);
                 be.setOwnerUUID(PocketRoomManager.get(((net.minecraft.server.level.ServerLevel) level).getServer())
                         .anchorOwner(pocketId, player.getUUID()));
+                be.setCustomName(stack.get(DataComponents.CUSTOM_NAME));
             }
 
             PocketRoomManager mgr = PocketRoomManager.get(((net.minecraft.server.level.ServerLevel) level).getServer());
@@ -142,7 +147,8 @@ public class PocketAnchorItem extends BlockItem {
         if (mgr.getAnchorLocation(pocketId).isEmpty()) {
             BlockPos placePos = findReplaceable(level, player.blockPosition());
             if (placePos == null) {
-                player.displayClientMessage(Component.literal("There is no room here for the anchor to rest."), true);
+                player.displayClientMessage(Component.literal(sweptAway(level, player.blockPosition())
+                        ? LANDING_REFUSAL : "There is no room here for the anchor to rest."), true);
                 return InteractionResult.FAIL;
             }
             level.setBlock(placePos, ModBlocks.POCKET_ANCHOR.get().defaultBlockState(), 3);
@@ -150,6 +156,7 @@ public class PocketAnchorItem extends BlockItem {
                 be.setPocketId(pocketId);
                 be.setOwnerUUID(PocketRoomManager.get(((net.minecraft.server.level.ServerLevel) level).getServer())
                         .anchorOwner(pocketId, player.getUUID()));
+                be.setCustomName(stack.get(DataComponents.CUSTOM_NAME));
             }
             mgr.setAnchorLocation(pocketId, level.dimension(), placePos);
         }
@@ -188,15 +195,29 @@ public class PocketAnchorItem extends BlockItem {
     }
 
     private static BlockPos findReplaceable(Level level, BlockPos start) {
-        if (level.getBlockState(start).canBeReplaced()) return start;
+        if (canRest(level, start)) return start;
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
                 BlockPos c = start.offset(dx, 0, dz);
-                if (level.getBlockState(c).canBeReplaced()) return c;
+                if (canRest(level, c)) return c;
             }
         }
         return null;
+    }
+
+    /** Somewhere an anchor can be set down and stay: replaceable, and not on the End's landing platform. */
+    public static boolean canRest(Level level, BlockPos pos) {
+        return level.getBlockState(pos).canBeReplaced() && !sweptAway(level, pos);
+    }
+
+    static final String LANDING_REFUSAL =
+            "The landing stone is swept bare by every arrival. The anchor would not stay; step off the platform.";
+
+    /** On the End's landing platform, cleared by every End portal arrival (EndLanding). */
+    public static boolean sweptAway(Level level, BlockPos pos) {
+        return level.dimension().equals(Level.END)
+                && com.pocketdimensions.manager.EndLanding.sweeps(pos.getX(), pos.getY(), pos.getZ());
     }
 
     // -------------------------------------------------------------------------

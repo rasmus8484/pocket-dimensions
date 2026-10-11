@@ -94,6 +94,7 @@ public class RealmEventHandler {
         PlayerInteractEvent.RightClickBlock.BUS.addListener(this::onRightClickWorldCore);
         PlayerEvent.PlayerLoggedInEvent.BUS.addListener(this::onPlayerLoggedIn);
         PlayerEvent.PlayerChangedDimensionEvent.BUS.addListener(this::onChangedDimension);
+        PlayerEvent.PlayerRespawnEvent.BUS.addListener(this::onRespawn);
         SleepFinishedTimeEvent.BUS.addListener(this::onRealmSleepFinished);
     }
 
@@ -170,10 +171,32 @@ public class RealmEventHandler {
     }
 
     /**
+     * Woke up in a realm (a bed or respawn anchor there). Forge counts no change of dimension for a respawn, so the
+     * arrival is judged here: whoever may enter the realm they woke in (owner, allow list, an open breach) stays as its
+     * guest; anyone else is cast out, as at an anchor.
+     */
+    private void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer sp)) return;
+        if (!sp.level().dimension().equals(PocketDimensionsMod.REALM_DIM)) return;
+        MinecraftServer server = ((ServerLevel) sp.level()).getServer();
+        RealmManager mgr = RealmManager.get(server);
+        UUID owner = mgr.realmOwnerAt(sp.getX(), sp.getZ());
+        if (owner == null) { eject(sp, null); return; }
+        if (!mgr.mayEnter(server, owner, sp.getUUID())) {
+            mgr.clearPlayerRealmInfo(sp.getUUID());
+            eject(sp, "The realm's wards do not know you, and cast you out.");
+            return;
+        }
+        mgr.recordInRealm(sp.getUUID(), owner);
+        runtimeStates.remove(sp.getUUID());
+    }
+
+    /**
      * Whether someone who has just arrived in the realm dimension may stay: they need a record of entering through an
      * anchor, and must still be allowed into that realm (RealmRules.mayEnter). Otherwise they are sent back out.
      */
     private static boolean mayStay(ServerPlayer sp, MinecraftServer server, RealmManager.PlayerRealmInfo info) {
+        if (sp.isSpectator()) return true;                       // spectators fly free
         if (info == null) { eject(sp, null); return false; }
         if (!RealmManager.get(server).mayEnter(server, info.realmOwner, sp.getUUID())) {
             eject(sp, "The realm's wards do not know you, and cast you out.");
@@ -311,6 +334,9 @@ public class RealmEventHandler {
             runtimeStates.remove(playerUUID);
             return;
         }
+
+        // Spectators fly free: no bounds, no ceiling, no record needed
+        if (serverPlayer.isSpectator()) return;
 
         MinecraftServer server = ((ServerLevel) serverPlayer.level()).getServer();
         if (server == null) return;

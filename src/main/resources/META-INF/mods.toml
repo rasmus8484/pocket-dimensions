@@ -18,6 +18,7 @@ Pocket rooms and player-owned realms for PvP servers, where nothing is ever trul
 Pocket Rooms: a Pocket Anchor opens a sealed room, bigger on the inside, that anyone can walk into. Anchors can be stolen or broken.
 
 Realms: a World Anchor and a World Seed bind a piece of a shared world to you, guarded by its World Core. Rivals can lay siege with a World Breacher, to force the realm open, or an Anchor Breaker, to destroy its anchor. Both burn lapis, and the core's lapis slows them down.
+How to play: type /pd help in game, or read the Player Guide at github.com/rasmus8484/pocket-dimensions/blob/main/GUIDE.md
 '''
 
 [[dependencies.pocketdimensions]]

@@ -647,6 +647,11 @@ public class RealmManager extends SavedData {
         return removed;
     }
 
+    /** Everyone who owns a realm. */
+    public Set<UUID> owners() {
+        return Collections.unmodifiableSet(realms.keySet());
+    }
+
     public boolean isAllowed(UUID ownerUUID, UUID playerUUID) {
         RealmData data = realms.get(ownerUUID);
         if (data == null) return false;
