@@ -1,50 +1,57 @@
 # The Core's landing: the Stone Dais (RL-024)
 
 Status: design agreed 2026-10-11, from the walkable studies page (scratchpad `core-landing-studies.html`, published as
-the "Core landing studies" artifact, version 18, look "Stone Dais", 9 across, 6 vines).
+the "Core landing studies" artifact, version 18, look "Stone Dais", 9 across, 6 vines). Revised the same day after the
+first look in game (round 2):
+- the dais is plain vanilla stone, and there is no heartstone block;
+- aurora stone is vanilla stone with the veins on top;
+- veins also run downward through the dais and into the ground.
 
 ## What the player sees
 
 Every World Core stands at the exact centre of its realm, whatever the land there is: plains, forest, a hillside or open
-ocean. Under it lies a small round dais of the Core's own weathered rock, 9 blocks across, its floor level and its edge
+ocean. Under it lies a small round dais of plain stone, 9 blocks across, its floor level and its edge
 cleanly cut, with a shallow rounded underside 3 blocks deep. Out of a small pool under the Core, six vines of
 **aurora stone** wind outward through the floor, flush with it, now and then splitting, and where they reach the edge
-they trickle down the dais's side. Above the dais the sky is open: a cylinder is cleared straight up, so nothing (trees,
+they trickle down the dais's side. From the vines, roots of aurora stone run on downward through the dais and a few
+blocks into the ground beneath it, so the veins are not only on the surface. Above the dais the sky is open: a cylinder is cleared straight up, so nothing (trees,
 a hill, an overhang) hangs over the Core or its beam.
 
-Aurora stone is to the Core's rock what crying obsidian is to obsidian: the same rock, with thin branching veins of power
+Aurora stone is to stone what crying obsidian is to obsidian: the same rock, with thin branching veins of power
 running through it. The aurora flows inside the veins (green, cyan, violet, pink, slowly turning), with brighter pulses
 travelling along them. The veins glow at night while the rock around them darkens like any stone.
 
-## The two new blocks
+## The new block
 
 | Block | Id | Look | Behaviour |
 |---|---|---|---|
-| Heartstone | `heartstone` | The Core's weathered rock (the palette and grain of the Geode Heart's boulder, `tools/anchor/geode.mjs`) | Stone-like: strength 1.5 / 6, pickaxe, drops itself |
-| Aurora Stone | `aurora_stone` | Heartstone with crying-obsidian veins of flowing aurora | As heartstone, and gives light level 7 (no hostile mobs spawn on the dais) |
+| Aurora Stone | `aurora_stone` | Vanilla stone with crying-obsidian veins of flowing aurora | Like stone: strength 1.5 / 6, pickaxe, drops itself, and gives light level 7 (no hostile mobs spawn on the dais) |
 
-- Both are plain blocks (no block entity), in the creative tab, with loot tables that drop themselves and the
+- A plain block (no block entity), in the creative tab, with a loot table that drops itself and the
   `minecraft:mineable/pickaxe` tag. No recipe yet: a renewable source is for later (the user's idea of a recipe).
+- The rest of the dais is vanilla `minecraft:stone`, and so is the seal in the ring outside the cylinder.
 - **One pattern on every aurora stone block**, like a vanilla texture: the one the studies page settled on.
-- **The rock in aurora stone is the heartstone texture itself**, so the two can never drift apart in shade.
+- **The rock in aurora stone is vanilla's own stone texture** (`minecraft:block/stone`). It matches the stone around
+  it exactly, and follows any resource pack that changes stone.
 
 ### How aurora stone is drawn
 
 The same proven way as the World Anchor's flowing runes: a block model of stacked elements and animated textures, no
 custom renderer.
 
-1. A full cube textured with `heartstone.png`, lit like any block.
+1. A full cube textured with vanilla's `minecraft:block/stone`, lit like any block.
 2. A second cube in the same place with the **vein** texture: transparent except on the veins, animated, with
    `"light_emission": 15` and `"shade": false`, so the veins stay bright at night.
 3. A third with the veins' stained **rim** (the rock just beside a vein, faintly coloured): animated, a lower light
-   emission (about 6), so it glows a little but darkens with the night.
+   emission (about 6), so it glows a little but darkens with the night. The rim's pixels are the aurora mixed into a
+   plain grey of 126, vanilla stone's average (its pixels run from 104 to 143). Mixing into a fixed grey rather than
+   the real stone pixel keeps the generator free of Mojang's texture.
 
 Render type cutout. The two overlays never cover the same pixel, so they never flicker against each other.
 
 **The textures** come from a new generator, `tools/anchor/dais.mjs`, run by `node tools/anchor/build.mjs` like the
 others:
 
-- `heartstone.png` (16 x 16).
 - `aurora_stone_veins.png` and `aurora_stone_rim.png`: animated strips with an `.mcmeta` (`interpolate: true`).
 - The vein shape is the studies page's: 1-pixel random walks with a few branches, wrapping round the tile edges so
   neighbouring blocks join seamlessly. Each vein pixel also stores its distance along the vein.
@@ -67,8 +74,8 @@ This replaces the dry-land search entirely.
    - y ≤ floor, and
    - `hypot(hypot(dx, dz) / 4.5, (floor - y) / 3) < 1`.
 
-   Every block of the dais becomes heartstone, whatever was there before: ground, water or air.
-5. **The vines.** Aurora stone replaces heartstone along six winding paths, with the same rules as the studies page:
+   Every block of the dais becomes stone, whatever was there before: ground, water or air.
+5. **The vines.** Aurora stone replaces stone along six winding paths, with the same rules as the studies page:
    - **The pool.** The floor blocks within 1.6 of the centre are aurora stone.
    - **The paths.** Vine i starts 1.2 blocks out at an angle of i/6 of a turn (plus a little jitter). It steps out
      half a block at a time, wandering slowly.
@@ -77,14 +84,21 @@ This replaces the dry-land search entirely.
    - **The edge.** Vines never leave the floor. At the edge, the vine's outward-facing side blocks below its last floor
      block become aurora stone.
 
-   The noise is seeded by the plot index, so each realm's vines are its own and are the same every time.
+   - **The roots.** Roots start from the pool's centre and from about one in four of the floor's aurora stone blocks.
+     From each start a vein runs straight down, 3 to 7 blocks below the floor, now and then stepping one block aside.
+     - Inside the dais, the stone it passes through becomes aurora stone.
+     - Below the dais, it replaces the ground only where that block is natural solid ground (`isGround`, not a fluid,
+       no block entity), and skips anything else (caves, water, a chest).
+     - Roots reach at most 7 blocks out from the centre, so they stay in the Core's chunk.
+
+   The noise is seeded by the plot index, so each realm's vines and roots are its own and are the same every time.
 6. **The open sky.** Every block in the cylinder `hypot(dx, dz) < 5.5` above the floor is set to air, up to the highest
    block in it (fluids too). That covers the dais and a one-block margin. The cylinder replaces today's single cleared
    column.
 7. **The Core** is placed on the pool, at (centre, floor + 1, centre). The spawn spot next to it (one block east) is on
    the pool's aurora stone.
 
-Any fluid standing above the floor in the ring just outside the cylinder (`5.5 ≤ hypot < 6.5`) is sealed in heartstone,
+Any fluid standing above the floor in the ring just outside the cylinder (`5.5 ≤ hypot < 6.5`) is sealed in stone,
 so a lake or lava pool beside a hillside dais can't pour onto it. Blocks are set as world generation sets them (no
 neighbour or shape updates), so nothing pours or collapses while the dais is built. Leaves cut from a tree
 decay as usual later.
@@ -131,13 +145,14 @@ An old off-centre Core's beam still ends on the dome above it (`Vault.Layout.bea
 - `manager/LandingDais.java` (new, pure, unit tested): given the plot seed and a function giving each column's ground
   height, returns:
   - the floor height;
-  - every dais block, as an offset and a kind (heartstone or aurora stone);
+  - every dais block, as an offset and a kind (stone or aurora stone);
+  - the roots below the dais;
   - the clearing radius.
 
   The studies page's hash and value noise move here as plain Java.
 - `RealmManager.ensureGenerated`: works out the ground heights from the level, asks `LandingDais` for the plan, clears
   the cylinder, sets the blocks, then places the Core.
-- `init/ModBlocks`, `init/ModItems`, `init/ModCreativeTabs`: the two blocks and their items.
+- `init/ModBlocks`, `init/ModItems`, `init/ModCreativeTabs`: aurora stone and its item.
 - Resources:
   - blockstates and models (block and item);
   - textures;
@@ -155,6 +170,7 @@ An old off-centre Core's beam still ends on the dome above it (`Vault.Layout.bea
   - the pool sits under the Core;
   - every vine block is on the floor or its edge spill, never outside the dais;
   - six vines reach the rim;
+  - roots run down from the floor, joined block to block, at most 7 deep and 7 out;
   - the plan is the same for the same seed and differs between seeds;
   - on water the floor sits one above the surface.
 - **`VaultFrameTest`:** no rune in the 70000 range for an off-centre Core.
