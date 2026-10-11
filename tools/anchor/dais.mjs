@@ -1,5 +1,6 @@
 // The Stone Dais under the World Core (RL-024, docs/superpowers/specs/2026-10-11-core-landing-dais-design.md):
-// aurora stone's two animated overlays (drawn over vanilla stone), its veins and their stained rim.
+// aurora stone's two animated overlays (drawn over vanilla stone), its veins and their stained rim. The veins dance in
+// teal with drifting swatches of pink, blue and purple, like a real aurora.
 // Ported from the approved studies page (core-landing-studies.html, version 18): the same hash and vein walk.
 
 /** The studies page's integer hash, 0..1. */
@@ -46,14 +47,36 @@ export const VEINS = (() => {
   return { mask, along };
 })();
 
-const AURORA = [[60, 255, 170], [60, 200, 255], [170, 90, 255], [255, 110, 200]];   // green, cyan, violet, pink
-/** The aurora's colour at s (one turn per 1.0), each colour easing into the next. */
-export function aurora(s) {
-  const f = (s - Math.floor(s)) * 4, i = Math.floor(f) % 4, t = f - Math.floor(f), e = t * t * (3 - 2 * t);
-  return AURORA[i].map((a, c) => a + (AURORA[(i + 1) % 4][c] - a) * e);
+const TAU = Math.PI * 2, clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+export const TEAL = [[20, 190, 160], [90, 255, 215]];                       // deep and bright teal: the aurora's body
+const ACCENTS = [                                                           // swatches drifting through it
+  { c: [255, 110, 210], k: [1, 2, 3], ph: 0.0 },                           // pink
+  { c: [80, 150, 255], k: [2, -1, -2], ph: 0.37 },                         // blue
+  { c: [185, 110, 255], k: [-1, 1, 4], ph: 0.71 },                         // purple
+];
+const smoothstep = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/**
+ * How strongly each accent (pink, blue, purple) shows at pixel (x, y), t seconds in: a wave travelling across the
+ * block (whole cycles per 16 px, so blocks tile, and per loop, so the strip loops), only its crest showing, and each
+ * colour coming and going over the loop. Mostly 0: the aurora is mainly teal.
+ */
+export function accents(x, y, t) {
+  return ACCENTS.map(({ k, ph }) => {
+    const wave = 0.5 + 0.5 * Math.sin(TAU * (k[0] * x / 16 + k[1] * y / 16 + k[2] * t / LOOP_SECONDS + ph));
+    const gate = 0.5 + 0.5 * Math.sin(TAU * (t / LOOP_SECONDS + ph * 2));
+    return smoothstep(0.82, 0.99, wave) * gate * gate;
+  });
 }
 
-const TAU = Math.PI * 2, clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+/** The aurora's colour at pixel (x, y), `along` its vein, t seconds in: dancing teal with swatches of pink, blue, purple. */
+export function auroraAt(x, y, along, t) {
+  const shimmer = 0.5 + 0.5 * Math.sin(TAU * (along * 2 + x / 16 - 3 * t / LOOP_SECONDS));   // teal rippling deep to bright
+  let c = TEAL[0].map((v, i) => v + (TEAL[1][i] - v) * shimmer);
+  accents(x, y, t).forEach((w, i) => { c = c.map((v, ch) => v + (ACCENTS[i].c[ch] - v) * w); });
+  return c;
+}
+
 /** The pulse's brightness 0..1 at a vein pixel `along` its vein, t seconds in: one pulse every 2 s, two per 16 px. */
 export const pulse = (along, t) => Math.pow(0.5 + 0.5 * Math.sin(TAU * (along * 2 - t * 0.5)), 2);
 
@@ -63,7 +86,7 @@ export function frame(layer, t) {
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     const i = y * 16 + x;
     if (VEINS.mask[i] !== want) continue;
-    const a = VEINS.along[i], p = pulse(a, t), au = aurora(t / LOOP_SECONDS + 0.08 * Math.sin(TAU * a));
+    const a = VEINS.along[i], p = pulse(a, t), au = auroraAt(x, y, a, t);
     const c = layer === 'veins'
       ? au.map(v => v * (0.6 + 0.75 * p) + 255 * 0.05 * p)
       : STONE_GREY.map((r, ch) => r + (au[ch] * 0.35 - r) * (0.35 + 0.2 * p));

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FRAMES, FRAMETIME, LOOP_SECONDS, VEINS, STONE_GREY, frame, strip } from '../dais.mjs';
+import { FRAMES, FRAMETIME, LOOP_SECONDS, VEINS, STONE_GREY, TEAL, accents, frame, strip } from '../dais.mjs';
 
 const at = (x, y) => VEINS.mask[((y + 16) % 16) * 16 + ((x + 16) % 16)];
 
@@ -57,4 +57,28 @@ test('the strip loops: 128 frames of 5 ticks make 32 s, and the frame after the 
 
 test('the power flows: the veins change from one moment to the next', () => {
   assert.notDeepEqual(frame('veins', 0), frame('veins', 0.5));
+});
+
+test('the aurora is mainly teal: most of the vein, most of the time, shows no accent', () => {
+  let n = 0, teal = 0;
+  for (let k = 0; k < FRAMES; k++) for (let i = 0; i < 256; i++) if (VEINS.mask[i] === 1) {
+    n++; if (accents(i % 16, i >> 4, k * LOOP_SECONDS / FRAMES).reduce((a, b) => a + b) < 0.2) teal++;
+  }
+  assert.ok(teal / n >= 0.6, `teal share ${(teal / n).toFixed(2)}`);
+  assert.ok(TEAL.every(c => c[1] > c[0] && c[2] > c[0]), 'teal: more green and blue than red');
+});
+
+test('swatches of pink, blue and purple each show strongly somewhere in the loop', () => {
+  const peak = [0, 0, 0];
+  for (let k = 0; k < FRAMES; k++) for (let i = 0; i < 256; i++) if (VEINS.mask[i] === 1)
+    accents(i % 16, i >> 4, k * LOOP_SECONDS / FRAMES).forEach((w, c) => { peak[c] = Math.max(peak[c], w); });
+  peak.forEach((p, c) => assert.ok(p > 0.6, `accent ${c} peaks at ${p.toFixed(2)}`));
+});
+
+test('the swatches tile across blocks and loop in time', () => {
+  for (const [x, y, t] of [[3, 5, 1.5], [0, 15, 20], [11, 2, 31]]) {
+    assert.deepEqual(accents(x + 16, y, t).map(v => v.toFixed(9)), accents(x, y, t).map(v => v.toFixed(9)));
+    assert.deepEqual(accents(x, y + 16, t).map(v => v.toFixed(9)), accents(x, y, t).map(v => v.toFixed(9)));
+    assert.deepEqual(accents(x, y, t + LOOP_SECONDS).map(v => v.toFixed(9)), accents(x, y, t).map(v => v.toFixed(9)));
+  }
 });
