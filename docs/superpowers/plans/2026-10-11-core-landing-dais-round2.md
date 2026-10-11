@@ -24,7 +24,7 @@
 
 ## Global Constraints
 
-- **No dashes:** never use em dashes, and never a spaced en dash (" – ") instead. This applies to code, comments,
+- **No dashes:** never use em dashes, and never a spaced en dash used in its place. This applies to code, comments,
   docs and commit messages.
 - **Commit messages:** no `Co-Authored-By` line. One descriptive sentence, as in `git log`.
 - **Gradle and the dev server:** never run Gradle while the dev server or client runs.
