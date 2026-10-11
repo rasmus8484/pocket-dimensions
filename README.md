@@ -167,6 +167,15 @@ Everything can be gathered once you reach the Nether; nothing needs the End. The
 
 All five appear in the recipe book the first time you enter the Nether. They can be crafted before that if you know them.
 
+The two building blocks are shapeless (any slots, no pattern) and make two at a time:
+
+| Block | Ingredients | Makes |
+|-------|-------------|-------|
+| Aurora Stone | lapis lazuli, amethyst shard, 2 stone | 2 |
+| Aurora Slate | lapis lazuli, amethyst shard, 2 deepslate | 2 |
+
+Both appear in the recipe book once you pick up an amethyst shard.
+
 The World Core and Boundary Block have no recipe: the realm places its core, and the mod builds the room walls.
 
 ### Advancements
