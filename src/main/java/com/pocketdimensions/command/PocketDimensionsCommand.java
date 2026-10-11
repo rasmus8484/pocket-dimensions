@@ -47,6 +47,8 @@ import java.util.UUID;
  *                                                    core is removed, its anchor unlinked and its plot retired
  *   /pd regenCore                                  - rebuild the World Core of the realm you're standing in, or of
  *                                                    the World Anchor you're looking at
+ *   /pd regenRoom                                  - rebuild the walls (and the void they show) of the pocket room
+ *                                                    you're standing in, or of the Pocket Anchor you're looking at
  *   /pd regenAnchor <name>                         - put the player's World Anchor back, linked, where it last stood
  *   /pd allow <name> [man]                         - look at a World Anchor or World Core: put a player on the
  *                                                    realm's access list (with man: also make them a manager)
@@ -83,6 +85,8 @@ public class PocketDimensionsCommand {
                         .executes(PocketDimensionsCommand::executeDisown)))
                 .then(Commands.literal("regenCore")
                     .executes(PocketDimensionsCommand::executeRegenCore))
+                .then(Commands.literal("regenRoom")
+                    .executes(PocketDimensionsCommand::executeRegenRoom))
                 .then(Commands.literal("regenAnchor")
                     .then(Commands.argument("player", StringArgumentType.word())
                         .executes(PocketDimensionsCommand::executeRegenAnchor)))
@@ -300,6 +304,34 @@ public class PocketDimensionsCommand {
                 yield 1;
             }
         };
+    }
+
+    /** The pocket room you stand in, or else the one of the Pocket Anchor you're looking at: its walls put back. */
+    private static int executeRegenRoom(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        ServerPlayer player = src.getPlayerOrException();
+        var mgr = com.pocketdimensions.manager.PocketRoomManager.get(server);
+        ServerLevel pocket = server.getLevel(PocketDimensionsMod.POCKET_DIM);
+        if (pocket == null) return 0;
+
+        UUID room = player.level().dimension().equals(PocketDimensionsMod.POCKET_DIM)
+                ? mgr.roomAt(player.blockPosition()) : null;
+        if (room == null) {
+            BlockEntity target = lookedAt(src);
+            if (target == null) return 0;
+            if (!(target instanceof PocketAnchorBlockEntity anchor) || anchor.getPocketId() == null) {
+                src.sendFailure(Component.literal("A realm has no walls to mend. Stand in a pocket room or look at its anchor."));
+                return 0;
+            }
+            room = anchor.getPocketId();
+        }
+
+        int put = mgr.regenerateShell(room, pocket);
+        if (put < 0) { src.sendFailure(Component.literal("That pocket room no longer exists.")); return 0; }
+        if (put == 0) { src.sendFailure(Component.literal("The room's walls already stand whole.")); return 0; }
+        src.sendSuccess(() -> Component.literal("The room's walls knit themselves whole again (" + put + " blocks)."), true);
+        return 1;
     }
 
     /** The owner's World Anchor, back where it last stood (RealmManager.regenerateAnchor). */

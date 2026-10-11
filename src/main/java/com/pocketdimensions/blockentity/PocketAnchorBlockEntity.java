@@ -42,6 +42,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
 
     /** Original owner for logging/reference (not used for access control). */
     private UUID ownerUUID = null;
+    private @Nullable Component customName = null;
 
     /** Client only: the cube's tumble phase in seconds, advancing faster while the room is occupied. */
     private double phase, prevPhase;
@@ -122,7 +123,22 @@ public class PocketAnchorBlockEntity extends BlockEntity {
      */
     public void stealAnchor(Player thief, Level level, BlockPos pos, BlockState state) {
         if (pocketId == null) return;
+        final UUID owner = ownerUUID;
 
+        thief.getInventory().add(anchorStack());
+        // Clear the anchor from the manager so exit logic knows it's no longer placed (and, first, so the removal below
+        // is not taken for the world sweeping it away: preRemoveSideEffects)
+        if (!level.isClientSide() && level.getServer() != null) {
+            PocketRoomManager.get(level.getServer()).clearAnchorLocation(pocketId);
+        }
+        level.removeBlock(pos, false);
+        if (owner != null && !owner.equals(thief.getUUID()))
+            com.pocketdimensions.advancement.Milestones.reach(thief, com.pocketdimensions.advancement.Milestones.STEAL_ANCHOR);
+        // No sound, no particle - intentionally silent
+    }
+
+    /** The anchor in item form, still bound to its room and its first owner. */
+    private ItemStack anchorStack() {
         ItemStack stack = new ItemStack(ModItems.POCKET_ANCHOR_ITEM.get());
         final UUID id = pocketId;
         final UUID owner = ownerUUID;
@@ -134,17 +150,25 @@ public class PocketAnchorBlockEntity extends BlockEntity {
                 tag.putLong("original_owner_lsb", owner.getLeastSignificantBits());
             }
         });
+        if (customName != null) stack.set(DataComponents.CUSTOM_NAME, customName);
+        return stack;
+    }
 
-        thief.getInventory().add(stack);
-        level.removeBlock(pos, false);
-
-        // Clear the anchor from the manager so exit logic knows it's no longer placed
-        if (!level.isClientSide() && level.getServer() != null) {
-            PocketRoomManager.get(level.getServer()).clearAnchorLocation(pocketId);
-        }
-        if (owner != null && !owner.equals(thief.getUUID()))
-            com.pocketdimensions.advancement.Milestones.reach(thief, com.pocketdimensions.advancement.Milestones.STEAL_ANCHOR);
-        // No sound, no particle - intentionally silent
+    /**
+     * Swept away by the world rather than a player (the End's landing platform rebuilt by an arrival, /fill, /setblock):
+     * the anchor falls as an item still bound to its room, never lost with the room behind it. A theft has already
+     * cleared the anchor's place and a mined anchor has already destroyed its room, so neither lands here.
+     */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (pocketId == null || !(level instanceof ServerLevel serverLevel)) return;
+        PocketRoomManager mgr = PocketRoomManager.get(serverLevel.getServer());
+        if (!mgr.roomExists(pocketId)) return;
+        var here = mgr.getAnchorLocation(pocketId).orElse(null);
+        if (here == null || !here.getKey().equals(level.dimension()) || !here.getValue().equals(pos)) return;
+        mgr.clearAnchorLocation(pocketId);
+        net.minecraft.world.level.block.Block.popResource(level, pos, anchorStack());
     }
 
     // -------------------------------------------------------------------------
@@ -154,6 +178,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
+        output.storeNullable("CustomName", net.minecraft.network.chat.ComponentSerialization.CODEC, customName);
         if (pocketId != null) {
             output.putLong("pocket_id_msb", pocketId.getMostSignificantBits());
             output.putLong("pocket_id_lsb", pocketId.getLeastSignificantBits());
@@ -167,6 +192,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
+        customName = parseCustomNameSafe(input, "CustomName");
         long pidMsb = input.getLongOr("pocket_id_msb", 0L);
         long pidLsb = input.getLongOr("pocket_id_lsb", 0L);
         pocketId = (pidMsb != 0 || pidLsb != 0) ? new UUID(pidMsb, pidLsb) : null;
@@ -196,4 +222,7 @@ public class PocketAnchorBlockEntity extends BlockEntity {
 
     public UUID getOwnerUUID() { return ownerUUID; }
     public void setOwnerUUID(UUID uuid) { this.ownerUUID = uuid; setChanged(); }
+
+    /** The name given on an anvil, kept while placed so the anchor comes back up still bearing it. */
+    public void setCustomName(@Nullable Component name) { this.customName = name; setChanged(); }
 }

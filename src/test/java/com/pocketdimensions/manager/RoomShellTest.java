@@ -52,4 +52,30 @@ class RoomShellTest {
         assertArrayEquals(new float[]{3, 2, 3, 17, 2, 17}, floor, 0.01f);
         assertEquals(6, RoomShell.PANELS.length);
     }
+
+    @Test
+    void theShellIsTheTwoLayersRoundTheInsideAndNothingElse() {
+        assertTrue(RoomShell.inShell(0, 0, 0), "outer corner");
+        assertTrue(RoomShell.inShell(1, 9, 9), "inner wall layer");
+        assertTrue(RoomShell.inShell(19, 19, 19), "far outer corner");
+        assertFalse(RoomShell.inShell(2, 2, 2), "the inside's first block is air, not wall");
+        assertFalse(RoomShell.inShell(17, 9, 17), "inside");
+        assertFalse(RoomShell.inShell(-1, 9, 9), "outside the room");
+        assertFalse(RoomShell.inShell(20, 9, 9), "outside the room");
+        int count = 0;
+        for (int x = -1; x <= 20; x++) for (int y = -1; y <= 20; y++) for (int z = -1; z <= 20; z++) if (RoomShell.inShell(x, y, z)) count++;
+        assertEquals(20 * 20 * 20 - 16 * 16 * 16, count);
+    }
+
+    @Test
+    void theRoomHoldsEverythingWithinItsWallsAndNothingBeyond() {
+        assertTrue(RoomShell.holds(9, 2, 9), "standing on the floor");
+        assertTrue(RoomShell.holds(0, 0, 0), "inside the wall itself still counts");
+        assertTrue(RoomShell.holds(19, 19, 19));
+        assertFalse(RoomShell.holds(-1, 5, 5), "through the west wall");
+        assertFalse(RoomShell.holds(20, 5, 5), "through the east wall");
+        assertFalse(RoomShell.holds(5, -1, 5), "fallen through the floor");
+        assertFalse(RoomShell.holds(5, 20, 5), "above the ceiling");
+        assertFalse(RoomShell.holds(5, 5, 20));
+    }
 }

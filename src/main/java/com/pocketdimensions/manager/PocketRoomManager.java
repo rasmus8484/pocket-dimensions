@@ -328,6 +328,50 @@ public class PocketRoomManager extends SavedData {
         setDirty();
     }
 
+    /** The room whose shell or inside holds this position in the pocket dimension, or null. */
+    /** Whether pos lies within this room's walls (walls included); false for an unknown room. */
+    public boolean holds(UUID pocketId, BlockPos pos) {
+        RoomData data = rooms.get(pocketId);
+        if (data == null) return false;
+        BlockPos o = plotOrigin(data.plotIndex);
+        return RoomShell.holds(pos.getX() - o.getX() - SHELL_OFFSET_XZ, pos.getY() - o.getY() - SHELL_OFFSET_Y,
+                pos.getZ() - o.getZ() - SHELL_OFFSET_XZ);
+    }
+
+    public @Nullable UUID roomAt(BlockPos pos) {
+        for (Map.Entry<UUID, RoomData> e : rooms.entrySet()) {
+            BlockPos o = plotOrigin(e.getValue().plotIndex);
+            int x = pos.getX() - o.getX() - SHELL_OFFSET_XZ, y = pos.getY() - o.getY() - SHELL_OFFSET_Y,
+                    z = pos.getZ() - o.getZ() - SHELL_OFFSET_XZ;
+            if (x >= 0 && y >= 0 && z >= 0 && x < SHELL_SIZE && y < SHELL_SIZE && z < SHELL_SIZE) return e.getKey();
+        }
+        return null;
+    }
+
+    /**
+     * /pd regenRoom: puts back every block of the room's shell that isn't what the generator placed (a wall broken by
+     * accident, in creative), and with it the floor corner's heart, which draws the void. The inside is left alone.
+     * Returns how many blocks were put back, or -1 for a room that doesn't exist.
+     */
+    public int regenerateShell(UUID pocketId, ServerLevel level) {
+        RoomData data = rooms.get(pocketId);
+        if (data == null) return -1;
+        BlockPos origin = plotOrigin(data.plotIndex);
+        int ox = origin.getX() + SHELL_OFFSET_XZ, oy = origin.getY() + SHELL_OFFSET_Y, oz = origin.getZ() + SHELL_OFFSET_XZ;
+        var boundary = (com.pocketdimensions.block.BoundaryBlock) ModBlocks.BOUNDARY_BLOCK.get();
+        var m = new BlockPos.MutableBlockPos();
+        int put = 0;
+        for (int x = 0; x < SHELL_SIZE; x++) for (int y = 0; y < SHELL_SIZE; y++) for (int z = 0; z < SHELL_SIZE; z++) {
+            if (!RoomShell.inShell(x, y, z)) continue;
+            BlockState want = boundary.stateAt(x, y, z);
+            if (level.getBlockState(m.set(ox + x, oy + y, oz + z)) == want) continue;
+            level.setBlock(m, want, 3);
+            put++;
+        }
+        if (!data.generated) { data.generated = true; setDirty(); }
+        return put;
+    }
+
     // -------------------------------------------------------------------------
     // Anchor tracking
     // -------------------------------------------------------------------------
@@ -384,6 +428,7 @@ public class PocketRoomManager extends SavedData {
     // -------------------------------------------------------------------------
 
     public void addOccupant(UUID pocketId, UUID playerUUID) {
+        removeOccupantEverywhere(playerUUID);                   // one room at a time
         occupants.computeIfAbsent(pocketId, k -> new HashSet<>()).add(playerUUID);
         setDirty();
     }
@@ -395,6 +440,21 @@ public class PocketRoomManager extends SavedData {
             if (set.isEmpty()) occupants.remove(pocketId);
         }
         setDirty();
+    }
+
+    /**
+     * Out of every room's list. For leaving by any way but the room's own exit (/tp, dying, another mod's teleport),
+     * which would otherwise leave the player listed inside: the room would stay lit, and the next crouch + jump would
+     * be taken as leaving that old room instead of the one they stand in.
+     */
+    public void removeOccupantEverywhere(UUID playerUUID) {
+        boolean changed = false;
+        for (var it = occupants.values().iterator(); it.hasNext(); ) {
+            Set<UUID> set = it.next();
+            if (set.remove(playerUUID)) changed = true;
+            if (set.isEmpty()) it.remove();
+        }
+        if (changed) setDirty();
     }
 
     public Set<UUID> getOccupants(UUID pocketId) {

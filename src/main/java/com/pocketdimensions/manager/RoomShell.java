@@ -40,6 +40,17 @@ public final class RoomShell {
         return rim == 0 ? Part.VOID : rim == 1 ? Part.EDGE : Part.CORNER;
     }
 
+    /** Whether a block at x, y, z (relative to the shell's corner) is within the room, walls included. */
+    public static boolean holds(int x, int y, int z) {
+        return x >= 0 && y >= 0 && z >= 0 && x < SIZE && y < SIZE && z < SIZE;
+    }
+
+    /** Whether a local position is part of the shell (the two layers round the inside), not inside or beyond it. */
+    public static boolean inShell(int x, int y, int z) {
+        if (x < 0 || y < 0 || z < 0 || x >= SIZE || y >= SIZE || z >= SIZE) return false;
+        return partAt(x, y, z) != null;
+    }
+
     public static boolean isHeart(int x, int y, int z) { return x == HEART_X && y == HEART_Y && z == HEART_Z; }
 
     private static boolean inside(int v) { return v >= IN_MIN && v <= IN_MAX; }
