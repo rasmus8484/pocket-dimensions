@@ -131,7 +131,7 @@ Two siege blocks can be placed on top of a linked World Anchor (never an empty o
 
 **The World Core (the Geode Heart):** a two-block boulder of weathered stone floating at the realm's centre, split open on four sides around a crystal-lined hollow that holds the realm's black hole (the same one as the anchor's). A shaft is bored straight down through it; the beacon rises from the black hole up the shaft, runes climb the beam in a slow double helix, crystal shards circle the black hole and drift down the shaft, faceted aurora crystals are driven through its crown and a layer of aurora crystal hangs beneath it, slowly shifting colour. A rune tablet below each opening marks where it answers you.
 
-**The Stone Dais:** every World Core lands at the realm's exact centre, on land or open water, on a small round dais of **Heartstone** (the Core's own rock), 9 blocks across, with the sky cleared above it. Vines of **Aurora Stone** run out from under the Core to the edge and down its side: the same rock with thin veins of flowing aurora, like crying obsidian, glowing at night (light 7). Both can be mined with a pickaxe and drop themselves.
+**The Stone Dais:** every World Core lands at the realm's exact centre, on land or open water, on a small round dais of plain stone, 9 blocks across, with the sky cleared above it. Vines of **Aurora Stone** run out from under the Core to the edge and down its side, and roots of it run down into the ground below: stone with thin veins of aurora, like crying obsidian, dancing teal with drifting swatches of pink, blue and purple, glowing at night (light 7). It can be mined with a pickaxe and drops itself.
 
 **Beacon indicator:** the core's colours show the realm's state from anywhere inside it:
 - **Blue**: no active siege
