@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FRAMES, FRAMETIME, LOOP_SECONDS, VEINS, STONE_GREY, TEAL, accents, frame, strip } from '../dais.mjs';
+import { FRAMES, FRAMETIME, LOOP_SECONDS, VEINS, STONE_GREY, TEAL, accents, frame, strip, DEEPSLATE_GREY, SLATE, slateFrame, slateStrip, auroraAt } from '../dais.mjs';
 
 const at = (x, y) => VEINS.mask[((y + 16) % 16) * 16 + ((x + 16) % 16)];
 
@@ -82,3 +82,30 @@ test('the swatches tile across blocks and loop in time', () => {
     assert.deepEqual(accents(x, y, t + LOOP_SECONDS).map(v => v.toFixed(9)), accents(x, y, t).map(v => v.toFixed(9)));
   }
 });
+
+test('aurora slate: about one pixel in twenty is a fleck of the aurora, a few more a dim halo, the rest clear', () => {
+  assert.deepEqual(DEEPSLATE_GREY, [80, 80, 83], "vanilla deepslate's average grey");
+  const flecks = SLATE.mask.filter(v => v === 1).length, halo = SLATE.mask.filter(v => v === 0.5).length;
+  assert.ok(flecks >= 256 * 0.03 && flecks <= 256 * 0.08, `flecks ${flecks}`);
+  assert.ok(halo > 0 && halo <= flecks * 1.5, `halo ${halo}`);
+  const f = slateFrame(0);
+  for (let i = 0; i < 256; i++) assert.equal(f[i * 4 + 3], SLATE.mask[i] ? 255 : 0, `pixel ${i}`);
+});
+
+test("the flecks shift with the veins: each is the aurora's colour at that moment, twinkling", () => {
+  for (const t of [0, 5.5, 13, 27.25]) {
+    const f = slateFrame(t);
+    for (let i = 0; i < 256; i++) {
+      if (SLATE.mask[i] !== 1) continue;
+      const x = i % 16, y = i >> 4, au = auroraAt(x, y, ((x * 0.37 + y * 0.21) % 1 + 1) % 1, t), tw = SLATE.twinkle(i, t);
+      for (let ch = 0; ch < 3; ch++) assert.ok(Math.abs(f[i * 4 + ch] - Math.min(255, Math.round(au[ch] * (0.75 + 0.35 * tw)))) <= 1, `pixel ${i} at ${t}`);
+    }
+  }
+  assert.notDeepEqual(slateFrame(0), slateFrame(8), 'the colours move on');
+});
+
+test('the slate strip loops on the same 32 s as the veins: 128 frames', () => {
+  assert.deepEqual(slateFrame(LOOP_SECONDS), slateFrame(0));
+  assert.equal(slateStrip().length, 16 * 16 * 4 * FRAMES);
+});
+

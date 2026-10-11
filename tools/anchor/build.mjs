@@ -10,7 +10,7 @@ import { shape as pocketShape, paint as pocketPaint, glowSprite } from './pocket
 import { sprite as seedSprite } from './seed.mjs';
 import { veilTexture, FRAMES as VEIL_FRAMES } from './veil.mjs';
 import { lineTexture, fieldTexture } from './sigil.mjs';
-import { strip as daisStrip, FRAMES as DAIS_FRAMES, FRAMETIME as DAIS_FRAMETIME } from './dais.mjs';
+import { strip as daisStrip, slateStrip, FRAMES as DAIS_FRAMES, FRAMETIME as DAIS_FRAMETIME } from './dais.mjs';
 import { slab, polished, hollow, tablet } from './gui.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
@@ -285,7 +285,19 @@ for (const name of ['aurora_stone']) {
   write(`blockstates/${name}.json`, json({ variants: { '': { model: `pocketdimensions:block/${name}` } } }));
   write(`items/${name}.json`, json({ model: { type: 'minecraft:model', model: `pocketdimensions:block/${name}` } }));
 }
-console.log(`dais: aurora_stone (veins + rim, ${DAIS_FRAMES} frames)`);
+// aurora slate: vanilla deepslate with one overlay, flecks of the aurora that shift with aurora stone's veins and glow
+write('textures/block/aurora_slate_flecks.png', encodePNG(16, 16 * DAIS_FRAMES, slateStrip()));
+write('textures/block/aurora_slate_flecks.png.mcmeta', json({ animation: { frametime: DAIS_FRAMETIME, interpolate: true } }));
+const pillar = { from: [0, 0, 0], to: [16, 16, 16], faces: Object.fromEntries(['down', 'up', 'north', 'south', 'west', 'east'].map(d => [d, { uv: [0, 0, 16, 16], texture: d === 'up' || d === 'down' ? '#end' : '#side', cullface: d }])) };
+write('models/block/aurora_slate.json', json({
+  parent: 'minecraft:block/block',
+  render_type: 'minecraft:cutout',
+  textures: { particle: 'minecraft:block/deepslate', side: 'minecraft:block/deepslate', end: 'minecraft:block/deepslate_top', flecks: 'pocketdimensions:block/aurora_slate_flecks' },
+  elements: [pillar, cubeFaces('#flecks', { shade: false, light_emission: 15 })],
+}));
+write('blockstates/aurora_slate.json', json({ variants: { '': { model: 'pocketdimensions:block/aurora_slate' } } }));
+write('items/aurora_slate.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:block/aurora_slate' } }));
+console.log(`dais: aurora_stone (veins + rim), aurora_slate (flecks), ${DAIS_FRAMES} frames`);
 
 // The ward sigil's line and beam stroke
 write('textures/misc/ward_line.png', encodePNG(16, 16, lineTexture()));

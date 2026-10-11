@@ -17,7 +17,7 @@ class DaisBlocksResourcesTest {
 
     private static final Path ASSETS = Path.of("src/main/resources/assets/pocketdimensions");
     private static final Path DATA = Path.of("src/main/resources/data");
-    private static final String[] BLOCKS = {"aurora_stone"};
+    private static final String[] BLOCKS = {"aurora_stone", "aurora_slate"};
 
     private static JsonObject read(Path p) throws IOException {
         assertTrue(Files.exists(p), "missing " + p);
@@ -30,6 +30,7 @@ class DaisBlocksResourcesTest {
         assertFalse(lang.has("block.pocketdimensions.heartstone"), "heartstone is gone: the dais is plain stone");
         assertFalse(Files.exists(ASSETS.resolve("blockstates/heartstone.json")), "heartstone is gone");
         assertEquals("Aurora Stone", lang.get("block.pocketdimensions.aurora_stone").getAsString());
+        assertEquals("Aurora Slate", lang.get("block.pocketdimensions.aurora_slate").getAsString());
         for (String b : BLOCKS) {
             read(ASSETS.resolve("blockstates/" + b + ".json"));
             read(ASSETS.resolve("models/block/" + b + ".json"));
@@ -59,5 +60,18 @@ class DaisBlocksResourcesTest {
         assertFalse(el.get(0).getAsJsonObject().has("light_emission"), "the rock is lit like any block");
         assertEquals(6, el.get(1).getAsJsonObject().get("light_emission").getAsInt(), "the rim glows a little");
         assertEquals(15, el.get(2).getAsJsonObject().get("light_emission").getAsInt(), "the veins shine at night");
+    }
+
+    @Test
+    void auroraSlateIsDeepslateWithGlowingFlecks() throws IOException {
+        JsonObject m = read(ASSETS.resolve("models/block/aurora_slate.json"));
+        assertEquals("minecraft:cutout", m.get("render_type").getAsString());
+        JsonObject tex = m.getAsJsonObject("textures");
+        assertEquals("minecraft:block/deepslate", tex.get("side").getAsString(), "vanilla deepslate's own texture");
+        assertEquals("minecraft:block/deepslate_top", tex.get("end").getAsString());
+        JsonArray el = m.getAsJsonArray("elements");
+        assertEquals(2, el.size());
+        assertFalse(el.get(0).getAsJsonObject().has("light_emission"), "the slate is lit like any block");
+        assertEquals(15, el.get(1).getAsJsonObject().get("light_emission").getAsInt(), "the flecks glow at night");
     }
 }

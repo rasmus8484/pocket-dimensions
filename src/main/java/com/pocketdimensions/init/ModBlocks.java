@@ -86,4 +86,12 @@ public class ModBlocks {
                     .lightLevel(state -> 7)
                     .sound(SoundType.STONE)
                     .requiresCorrectToolForDrops()));
+
+    // aurora slate, the casing of the dais and the path the beam cleared above it: deepslate with the aurora caught in it
+    public static final RegistryObject<Block> AURORA_SLATE = BLOCKS.register("aurora_slate",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .setId(BLOCKS.key("aurora_slate"))
+                    .strength(3.0f, 6.0f)
+                    .sound(SoundType.DEEPSLATE)
+                    .requiresCorrectToolForDrops()));
 }

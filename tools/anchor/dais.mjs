@@ -101,3 +101,43 @@ export function strip(layer) {
   for (let k = 0; k < FRAMES; k++) out.set(frame(layer, k * LOOP_SECONDS / FRAMES), k * 16 * 16 * 4);
   return out;
 }
+
+// ---------- aurora slate: deepslate with flecks of the aurora caught in it ----------
+
+/** Vanilla deepslate's average grey: the flecks' dim halo is mixed into it. */
+export const DEEPSLATE_GREY = [80, 80, 83];
+
+/**
+ * Where the flecks are: mask 1 = a fleck (about one pixel in twenty), 0.5 = a dim halo, 0 = clear (the deepslate shows
+ * through). Each fleck twinkles slowly on its own phase, on a 4 s cycle, so the 32 s strip still loops.
+ */
+export const SLATE = (() => {
+  const mask = new Float32Array(256), phase = new Float32Array(256);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const h = hsh(x, y, 5, 74), i = y * 16 + x;
+    mask[i] = h > 0.95 ? 1 : h > 0.925 ? 0.5 : 0;
+    phase[i] = h * 40;
+  }
+  return { mask, twinkle: (i, t) => 0.5 + 0.5 * Math.sin(TAU * t / 4 + phase[i]) };
+})();
+
+/** One 16 x 16 frame of the fleck overlay at t seconds: the aurora's colour (as in the veins), twinkling; halo dim. */
+export function slateFrame(t) {
+  const rgba = new Uint8Array(16 * 16 * 4);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const i = y * 16 + x, m = SLATE.mask[i];
+    if (!m) continue;
+    const c = m === 1
+      ? auroraAt(x, y, ((x * 0.37 + y * 0.21) % 1 + 1) % 1, t).map(v => v * (0.75 + 0.35 * SLATE.twinkle(i, t)))
+      : auroraAt(x, y, 0.3, t).map((v, ch) => DEEPSLATE_GREY[ch] + (v * 0.5 - DEEPSLATE_GREY[ch]) * 0.5);
+    rgba.set([...c.map(clamp), 255], i * 4);
+  }
+  return rgba;
+}
+
+/** The fleck overlay's animation strip: FRAMES frames stacked downward. */
+export function slateStrip() {
+  const out = new Uint8Array(16 * 16 * 4 * FRAMES);
+  for (let k = 0; k < FRAMES; k++) out.set(slateFrame(k * LOOP_SECONDS / FRAMES), k * 16 * 16 * 4);
+  return out;
+}

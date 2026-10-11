@@ -27,6 +27,7 @@ public class ModCreativeTabs {
                                 output.accept(ModItems.WORLD_CORE_ITEM.get());
                                 output.accept(ModItems.BOUNDARY_BLOCK_ITEM.get());
                                 output.accept(ModItems.AURORA_STONE_ITEM.get());
+                                output.accept(ModItems.AURORA_SLATE_ITEM.get());
                             })
                             .build());
 }

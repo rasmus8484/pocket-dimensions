@@ -47,6 +47,10 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.AURORA_STONE.get(),
                     new Item.Properties().setId(ITEMS.key("aurora_stone")).useBlockDescriptionPrefix()));
 
+    public static final RegistryObject<Item> AURORA_SLATE_ITEM = ITEMS.register("aurora_slate",
+            () -> new BlockItem(ModBlocks.AURORA_SLATE.get(),
+                    new Item.Properties().setId(ITEMS.key("aurora_slate")).useBlockDescriptionPrefix()));
+
     // ---- Functional items ----
 
     public static final RegistryObject<Item> WORLD_SEED = ITEMS.register("world_seed",
