@@ -96,6 +96,21 @@ decay as usual later.
   - the config key `max_spawn_search_chunks`.
 - Every plot is valid now, so `invalidPlots` only holds retired plots (relocated or disowned).
 
+### When a dais is built
+
+A dais is built once per **new realm**, by `RealmManager.ensureGenerated`, when a plot is generated for the first time.
+That happens exactly when a player is given a new plot:
+
+- **The first World Seed** a player links: `allocateRealm` gives them a new plot.
+- **A new World Seed after `/pd disown`**: disown removes the realm, so the next seed allocates a new plot.
+- **A relocation**: a fresh plot is generated.
+
+Nothing is rebuilt when a player gets back to the **same** realm:
+
+- **A new anchor after the old one was broken (or taken by an Anchor Breaker).** The seed only relinks the existing
+  realm. It is already generated, so `ensureGenerated` does nothing, and the player returns to the same Core and dais.
+- **A transfer of ownership** keeps the realm as it is.
+
 ### Existing realms
 
 Realms already generated keep their Core where it stands; nothing is moved or rebuilt. A relocation grows the new realm
