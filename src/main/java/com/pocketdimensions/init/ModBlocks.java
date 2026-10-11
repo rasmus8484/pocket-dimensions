@@ -78,14 +78,7 @@ public class ModBlocks {
                     .sound(SoundType.AMETHYST)
                     .requiresCorrectToolForDrops()));
 
-    // the Stone Dais the World Core lands on (RL-024): the Core's own rock, and the same rock veined with the aurora
-    public static final RegistryObject<Block> HEARTSTONE = BLOCKS.register("heartstone",
-            () -> new Block(BlockBehaviour.Properties.of()
-                    .setId(BLOCKS.key("heartstone"))
-                    .strength(1.5f, 6.0f)
-                    .sound(SoundType.STONE)
-                    .requiresCorrectToolForDrops()));
-
+    // aurora stone, veining the Stone Dais the World Core lands on (RL-024): stone with the aurora flowing in thin veins
     public static final RegistryObject<Block> AURORA_STONE = BLOCKS.register("aurora_stone",
             () -> new Block(BlockBehaviour.Properties.of()
                     .setId(BLOCKS.key("aurora_stone"))

@@ -26,7 +26,6 @@ public class ModCreativeTabs {
                                 output.accept(ModItems.ANCHOR_BREAKER_ITEM.get());
                                 output.accept(ModItems.WORLD_CORE_ITEM.get());
                                 output.accept(ModItems.BOUNDARY_BLOCK_ITEM.get());
-                                output.accept(ModItems.HEARTSTONE_ITEM.get());
                                 output.accept(ModItems.AURORA_STONE_ITEM.get());
                             })
                             .build());

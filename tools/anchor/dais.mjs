@@ -1,6 +1,6 @@
 // The Stone Dais under the World Core (RL-024, docs/superpowers/specs/2026-10-11-core-landing-dais-design.md):
-// heartstone, the Core's weathered rock, and aurora stone's two animated overlays, its veins and their stained rim.
-// Ported from the approved studies page (core-landing-studies.html, version 18): the same hash, rock and vein walk.
+// aurora stone's two animated overlays (drawn over vanilla stone), its veins and their stained rim.
+// Ported from the approved studies page (core-landing-studies.html, version 18): the same hash and vein walk.
 
 /** The studies page's integer hash, 0..1. */
 export function hsh(i, j, k, s) {
@@ -12,18 +12,8 @@ export function hsh(i, j, k, s) {
 /** 128 frames, 5 ticks each (4 a second): 32 s, one turn of the aurora's colours and 16 pulses, so the strip loops. */
 export const FRAMES = 128, FRAMETIME = 5, LOOP_SECONDS = FRAMES * FRAMETIME / 20;
 
-/** Heartstone's colour at pixel (x, y): the Core's rock [112, 108, 120], grained in 2 x 2 flecks. */
-export function rock(x, y) {
-  const v = 0.91 + 0.18 * (hsh(x >> 1, y >> 1, 5, 9) * 0.5 + hsh(x, y, 8, 4) * 0.5);
-  return [112 * v, 108 * v, 120 * v].map(Math.round);
-}
-
-/** Heartstone: 16 x 16, opaque. Aurora stone's bottom layer is this same texture, so their rock always matches. */
-export function heartstone() {
-  const rgba = new Uint8Array(16 * 16 * 4);
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) rgba.set([...rock(x, y), 255], (y * 16 + x) * 4);
-  return rgba;
-}
+/** Vanilla stone's average grey (its pixels run from 104 to 143): the rim's veins are mixed into it. */
+export const STONE_GREY = [126, 126, 126];
 
 const DIRS8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
 const W = n => ((n % 16) + 16) % 16;
@@ -76,7 +66,7 @@ export function frame(layer, t) {
     const a = VEINS.along[i], p = pulse(a, t), au = aurora(t / LOOP_SECONDS + 0.08 * Math.sin(TAU * a));
     const c = layer === 'veins'
       ? au.map(v => v * (0.6 + 0.75 * p) + 255 * 0.05 * p)
-      : rock(x, y).map((r, ch) => r + (au[ch] * 0.35 - r) * (0.35 + 0.2 * p));
+      : STONE_GREY.map((r, ch) => r + (au[ch] * 0.35 - r) * (0.35 + 0.2 * p));
     rgba.set([...c.map(clamp), 255], i * 4);
   }
   return rgba;

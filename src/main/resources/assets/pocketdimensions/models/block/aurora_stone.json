@@ -2,8 +2,8 @@
   "parent": "minecraft:block/block",
   "render_type": "minecraft:cutout",
   "textures": {
-    "particle": "pocketdimensions:block/heartstone",
-    "rock": "pocketdimensions:block/heartstone",
+    "particle": "minecraft:block/stone",
+    "rock": "minecraft:block/stone",
     "rim": "pocketdimensions:block/aurora_stone_rim",
     "veins": "pocketdimensions:block/aurora_stone_veins"
   },

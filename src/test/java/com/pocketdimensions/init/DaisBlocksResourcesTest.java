@@ -12,12 +12,12 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** The Stone Dais's two blocks have everything the game needs: names, models, items, drops, and the pickaxe (RL-024). */
+/** The Stone Dais's aurora stone has everything the game needs: names, models, items, drops, and the pickaxe (RL-024). */
 class DaisBlocksResourcesTest {
 
     private static final Path ASSETS = Path.of("src/main/resources/assets/pocketdimensions");
     private static final Path DATA = Path.of("src/main/resources/data");
-    private static final String[] BLOCKS = {"heartstone", "aurora_stone"};
+    private static final String[] BLOCKS = {"aurora_stone"};
 
     private static JsonObject read(Path p) throws IOException {
         assertTrue(Files.exists(p), "missing " + p);
@@ -27,7 +27,8 @@ class DaisBlocksResourcesTest {
     @Test
     void eachHasANameABlockstateAndAnItem() throws IOException {
         JsonObject lang = read(ASSETS.resolve("lang/en_us.json"));
-        assertEquals("Heartstone", lang.get("block.pocketdimensions.heartstone").getAsString());
+        assertFalse(lang.has("block.pocketdimensions.heartstone"), "heartstone is gone: the dais is plain stone");
+        assertFalse(Files.exists(ASSETS.resolve("blockstates/heartstone.json")), "heartstone is gone");
         assertEquals("Aurora Stone", lang.get("block.pocketdimensions.aurora_stone").getAsString());
         for (String b : BLOCKS) {
             read(ASSETS.resolve("blockstates/" + b + ".json"));
@@ -48,11 +49,11 @@ class DaisBlocksResourcesTest {
     }
 
     @Test
-    void auroraStoneIsTheHeartstoneWithGlowingVeinsOnTop() throws IOException {
+    void auroraStoneIsVanillaStoneWithGlowingVeinsOnTop() throws IOException {
         JsonObject m = read(ASSETS.resolve("models/block/aurora_stone.json"));
         assertEquals("minecraft:cutout", m.get("render_type").getAsString());
-        assertEquals("pocketdimensions:block/heartstone", m.getAsJsonObject("textures").get("rock").getAsString(),
-                "the rock is the heartstone texture itself, so the two always match");
+        assertEquals("minecraft:block/stone", m.getAsJsonObject("textures").get("rock").getAsString(),
+                "the rock is vanilla stone's own texture, so it matches the stone around it (and any resource pack)");
         JsonArray el = m.getAsJsonArray("elements");
         assertEquals(3, el.size());
         assertFalse(el.get(0).getAsJsonObject().has("light_emission"), "the rock is lit like any block");

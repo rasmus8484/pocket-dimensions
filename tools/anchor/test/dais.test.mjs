@@ -1,16 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FRAMES, FRAMETIME, LOOP_SECONDS, VEINS, heartstone, frame, strip } from '../dais.mjs';
+import { FRAMES, FRAMETIME, LOOP_SECONDS, VEINS, STONE_GREY, frame, strip } from '../dais.mjs';
 
 const at = (x, y) => VEINS.mask[((y + 16) % 16) * 16 + ((x + 16) % 16)];
 
-test('heartstone: the Core rock, 16 x 16, opaque', () => {
-  const rgba = heartstone();
-  assert.equal(rgba.length, 16 * 16 * 4);
-  for (let i = 0; i < rgba.length; i += 4) {
-    assert.equal(rgba[i + 3], 255);
-    [112, 108, 120].forEach((c, ch) => assert.ok(rgba[i + ch] >= Math.floor(c * 0.9) && rgba[i + ch] <= Math.ceil(c * 1.1), `pixel ${i / 4}`));
-  }
+test('the rim is mixed into vanilla stone grey (126, its average), not a rock of our own', () => {
+  assert.deepEqual(STONE_GREY, [126, 126, 126]);
+  const r = frame('rim', 0);
+  for (let i = 0; i < 256; i++) if (VEINS.mask[i] === 0.5)
+    for (let ch = 0; ch < 3; ch++) assert.ok(Math.abs(r[i * 4 + ch] - 126) < 90, `rim pixel ${i} stays near grey`);
 });
 
 test('the veins are thin, like crying obsidian: a few dozen pixels, never a 2 x 2 clump', () => {
