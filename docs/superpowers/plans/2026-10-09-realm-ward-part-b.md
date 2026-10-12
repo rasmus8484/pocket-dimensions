@@ -18,7 +18,7 @@
 - The sigil's plane is y 340 (`SigilLayout.PLANE_Y`). Pull reach `R = min(96, 0.9 x fog start)`, fog start = `rd - clamp(rd / 10, 4, 64)` with `rd` the render distance in blocks. Each element is scaled about the camera by one factor `k = min(1, R / d)`.
 - Colours: normal `#8CEBFF`, breaching `#FF5ADC`, breaking `#FF5028`, anchor lost dim red. Brightness full while warded, about half without; by day never below a quarter.
 - Drawn after the sky, before the terrain, no depth writes (`RenderTypes.eyes`); nothing is drawn outside the realm dimension or before the first sync.
-- Mixins: config `pocketdimensions.mixins.json`, loaded by `-mixin.config=` in dev runs and `MixinConfigs` in the jar manifest (done in the spike).
+- Mixins: config `pocketkingdoms.mixins.json`, loaded by `-mixin.config=` in dev runs and `MixinConfigs` in the jar manifest (done in the spike).
 
 ## Review Focus
 
@@ -33,8 +33,8 @@
 ### Task 1: CameraPull and WardLook (pure)
 
 **Files:**
-- Create: `src/main/java/com/pocketdimensions/client/ward/CameraPull.java`, `src/main/java/com/pocketdimensions/client/ward/WardLook.java`
-- Test: `src/test/java/com/pocketdimensions/client/ward/CameraPullTest.java`, `src/test/java/com/pocketdimensions/client/ward/WardLookTest.java`
+- Create: `src/main/java/com/pocketkingdoms/client/ward/CameraPull.java`, `src/main/java/com/pocketkingdoms/client/ward/WardLook.java`
+- Test: `src/test/java/com/pocketkingdoms/client/ward/CameraPullTest.java`, `src/test/java/com/pocketkingdoms/client/ward/WardLookTest.java`
 
 **Interfaces:**
 - Produces: `CameraPull.reach(float renderDistanceBlocks)` (double); `CameraPull.factor(double distance, double reach)` (double).
@@ -45,7 +45,7 @@
 `CameraPullTest.java`:
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
 import org.junit.jupiter.api.Test;
 
@@ -87,7 +87,7 @@ class CameraPullTest {
 `WardLookTest.java`:
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
 import org.junit.jupiter.api.Test;
 
@@ -152,7 +152,7 @@ class WardLookTest {
 
 - [ ] **Step 2: Run them to verify they fail**
 
-Run: `./gradlew.bat test --tests "com.pocketdimensions.client.ward.*"`
+Run: `./gradlew.bat test --tests "com.pocketkingdoms.client.ward.*"`
 Expected: FAIL, "cannot find symbol: class CameraPull" / "class WardLook".
 
 - [ ] **Step 3: Write minimal implementation**
@@ -160,7 +160,7 @@ Expected: FAIL, "cannot find symbol: class CameraPull" / "class WardLook".
 `CameraPull.java`:
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
 import net.minecraft.util.Mth;
 
@@ -191,7 +191,7 @@ public final class CameraPull {
 `WardLook.java`:
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
 /**
  * How the ward's sigil looks: its colour for the siege (the World Core beam's colours), its brightness (the Core's
@@ -253,13 +253,13 @@ public final class WardLook {
 
 - [ ] **Step 4: Run them to verify they pass**
 
-Run: `./gradlew.bat test --tests "com.pocketdimensions.client.ward.*"`
+Run: `./gradlew.bat test --tests "com.pocketkingdoms.client.ward.*"`
 Expected: PASS, 11 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/client/ward/CameraPull.java src/main/java/com/pocketdimensions/client/ward/WardLook.java src/test/java/com/pocketdimensions/client/ward
+git add src/main/java/com/pocketkingdoms/client/ward/CameraPull.java src/main/java/com/pocketkingdoms/client/ward/WardLook.java src/test/java/com/pocketkingdoms/client/ward
 git commit -m "Ward sigil logic: the pull toward the camera, and the ward's colours, brightness, cracks and pulses"
 ```
 
@@ -268,8 +268,8 @@ git commit -m "Ward sigil logic: the pull toward the camera, and the ward's colo
 ### Task 2: SigilLayout (pure)
 
 **Files:**
-- Create: `src/main/java/com/pocketdimensions/client/ward/SigilLayout.java`
-- Test: `src/test/java/com/pocketdimensions/client/ward/SigilLayoutTest.java`
+- Create: `src/main/java/com/pocketkingdoms/client/ward/SigilLayout.java`
+- Test: `src/test/java/com/pocketkingdoms/client/ward/SigilLayoutTest.java`
 
 **Interfaces:**
 - Produces: `SigilLayout.PLANE_Y` (int 340); `enum Kind { SEAL, RING, SPOKE, BAND }`; `record Rune(Kind kind, int ring, double x, double z, double size, double angle, int glyph, double radius)`; `record Line(Kind kind, int ring, double x1, double z1, double x2, double z2, double width)`; `record Sigil(double cx, double cz, List<Rune> runes, List<Line> lines)`; `static Sigil build(double cx, double cz, int minX, int minZ, int maxX, int maxZ)`; `static double turn(int ring, double ticks)` (radians the ring has turned).
@@ -277,7 +277,7 @@ git commit -m "Ward sigil logic: the pull toward the camera, and the ward's colo
 - [ ] **Step 1: Write the failing test**
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
 import org.junit.jupiter.api.Test;
 
@@ -359,13 +359,13 @@ class SigilLayoutTest {
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `./gradlew.bat test --tests com.pocketdimensions.client.ward.SigilLayoutTest`
+Run: `./gradlew.bat test --tests com.pocketkingdoms.client.ward.SigilLayoutTest`
 Expected: FAIL, "cannot find symbol: class SigilLayout".
 
 - [ ] **Step 3: Write the implementation**
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -464,13 +464,13 @@ public final class SigilLayout {
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `./gradlew.bat test --tests com.pocketdimensions.client.ward.SigilLayoutTest`
+Run: `./gradlew.bat test --tests com.pocketkingdoms.client.ward.SigilLayoutTest`
 Expected: PASS, 7 tests. If `allInside` fails for the small realm, the size floor (3) or the seal radius is too large for an 80-block plot: shrink the factor in `seal = Math.min(SEAL_RADIUS, edge * 0.12)`, not the test.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/client/ward/SigilLayout.java src/test/java/com/pocketdimensions/client/ward/SigilLayoutTest.java
+git add src/main/java/com/pocketkingdoms/client/ward/SigilLayout.java src/test/java/com/pocketkingdoms/client/ward/SigilLayoutTest.java
 git commit -m "SigilLayout: the ward sigil's seal, four turning rings, eight spokes and square band, centred on the Core inside the plot"
 ```
 
@@ -479,8 +479,8 @@ git commit -m "SigilLayout: the ward sigil's seal, four turning rings, eight spo
 ### Task 3: Ward sync (server to client)
 
 **Files:**
-- Create: `src/main/java/com/pocketdimensions/network/WardSyncS2C.java`, `src/main/java/com/pocketdimensions/event/WardSync.java`, `src/main/java/com/pocketdimensions/client/ward/WardView.java`
-- Modify: `src/main/java/com/pocketdimensions/network/ModNetworking.java` (register), `src/main/java/com/pocketdimensions/PocketDimensionsMod.java` (create `WardSync` beside the other handlers)
+- Create: `src/main/java/com/pocketkingdoms/network/WardSyncS2C.java`, `src/main/java/com/pocketkingdoms/event/WardSync.java`, `src/main/java/com/pocketkingdoms/client/ward/WardView.java`
+- Modify: `src/main/java/com/pocketkingdoms/network/ModNetworking.java` (register), `src/main/java/com/pocketkingdoms/PocketKingdomsMod.java` (create `WardSync` beside the other handlers)
 
 **Interfaces:**
 - Consumes: `SigilLayout.build` (Task 2).
@@ -488,10 +488,10 @@ git commit -m "SigilLayout: the ward sigil's seal, four turning rings, eight spo
 
 - [ ] **Step 1: Write a failing round-trip test**
 
-`src/test/java/com/pocketdimensions/network/WardSyncS2CTest.java`:
+`src/test/java/com/pocketkingdoms/network/WardSyncS2CTest.java`:
 
 ```java
-package com.pocketdimensions.network;
+package com.pocketkingdoms.network;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
@@ -519,13 +519,13 @@ class WardSyncS2CTest {
 }
 ```
 
-Run: `./gradlew.bat test --tests com.pocketdimensions.network.WardSyncS2CTest`
+Run: `./gradlew.bat test --tests com.pocketkingdoms.network.WardSyncS2CTest`
 Expected: FAIL, "cannot find symbol: class WardSyncS2C". (If the test then fails at runtime because Minecraft classes can't load in plain JUnit, rule it in the ledger, delete this test, and rely on the in-game check: the encoder is symmetric field by field.)
 
 - [ ] **Step 2: The packet**
 
 ```java
-package com.pocketdimensions.network;
+package com.pocketkingdoms.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.event.network.CustomPayloadEvent;
@@ -555,7 +555,7 @@ public record WardSyncS2C(boolean present, int coreX, int coreY, int coreZ, int 
     }
 
     public static void handle(WardSyncS2C m, CustomPayloadEvent.Context ctx) {
-        com.pocketdimensions.client.ward.WardView.receive(m);
+        com.pocketkingdoms.client.ward.WardView.receive(m);
     }
 }
 ```
@@ -569,21 +569,21 @@ Register it in `ModNetworking.register()` after `SiegeBarS2C`:
 
 - [ ] **Step 3: Run the round-trip test**
 
-Run: `./gradlew.bat test --tests com.pocketdimensions.network.WardSyncS2CTest`
+Run: `./gradlew.bat test --tests com.pocketkingdoms.network.WardSyncS2CTest`
 Expected: compile error only for `WardView` until Step 5; write Step 5's `WardView` first if needed, then: PASS, 2 tests.
 
 - [ ] **Step 4: The server side**
 
-`src/main/java/com/pocketdimensions/event/WardSync.java`:
+`src/main/java/com/pocketkingdoms/event/WardSync.java`:
 
 ```java
-package com.pocketdimensions.event;
+package com.pocketkingdoms.event;
 
-import com.pocketdimensions.PocketDimensionsMod;
-import com.pocketdimensions.blockentity.WorldCoreBlockEntity;
-import com.pocketdimensions.manager.RealmManager;
-import com.pocketdimensions.network.ModNetworking;
-import com.pocketdimensions.network.WardSyncS2C;
+import com.pocketkingdoms.PocketKingdomsMod;
+import com.pocketkingdoms.blockentity.WorldCoreBlockEntity;
+import com.pocketkingdoms.manager.RealmManager;
+import com.pocketkingdoms.network.ModNetworking;
+import com.pocketkingdoms.network.WardSyncS2C;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -615,7 +615,7 @@ public class WardSync {
 
     private void onPlayerTick(TickEvent.PlayerTickEvent.Post event) {
         if (event.side() != LogicalSide.SERVER || !(event.player() instanceof ServerPlayer player)) return;
-        if (!player.level().dimension().equals(PocketDimensionsMod.REALM_DIM)) {
+        if (!player.level().dimension().equals(PocketKingdomsMod.REALM_DIM)) {
             sent.remove(player.getUUID());          // re-sent on the next arrival
             return;
         }
@@ -654,16 +654,16 @@ public class WardSync {
 }
 ```
 
-In `PocketDimensionsMod`'s constructor, where `RealmEventHandler` is created, add `new com.pocketdimensions.event.WardSync();` beside it (check the exact line with `grep -n "new RealmEventHandler" src/main/java/com/pocketdimensions/PocketDimensionsMod.java`; if handlers are created differently, follow that pattern).
+In `PocketKingdomsMod`'s constructor, where `RealmEventHandler` is created, add `new com.pocketkingdoms.event.WardSync();` beside it (check the exact line with `grep -n "new RealmEventHandler" src/main/java/com/pocketkingdoms/PocketKingdomsMod.java`; if handlers are created differently, follow that pattern).
 
 - [ ] **Step 5: The client side**
 
-`src/main/java/com/pocketdimensions/client/ward/WardView.java`:
+`src/main/java/com/pocketkingdoms/client/ward/WardView.java`:
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
-import com.pocketdimensions.network.WardSyncS2C;
+import com.pocketkingdoms.network.WardSyncS2C;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
@@ -711,7 +711,7 @@ Expected: BUILD SUCCESSFUL, all tests pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/network src/main/java/com/pocketdimensions/event/WardSync.java src/main/java/com/pocketdimensions/client/ward/WardView.java src/main/java/com/pocketdimensions/PocketDimensionsMod.java src/test/java/com/pocketdimensions/network
+git add src/main/java/com/pocketkingdoms/network src/main/java/com/pocketkingdoms/event/WardSync.java src/main/java/com/pocketkingdoms/client/ward/WardView.java src/main/java/com/pocketkingdoms/PocketKingdomsMod.java src/test/java/com/pocketkingdoms/network
 git commit -m "Ward sync: each player in a realm is told its ward's state (core, bounds, siege, breach, lapis) when it changes"
 ```
 
@@ -720,9 +720,9 @@ git commit -m "Ward sync: each player in a realm is told its ward's state (core,
 ### Task 4: The sigil renderer (replacing the spike)
 
 **Files:**
-- Modify: `src/main/java/com/pocketdimensions/client/ward/WardSigilRenderer.java` (replace the spike), `src/main/java/com/pocketdimensions/mixin/LevelRendererMixin.java` (pass the render state)
+- Modify: `src/main/java/com/pocketkingdoms/client/ward/WardSigilRenderer.java` (replace the spike), `src/main/java/com/pocketkingdoms/mixin/LevelRendererMixin.java` (pass the render state)
 - Create: `tools/anchor/sigil.mjs`, `tools/anchor/test/sigil.test.mjs`; modify `tools/anchor/build.mjs`
-- Generated: `src/main/resources/assets/pocketdimensions/textures/misc/ward_line.png`
+- Generated: `src/main/resources/assets/pocketkingdoms/textures/misc/ward_line.png`
 
 **Interfaces:**
 - Consumes: `CameraPull.reach`, `CameraPull.factor`, `WardLook.*` (Task 1); `SigilLayout.*` (Task 2); `WardView.current()` (Task 3).
@@ -786,15 +786,15 @@ In `LevelRendererMixin`, change the call to `WardSigilRenderer.addPass(builder, 
 Replace `WardSigilRenderer.java` with:
 
 ```java
-package com.pocketdimensions.client.ward;
+package com.pocketkingdoms.client.ward;
 
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.framegraph.FramePass;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
-import com.pocketdimensions.PocketDimensionsMod;
-import com.pocketdimensions.network.WardSyncS2C;
+import com.pocketkingdoms.PocketKingdomsMod;
+import com.pocketkingdoms.network.WardSyncS2C;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelTargetBundle;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -815,21 +815,21 @@ public final class WardSigilRenderer {
     private static final Identifier[] RUNE = new Identifier[6], GLOW = new Identifier[6];
     static {
         for (int i = 0; i < 6; i++) {
-            RUNE[i] = Identifier.fromNamespaceAndPath(PocketDimensionsMod.MODID, "textures/particle/rune_" + i + ".png");
-            GLOW[i] = Identifier.fromNamespaceAndPath(PocketDimensionsMod.MODID, "textures/particle/rune_glow_" + i + ".png");
+            RUNE[i] = Identifier.fromNamespaceAndPath(PocketKingdomsMod.MODID, "textures/particle/rune_" + i + ".png");
+            GLOW[i] = Identifier.fromNamespaceAndPath(PocketKingdomsMod.MODID, "textures/particle/rune_glow_" + i + ".png");
         }
     }
-    private static final Identifier LINE = Identifier.fromNamespaceAndPath(PocketDimensionsMod.MODID, "textures/misc/ward_line.png");
+    private static final Identifier LINE = Identifier.fromNamespaceAndPath(PocketKingdomsMod.MODID, "textures/misc/ward_line.png");
 
     private WardSigilRenderer() {}
 
     public static void addPass(FrameGraphBuilder builder, LevelTargetBundle targets, LevelRenderState state) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || !mc.level.dimension().equals(PocketDimensionsMod.REALM_DIM)) return;
+        if (mc.level == null || !mc.level.dimension().equals(PocketKingdomsMod.REALM_DIM)) return;
         WardView.State ward = WardView.current();
         if (ward == null) return;
         float stars = state.skyRenderState.starBrightness;
-        FramePass pass = builder.addPass("pocketdimensions_ward_sigil");
+        FramePass pass = builder.addPass("pocketkingdoms_ward_sigil");
         targets.main = pass.readsAndWrites(targets.main);
         pass.executes(() -> draw(ward, stars));
     }
@@ -967,7 +967,7 @@ Expected:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/client/ward src/main/java/com/pocketdimensions/mixin/LevelRendererMixin.java tools/anchor/sigil.mjs tools/anchor/test/sigil.test.mjs tools/anchor/build.mjs src/main/resources/assets/pocketdimensions/textures/misc/ward_line.png
+git add src/main/java/com/pocketkingdoms/client/ward src/main/java/com/pocketkingdoms/mixin/LevelRendererMixin.java tools/anchor/sigil.mjs tools/anchor/test/sigil.test.mjs tools/anchor/build.mjs src/main/resources/assets/pocketkingdoms/textures/misc/ward_line.png
 git commit -m "The ward's sigil: seal, turning rings, spokes with pulses and a band along the Veil, over the Core, in the siege's colours, pulled toward the camera so it looks the same at any render distance"
 ```
 
@@ -975,5 +975,5 @@ git commit -m "The ward's sigil: seal, turning rings, spokes with pulses and a b
 
 ### Task 5: Docs
 
-- [ ] **Step 1:** `README.md` (Realms: a paragraph on the sigil: what each colour and dimming means), `pocket-worlds.md` (the ward section: the sigil is now built, Part C still planned), `CHANGELOG.md` (one line under Realms), `PRD.md` (RL-022 DONE with the classes), `CLAUDE.md` (mixins: `pocketdimensions.mixins.json`, `mixin/LevelRendererMixin`, the `-mixin.config` run arg and `MixinConfigs` manifest; `client/ward/*`; `event/WardSync`; `network/WardSyncS2C`), `docs/friend-test.md` (the sigil's states from two players' views).
+- [ ] **Step 1:** `README.md` (Realms: a paragraph on the sigil: what each colour and dimming means), `pocket-worlds.md` (the ward section: the sigil is now built, Part C still planned), `CHANGELOG.md` (one line under Realms), `PRD.md` (RL-022 DONE with the classes), `CLAUDE.md` (mixins: `pocketkingdoms.mixins.json`, `mixin/LevelRendererMixin`, the `-mixin.config` run arg and `MixinConfigs` manifest; `client/ward/*`; `event/WardSync`; `network/WardSyncS2C`), `docs/friend-test.md` (the sigil's states from two players' views).
 - [ ] **Step 2:** `grep -n "—" README.md PRD.md pocket-worlds.md CHANGELOG.md` gives nothing; commit `"Docs: the ward's sigil"`.

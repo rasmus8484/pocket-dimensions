@@ -59,8 +59,8 @@ flecks of the aurora, animated exactly like aurora stone's veins. Keep the auror
 ### Task 1: LandingDais: the casing, roots kept in the dais, the fuse rule
 
 **Files:**
-- Modify: `src/main/java/com/pocketdimensions/manager/LandingDais.java`
-- Test: `src/test/java/com/pocketdimensions/manager/LandingDaisTest.java`
+- Modify: `src/main/java/com/pocketkingdoms/manager/LandingDais.java`
+- Test: `src/test/java/com/pocketkingdoms/manager/LandingDaisTest.java`
 
 **Interfaces:**
 - **Produces:**
@@ -96,7 +96,7 @@ flecks of the aurora, animated exactly like aurora stone's veins. Keep the auror
         assertTrue(LandingDais.fuses(true, false, false, false, false, true), "a lake in the wall is sealed");
 ```
 
-- [ ] **Step 2:** Run `./gradlew.bat test --tests "com.pocketdimensions.manager.LandingDaisTest"`. Expected: the compile
+- [ ] **Step 2:** Run `./gradlew.bat test --tests "com.pocketkingdoms.manager.LandingDaisTest"`. Expected: the compile
   fails (no `shell()`, `wall()`, `inside`, `fuses`, `CASING_REACH`).
 - [ ] **Step 3: Implement.** Apply the scratchpad script `r3_landingdais.py` (checked before this plan was written:
   189 shell blocks, 40 wall columns, no leaks, at most 6 out, nothing of the dais outside it). Then add `fuses`:
@@ -170,7 +170,7 @@ flecks of the aurora, animated exactly like aurora stone's veins. Keep the auror
 ### Task 3: RealmManager casts the casing
 
 **Files:**
-- Modify: `src/main/java/com/pocketdimensions/manager/RealmManager.java` (`buildDais`, `canRootInto`).
+- Modify: `src/main/java/com/pocketkingdoms/manager/RealmManager.java` (`buildDais`, `canRootInto`).
 
 - [ ] **Step 1: Implement in `buildDais`.**
   - The clearing loop clears only the cylinder (the old `inWall` seal goes).

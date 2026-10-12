@@ -55,7 +55,7 @@
 - [ ] `COMPLETE` property, head shape, `animateTick` drain particles.
 - [ ] serverTick: influence/COMPLETE sync every 20 ticks and on completion; `sendBlockUpdated` every 40 ticks.
 - [ ] Renderer: beam only when complete and fueled, translated 12 px up.
-- [ ] Remove old `models/block/world_breacher.json`; item JSON → `pocketdimensions:item/world_breacher`.
+- [ ] Remove old `models/block/world_breacher.json`; item JSON → `pocketkingdoms:item/world_breacher`.
 - [ ] `./gradlew build` → SUCCESS. Commit.
 
 ### Task 5: Verify and document

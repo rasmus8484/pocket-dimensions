@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    "minecraft:lapis_lazuli",
+    "minecraft:amethyst_shard",
+    "minecraft:stone",
+    "minecraft:stone"
+  ],
+  "result": {
+    "id": "pocketkingdoms:aurora_stone",
+    "count": 2
+  }
+}

@@ -52,7 +52,7 @@
 | `client/WorldAnchorBlockEntityRenderer.java` (new) | black hole, rings, beam, seed |
 | `client/particle/RuneParticle.java` (new) | rune particle + provider |
 | `client/ClientSetup.java` | register renderer and particle provider |
-| `PocketDimensionsMod.java` | register `ModParticles.PARTICLE_TYPES` |
+| `PocketKingdomsMod.java` | register `ModParticles.PARTICLE_TYPES` |
 | `assets/.../blockstates/world_anchor.json` | 4 variants (half × linked) |
 
 ---
@@ -416,11 +416,11 @@ git commit -m "Add voxel-to-Minecraft model toolkit for the World Anchor"
 
 **Files:**
 - Create: `tools/anchor/build.mjs`
-- Generated: `src/main/resources/assets/pocketdimensions/models/block/world_anchor_{inert,linked}_{lower,upper}.json`, `models/item/world_anchor.json`, `textures/block/world_anchor_{inert,linked}_{lower,upper}.png`, `textures/block/world_anchor_{inert,linked}_{lower,upper}_flow.png(.mcmeta)`, `textures/particle/rune_0..5.png`, `particles/rune.json`
+- Generated: `src/main/resources/assets/pocketkingdoms/models/block/world_anchor_{inert,linked}_{lower,upper}.json`, `models/item/world_anchor.json`, `textures/block/world_anchor_{inert,linked}_{lower,upper}.png`, `textures/block/world_anchor_{inert,linked}_{lower,upper}_flow.png(.mcmeta)`, `textures/particle/rune_0..5.png`, `particles/rune.json`
 
 **Interfaces:**
 - Consumes: Task 1 exports.
-- Produces: model ids `pocketdimensions:block/world_anchor_{inert|linked}_{lower|upper}`, item model `pocketdimensions:item/world_anchor`, particle sprites `pocketdimensions:rune_0..5`.
+- Produces: model ids `pocketkingdoms:block/world_anchor_{inert|linked}_{lower|upper}`, item model `pocketkingdoms:item/world_anchor`, particle sprites `pocketkingdoms:rune_0..5`.
 
 - [ ] **Step 1: Write `tools/anchor/build.mjs`**
 
@@ -432,7 +432,7 @@ import { shape, paint, GLYPHS, PAL, SC } from './runebound.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '../../src/main/resources/assets/pocketdimensions');
+const root = join(dirname(fileURLToPath(import.meta.url)), '../../src/main/resources/assets/pocketkingdoms');
 const write = (rel, data) => { const p = join(root, rel); mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, data); };
 const json = o => JSON.stringify(o, null, 2) + '\n';
 
@@ -466,12 +466,12 @@ for (const [state, L] of [['inert', false], ['linked', true]]) {
     if (m.elements.length > 200) throw new Error(`${name}: ${m.elements.length} elements (max 200)`);
     report.push(`${name}: ${m.elements.length} elements, atlas ${m.atlas.size}px`);
     write(`textures/block/${name}.png`, encodePNG(m.atlas.size, m.atlas.size, m.atlas.rgba));
-    const textures = { main: `pocketdimensions:block/${name}`, particle: `pocketdimensions:block/${name}` };
+    const textures = { main: `pocketkingdoms:block/${name}`, particle: `pocketkingdoms:block/${name}` };
     if (m.elements.some(e => Object.values(e.faces).some(f => f.texture === '#flow'))) {
       const s = flowStrip(m, voxels);
       write(`textures/block/${name}_flow.png`, encodePNG(s.w, s.h, s.rgba));
       write(`textures/block/${name}_flow.png.mcmeta`, json({ animation: { frametime: 8, interpolate: true } }));
-      textures.flow = `pocketdimensions:block/${name}_flow`;
+      textures.flow = `pocketkingdoms:block/${name}_flow`;
     }
     write(`models/block/${name}.json`, json({ parent: 'minecraft:block/block', ambientocclusion: false, textures, elements: m.elements }));
     halves[`${state}_${half}`] = { m, textures };
@@ -502,7 +502,7 @@ GLYPHS.forEach((g, i) => {
   g.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'X') rgba.set([255, 255, 255, 255], ((r + 1) * 8 + c + 2) * 4); }));
   write(`textures/particle/rune_${i}.png`, encodePNG(8, 8, rgba));
 });
-write('particles/rune.json', json({ textures: GLYPHS.map((_, i) => `pocketdimensions:rune_${i}`) }));
+write('particles/rune.json', json({ textures: GLYPHS.map((_, i) => `pocketkingdoms:rune_${i}`) }));
 
 console.log(report.join('\n'));
 ```
@@ -514,13 +514,13 @@ Expected: four lines like `world_anchor_inert_lower: N elements, atlas 64px`, ev
 
 - [ ] **Step 3: Check the generated textures by eye**
 
-Run: `python3 -c "from PIL import Image; im=Image.open('src/main/resources/assets/pocketdimensions/textures/block/world_anchor_linked_lower.png'); im.resize((im.width*8,im.height*8),Image.NEAREST).save('C:/Users/rasmu/AppData/Local/Temp/atlas_preview.png')"` and open the preview.
+Run: `python3 -c "from PIL import Image; im=Image.open('src/main/resources/assets/pocketkingdoms/textures/block/world_anchor_linked_lower.png'); im.resize((im.width*8,im.height*8),Image.NEAREST).save('C:/Users/rasmu/AppData/Local/Temp/atlas_preview.png')"` and open the preview.
 Expected: basalt greys, gold trim strips and cyan rune pixels; no fully black atlas.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-cd src/main/resources/assets/pocketdimensions
+cd src/main/resources/assets/pocketkingdoms
 git add models/block/world_anchor_inert_*.json models/block/world_anchor_linked_*.json models/item/world_anchor.json         textures/block/world_anchor_inert_* textures/block/world_anchor_linked_* textures/particle particles
 cd -
 git add tools/anchor/build.mjs
@@ -532,12 +532,12 @@ git commit -m "Generate Runebound World Anchor models, textures and rune sprites
 ### Task 3: `LINKED` block state, shapes, light and state sync
 
 **Files:**
-- Modify: `src/main/java/com/pocketdimensions/block/WorldAnchorBlock.java`
-- Modify: `src/main/java/com/pocketdimensions/blockentity/WorldAnchorBlockEntity.java` (`unlink()`, add `onLoad()`, `getRenderBoundingBox()`)
-- Modify: `src/main/java/com/pocketdimensions/item/WorldSeedItem.java` (after `be.setLinked(true);`)
-- Modify: `src/main/java/com/pocketdimensions/init/ModBlocks.java` (WORLD_ANCHOR properties)
-- Modify: `src/main/resources/assets/pocketdimensions/blockstates/world_anchor.json`
-- Modify: `src/main/resources/assets/pocketdimensions/items/world_anchor.json`
+- Modify: `src/main/java/com/pocketkingdoms/block/WorldAnchorBlock.java`
+- Modify: `src/main/java/com/pocketkingdoms/blockentity/WorldAnchorBlockEntity.java` (`unlink()`, add `onLoad()`, `getRenderBoundingBox()`)
+- Modify: `src/main/java/com/pocketkingdoms/item/WorldSeedItem.java` (after `be.setLinked(true);`)
+- Modify: `src/main/java/com/pocketkingdoms/init/ModBlocks.java` (WORLD_ANCHOR properties)
+- Modify: `src/main/resources/assets/pocketkingdoms/blockstates/world_anchor.json`
+- Modify: `src/main/resources/assets/pocketkingdoms/items/world_anchor.json`
 - Delete: `models/block/world_anchor_lower.json`, `models/block/world_anchor_upper.json`, `textures/block/world_anchor_{stone,gold,runes,energy}.png`, folder `worldanchor_assets/`
 
 **Interfaces:**
@@ -606,7 +606,7 @@ public AABB getRenderBoundingBox() {
     return new AABB(worldPosition).expandTowards(0, 1, 0);
 }
 ```
-Imports: `com.pocketdimensions.block.WorldAnchorBlock`, `net.minecraft.world.phys.AABB`.
+Imports: `com.pocketkingdoms.block.WorldAnchorBlock`, `net.minecraft.world.phys.AABB`.
 
 - [ ] **Step 4: Light level in `ModBlocks.WORLD_ANCHOR`** — add to its properties chain:
 
@@ -620,23 +620,23 @@ Imports: `com.pocketdimensions.block.WorldAnchorBlock`, `net.minecraft.world.phy
 ```json
 {
   "variants": {
-    "half=lower,linked=false": { "model": "pocketdimensions:block/world_anchor_inert_lower" },
-    "half=upper,linked=false": { "model": "pocketdimensions:block/world_anchor_inert_upper" },
-    "half=lower,linked=true":  { "model": "pocketdimensions:block/world_anchor_linked_lower" },
-    "half=upper,linked=true":  { "model": "pocketdimensions:block/world_anchor_linked_upper" }
+    "half=lower,linked=false": { "model": "pocketkingdoms:block/world_anchor_inert_lower" },
+    "half=upper,linked=false": { "model": "pocketkingdoms:block/world_anchor_inert_upper" },
+    "half=lower,linked=true":  { "model": "pocketkingdoms:block/world_anchor_linked_lower" },
+    "half=upper,linked=true":  { "model": "pocketkingdoms:block/world_anchor_linked_upper" }
   }
 }
 ```
 `items/world_anchor.json`:
 ```json
-{ "model": { "type": "minecraft:model", "model": "pocketdimensions:item/world_anchor" } }
+{ "model": { "type": "minecraft:model", "model": "pocketkingdoms:item/world_anchor" } }
 ```
 
 - [ ] **Step 6: Remove the old assets**
 
 ```bash
-rm -f src/main/resources/assets/pocketdimensions/models/block/world_anchor_lower.json src/main/resources/assets/pocketdimensions/models/block/world_anchor_upper.json
-rm -f src/main/resources/assets/pocketdimensions/textures/block/world_anchor_{stone,gold,runes,energy}.png
+rm -f src/main/resources/assets/pocketkingdoms/models/block/world_anchor_lower.json src/main/resources/assets/pocketkingdoms/models/block/world_anchor_upper.json
+rm -f src/main/resources/assets/pocketkingdoms/textures/block/world_anchor_{stone,gold,runes,energy}.png
 rm -rf worldanchor_assets
 ```
 
@@ -656,8 +656,8 @@ Run `./gradlew runClient`, open the test world, creative mode:
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/block/WorldAnchorBlock.java src/main/java/com/pocketdimensions/blockentity/WorldAnchorBlockEntity.java src/main/java/com/pocketdimensions/item/WorldSeedItem.java src/main/java/com/pocketdimensions/init/ModBlocks.java src/main/resources/assets/pocketdimensions/blockstates/world_anchor.json src/main/resources/assets/pocketdimensions/items/world_anchor.json
-git add -u src/main/resources/assets/pocketdimensions   # records removal of the old anchor files if they were tracked
+git add src/main/java/com/pocketkingdoms/block/WorldAnchorBlock.java src/main/java/com/pocketkingdoms/blockentity/WorldAnchorBlockEntity.java src/main/java/com/pocketkingdoms/item/WorldSeedItem.java src/main/java/com/pocketkingdoms/init/ModBlocks.java src/main/resources/assets/pocketkingdoms/blockstates/world_anchor.json src/main/resources/assets/pocketkingdoms/items/world_anchor.json
+git add -u src/main/resources/assets/pocketkingdoms   # records removal of the old anchor files if they were tracked
 git commit -m "Add linked block state to World Anchor and switch to Runebound models"
 ```
 
@@ -666,9 +666,9 @@ git commit -m "Add linked block state to World Anchor and switch to Runebound mo
 ### Task 4: Black hole and seed renderer
 
 **Files:**
-- Create: `src/main/java/com/pocketdimensions/client/WorldAnchorRenderState.java`
-- Create: `src/main/java/com/pocketdimensions/client/WorldAnchorBlockEntityRenderer.java`
-- Modify: `src/main/java/com/pocketdimensions/client/ClientSetup.java` (`onRegisterRenderers`)
+- Create: `src/main/java/com/pocketkingdoms/client/WorldAnchorRenderState.java`
+- Create: `src/main/java/com/pocketkingdoms/client/WorldAnchorBlockEntityRenderer.java`
+- Modify: `src/main/java/com/pocketkingdoms/client/ClientSetup.java` (`onRegisterRenderers`)
 
 **Interfaces:**
 - Consumes: `WorldAnchorBlock.LINKED`, `ModBlockEntityTypes.WORLD_ANCHOR`.
@@ -677,7 +677,7 @@ git commit -m "Add linked block state to World Anchor and switch to Runebound mo
 - [ ] **Step 1: Render state**
 
 ```java
-package com.pocketdimensions.client;
+package com.pocketkingdoms.client;
 
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 
@@ -692,12 +692,12 @@ public class WorldAnchorRenderState extends BlockEntityRenderState {
 - [ ] **Step 2: Renderer**
 
 ```java
-package com.pocketdimensions.client;
+package com.pocketkingdoms.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.pocketdimensions.block.WorldAnchorBlock;
-import com.pocketdimensions.blockentity.WorldAnchorBlockEntity;
+import com.pocketkingdoms.block.WorldAnchorBlock;
+import com.pocketkingdoms.blockentity.WorldAnchorBlockEntity;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -919,7 +919,7 @@ event.<WorldAnchorBlockEntity, WorldAnchorRenderState>registerBlockEntityRendere
         ModBlockEntityTypes.WORLD_ANCHOR.get(),
         ctx -> new WorldAnchorBlockEntityRenderer(ctx));
 ```
-Import `com.pocketdimensions.blockentity.WorldAnchorBlockEntity`.
+Import `com.pocketkingdoms.blockentity.WorldAnchorBlockEntity`.
 
 - [ ] **Step 4: Build**
 
@@ -935,7 +935,7 @@ Expected: `BUILD SUCCESSFUL`. If the compiler rejects `Axis.YP.rotation` or `cam
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/client/WorldAnchorRenderState.java src/main/java/com/pocketdimensions/client/WorldAnchorBlockEntityRenderer.java src/main/java/com/pocketdimensions/client/ClientSetup.java
+git add src/main/java/com/pocketkingdoms/client/WorldAnchorRenderState.java src/main/java/com/pocketkingdoms/client/WorldAnchorBlockEntityRenderer.java src/main/java/com/pocketkingdoms/client/ClientSetup.java
 git commit -m "Render the World Anchor black hole, beam and seed"
 ```
 
@@ -944,22 +944,22 @@ git commit -m "Render the World Anchor black hole, beam and seed"
 ### Task 5: Rune particles
 
 **Files:**
-- Create: `src/main/java/com/pocketdimensions/init/ModParticles.java`
-- Create: `src/main/java/com/pocketdimensions/client/particle/RuneParticle.java`
-- Modify: `src/main/java/com/pocketdimensions/PocketDimensionsMod.java` (register next to `ModMenuTypes.MENU_TYPES.register(modBusGroup);`)
-- Modify: `src/main/java/com/pocketdimensions/client/ClientSetup.java` (constructor)
-- Modify: `src/main/java/com/pocketdimensions/block/WorldAnchorBlock.java` (add `animateTick`)
+- Create: `src/main/java/com/pocketkingdoms/init/ModParticles.java`
+- Create: `src/main/java/com/pocketkingdoms/client/particle/RuneParticle.java`
+- Modify: `src/main/java/com/pocketkingdoms/PocketKingdomsMod.java` (register next to `ModMenuTypes.MENU_TYPES.register(modBusGroup);`)
+- Modify: `src/main/java/com/pocketkingdoms/client/ClientSetup.java` (constructor)
+- Modify: `src/main/java/com/pocketkingdoms/block/WorldAnchorBlock.java` (add `animateTick`)
 
 **Interfaces:**
-- Consumes: Task 2 sprites `pocketdimensions:rune_0..5` and `particles/rune.json`; Task 3 `LINKED`.
+- Consumes: Task 2 sprites `pocketkingdoms:rune_0..5` and `particles/rune.json`; Task 3 `LINKED`.
 - Produces: `ModParticles.RUNE: RegistryObject<SimpleParticleType>`.
 
 - [ ] **Step 1: `ModParticles`**
 
 ```java
-package com.pocketdimensions.init;
+package com.pocketkingdoms.init;
 
-import com.pocketdimensions.PocketDimensionsMod;
+import com.pocketkingdoms.PocketKingdomsMod;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -968,19 +968,19 @@ import net.minecraftforge.registries.RegistryObject;
 
 public class ModParticles {
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
-            DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, PocketDimensionsMod.MODID);
+            DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, PocketKingdomsMod.MODID);
 
     /** Glowing rune glyph that drifts off a linked World Anchor. */
     public static final RegistryObject<SimpleParticleType> RUNE =
             PARTICLE_TYPES.register("rune", () -> new SimpleParticleType(false));
 }
 ```
-In `PocketDimensionsMod`: `ModParticles.PARTICLE_TYPES.register(modBusGroup);`
+In `PocketKingdomsMod`: `ModParticles.PARTICLE_TYPES.register(modBusGroup);`
 
 - [ ] **Step 2: `RuneParticle`**
 
 ```java
-package com.pocketdimensions.client.particle;
+package com.pocketkingdoms.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
@@ -1038,7 +1038,7 @@ public class RuneParticle extends SingleQuadParticle {
 RegisterParticleProvidersEvent.BUS.addListener(e ->
         e.registerSpriteSet(ModParticles.RUNE.get(), RuneParticle.Provider::new));
 ```
-Imports: `net.minecraftforge.client.event.RegisterParticleProvidersEvent`, `com.pocketdimensions.init.ModParticles`, `com.pocketdimensions.client.particle.RuneParticle`.
+Imports: `net.minecraftforge.client.event.RegisterParticleProvidersEvent`, `com.pocketkingdoms.init.ModParticles`, `com.pocketkingdoms.client.particle.RuneParticle`.
 
 - [ ] **Step 4: Spawn from `WorldAnchorBlock.animateTick`**
 
@@ -1063,7 +1063,7 @@ public void animateTick(BlockState state, Level level, BlockPos pos, RandomSourc
     }
 }
 ```
-Imports: `net.minecraft.util.RandomSource`, `com.pocketdimensions.init.ModParticles`.
+Imports: `net.minecraft.util.RandomSource`, `com.pocketkingdoms.init.ModParticles`.
 
 - [ ] **Step 5: Build**
 
@@ -1078,7 +1078,7 @@ Expected: `BUILD SUCCESSFUL`.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/init/ModParticles.java src/main/java/com/pocketdimensions/client/particle/RuneParticle.java src/main/java/com/pocketdimensions/PocketDimensionsMod.java src/main/java/com/pocketdimensions/client/ClientSetup.java src/main/java/com/pocketdimensions/block/WorldAnchorBlock.java
+git add src/main/java/com/pocketkingdoms/init/ModParticles.java src/main/java/com/pocketkingdoms/client/particle/RuneParticle.java src/main/java/com/pocketkingdoms/PocketKingdomsMod.java src/main/java/com/pocketkingdoms/client/ClientSetup.java src/main/java/com/pocketkingdoms/block/WorldAnchorBlock.java
 git commit -m "Add drifting rune particles to linked World Anchors"
 ```
 

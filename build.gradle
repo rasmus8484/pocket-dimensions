@@ -6,7 +6,7 @@ plugins {
 }
 
 version = '0.1.0'
-group = 'com.pocketdimensions'
+group = 'com.pocketkingdoms'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
@@ -20,7 +20,7 @@ minecraft {
             workingDir = layout.projectDirectory.dir('run')
             systemProperty 'eventbus.api.strictRuntimeChecks', 'true'
             // the mod's mixins (in a built jar, the manifest's MixinConfigs names them)
-            args '-mixin.config=pocketdimensions.mixins.json'
+            args '-mixin.config=pocketkingdoms.mixins.json'
         }
 
         register('client') {
@@ -57,5 +57,5 @@ tasks.withType(JavaCompile).configureEach {
 // MIT asks for the notice to travel with every copy: ship it inside the jar
 tasks.named('jar') {
     from('LICENSE')
-    manifest { attributes('MixinConfigs': 'pocketdimensions.mixins.json') }
+    manifest { attributes('MixinConfigs': 'pocketkingdoms.mixins.json') }
 }

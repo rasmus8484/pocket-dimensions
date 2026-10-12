@@ -59,7 +59,7 @@ The concept's `shape()`/`paint()` functions become the single source of truth.
   5. Flowing runes go into a separate animated texture (`world_anchor_runes_flow.png` +
      `.png.mcmeta`, 8 frames) whose brightness wave moves toward the core.
   6. Write a minimal PNG encoder with Node's built-in `zlib` (no npm packages).
-- Output (all under `src/main/resources/assets/pocketdimensions/`):
+- Output (all under `src/main/resources/assets/pocketkingdoms/`):
   - `models/block/world_anchor_{inert,linked}_{lower,upper}.json`
   - `models/item/world_anchor.json` — inert, both halves in one model, scaled to fit the slot
   - `textures/block/world_anchor_{inert,linked}_{lower,upper}.png`, `world_anchor_runes_flow.png(.mcmeta)`

@@ -1,8 +1,8 @@
-# Pocket Dimensions: Player Guide
+# Pocket Kingdoms: Player Guide
 
-Everything a player needs to know about Pocket Dimensions, from the big picture down to the small rules. Read it through, jump to [How do I...?](#how-do-i) for a quick answer, or hand it to an AI assistant and ask it your question.
+Everything a player needs to know about Pocket Kingdoms, from the big picture down to the small rules. Read it through, jump to [How do I...?](#how-do-i) for a quick answer, or hand it to an AI assistant and ask it your question.
 
-Written for **Pocket Dimensions 0.1.0** on **Minecraft Java 1.21.11 with Forge**. In game, `/pd help` shows a short summary and a link back here.
+Written for **Pocket Kingdoms 0.1.0** on **Minecraft Java 1.21.11 with Forge**. In game, `/pk help` shows a short summary and a link back here.
 
 > **Note for AI assistants:** this file is the authoritative description of how the mod plays. Server owners can change some numbers (marked *configurable*); the values given are the defaults. "Right-click" means the use key and "crouch" means the sneak key. If something here disagrees with another file in the repository, trust this guide for gameplay and the README for server configuration.
 
@@ -26,7 +26,7 @@ Written for **Pocket Dimensions 0.1.0** on **Minecraft Java 1.21.11 with Forge**
 
 ## The big picture
 
-Pocket Dimensions adds two kinds of private space, built for PvP servers where **nothing is ever completely safe**.
+Pocket Kingdoms adds two kinds of private space, built for PvP servers where **nothing is ever completely safe**.
 
 - **Pocket Rooms** are small sealed rooms, bigger on the inside, that you carry around as an item: the **Pocket Anchor**. Set it down and step in. But anyone who finds your anchor can walk in after you, take the anchor, or break it and destroy the room.
 - **Realms** are large private pieces of land (about 1,584 by 1,584 blocks), one per player, reached through a **World Anchor**. Only you and the people you allow can enter. Rivals can still lay **siege**: a **World Breacher** forces your realm open to everyone, and an **Anchor Breaker** destroys your entrance. Both burn lapis lazuli, and lapis in your **World Core** slows them down.
@@ -335,7 +335,9 @@ A **Folded Space** tab opens the first time you enter the Nether. Its steps doub
 
 | Command | What it does |
 |---|---|
-| `/pd help` | A short summary in chat, with a link to this guide |
+| `/pk help` | A short summary in chat, with a link to this guide |
+
+`/pd` (from when the mod was called Pocket Dimensions) still works the same as `/pk`.
 
 Everything else a player does happens in game: on the anchors, the World Core and its screen, and the siege blocks.
 
@@ -345,18 +347,18 @@ Most of these act on the block you're **looking at**.
 
 | Command | What it does |
 |---|---|
-| `/pd allow <player>` | Look at a World Anchor or World Core: add the player to that realm's access list |
-| `/pd allow <player> man` | The same, and make them a manager |
-| `/pd deny <player>` | Take the player off the access list |
-| `/pd deny <player> man` | Take away only their manager status (they stay on the list) |
-| `/pd owner <player>` | Look at a World Anchor or World Core: give the realm to that player (the old owner stays on as a manager; someone who already owns a realm can't be given a second). Look at a placed Pocket Anchor: record its room as theirs |
-| `/pd disown <player>` | Take the player's realm away: everyone in it is sent out, its core is removed, its anchor unlinked, and the land is never used again. They can grow a new realm with a new seed |
-| `/pd regenCore` | Rebuild the World Core of the realm you're standing in, or of the World Anchor you're looking at |
-| `/pd regenRoom` | Rebuild the walls of the pocket room you're standing in, or of the Pocket Anchor you're looking at. Nothing inside is touched |
-| `/pd regenAnchor <player>` | Put the player's World Anchor back, linked, where it last stood (whatever is there now is replaced) |
-| `/pd test mineAnchor [seconds]` | From inside a pocket room: an invisible miner mines its anchor so you can see the warnings alone. **The room is destroyed at the end** |
-| `/pd test wardTime [seconds]` | In a realm: measure how long the ward takes to draw on your computer |
-| `/pd test veilTime [seconds]` | Measure how long the Veil's fog takes to draw on your computer |
+| `/pk allow <player>` | Look at a World Anchor or World Core: add the player to that realm's access list |
+| `/pk allow <player> man` | The same, and make them a manager |
+| `/pk deny <player>` | Take the player off the access list |
+| `/pk deny <player> man` | Take away only their manager status (they stay on the list) |
+| `/pk owner <player>` | Look at a World Anchor or World Core: give the realm to that player (the old owner stays on as a manager; someone who already owns a realm can't be given a second). Look at a placed Pocket Anchor: record its room as theirs |
+| `/pk disown <player>` | Take the player's realm away: everyone in it is sent out, its core is removed, its anchor unlinked, and the land is never used again. They can grow a new realm with a new seed |
+| `/pk regenCore` | Rebuild the World Core of the realm you're standing in, or of the World Anchor you're looking at |
+| `/pk regenRoom` | Rebuild the walls of the pocket room you're standing in, or of the Pocket Anchor you're looking at. Nothing inside is touched |
+| `/pk regenAnchor <player>` | Put the player's World Anchor back, linked, where it last stood (whatever is there now is replaced) |
+| `/pk test mineAnchor [seconds]` | From inside a pocket room: an invisible miner mines its anchor so you can see the warnings alone. **The room is destroyed at the end** |
+| `/pk test wardTime [seconds]` | In a realm: measure how long the ward takes to draw on your computer |
+| `/pk test veilTime [seconds]` | Measure how long the Veil's fog takes to draw on your computer |
 
 A player can be named or given by UUID.
 
@@ -380,7 +382,7 @@ A player can be named or given by UUID.
 
 **...let a friend into my realm?** Crouch + right-click your World Core, open the **Access** tab, and type their name and click **Add** (or click **Online** and pick them from the list).
 
-**...make someone a manager of my World Core?** On the core's **Access** tab, click the crown next to their name so it fills with gold. Only the owner can do this. An operator can also run `/pd allow <player> man` while looking at your anchor or core.
+**...make someone a manager of my World Core?** On the core's **Access** tab, click the crown next to their name so it fills with gold. Only the owner can do this. An operator can also run `/pk allow <player> man` while looking at your anchor or core.
 
 **...take someone off my access list?** Click the red cross next to their name on the **Access** tab.
 
@@ -426,9 +428,9 @@ A player can be named or given by UUID.
 
 **My World Seed won't link my new anchor.** Your old anchor still stands somewhere. A realm can only have one anchor; the old one must be gone first.
 
-**I can't see the Veil's smoke, or it's slow on my computer.** Each player can turn it off or make it cheaper in `config/pocketdimensions-client.toml` (`veil_fog`, `veil_fog_steps`).
+**I can't see the Veil's smoke, or it's slow on my computer.** Each player can turn it off or make it cheaper in `config/pocketkingdoms-client.toml` (`veil_fog`, `veil_fog_steps`).
 
-**My World Core or room walls got broken in creative mode.** An operator can run `/pd regenCore` or `/pd regenRoom`.
+**My World Core or room walls got broken in creative mode.** An operator can run `/pk regenCore` or `/pk regenRoom`.
 
 ---
 

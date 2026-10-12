@@ -122,6 +122,6 @@ for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
 // --- the cube on top --------------------------------------------------------------------------------------------
 for (let i = 0; i < W * H; i++) if (cube[i * 4 + 3]) out.set(cube.subarray(i * 4, i * 4 + 4), i * 4);
 
-const file = process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/main/resources/pocketdimensions_logo.png');
+const file = process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/main/resources/pocketkingdoms_logo.png');
 writeFileSync(file, encodePNG(W, H, out));
 console.log('wrote', file);

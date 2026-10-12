@@ -1,0 +1,29 @@
+{
+  "parent": "pocketkingdoms:main/echoes_in_the_walls",
+  "display": {
+    "icon": {
+      "id": "minecraft:netherite_pickaxe"
+    },
+    "title": {
+      "translate": "advancements.pocketkingdoms.unmade.title"
+    },
+    "description": {
+      "translate": "advancements.pocketkingdoms.unmade.description"
+    },
+    "frame": "challenge",
+    "hidden": true
+  },
+  "criteria": {
+    "unmade": {
+      "trigger": "pocketkingdoms:event",
+      "conditions": {
+        "event": "unmade"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "unmade"
+    ]
+  ]
+}

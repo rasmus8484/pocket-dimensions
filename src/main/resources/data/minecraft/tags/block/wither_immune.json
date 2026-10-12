@@ -1,11 +1,11 @@
 {
   "replace": false,
   "values": [
-    "pocketdimensions:boundary_block",
-    "pocketdimensions:world_anchor",
-    "pocketdimensions:world_core",
-    "pocketdimensions:world_breacher",
-    "pocketdimensions:anchor_breaker",
-    "pocketdimensions:veil"
+    "pocketkingdoms:boundary_block",
+    "pocketkingdoms:world_anchor",
+    "pocketkingdoms:world_core",
+    "pocketkingdoms:world_breacher",
+    "pocketkingdoms:anchor_breaker",
+    "pocketkingdoms:veil"
   ]
 }

@@ -1,8 +1,8 @@
 {
   "values": [
-    "pocketdimensions:pocket_anchor",
-    "pocketdimensions:world_breacher",
-    "pocketdimensions:anchor_breaker",
-    "pocketdimensions:world_anchor"
+    "pocketkingdoms:pocket_anchor",
+    "pocketkingdoms:world_breacher",
+    "pocketkingdoms:anchor_breaker",
+    "pocketkingdoms:world_anchor"
   ]
 }

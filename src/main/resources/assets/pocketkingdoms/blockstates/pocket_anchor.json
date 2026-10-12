@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "cube=false": {
+      "model": "pocketkingdoms:block/pocket_anchor"
+    },
+    "cube=true": {
+      "model": "pocketkingdoms:block/pocket_anchor_cube"
+    }
+  }
+}
