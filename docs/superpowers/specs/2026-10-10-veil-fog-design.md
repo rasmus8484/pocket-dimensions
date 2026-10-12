@@ -57,8 +57,8 @@ with the depth buffer, which blocks and particles cannot give, so it is drawn as
 - **What it draws**: one full-screen triangle into the main render target, no depth attachment. The fragment shader
   samples the main target's depth texture and the noise atlas and writes `vec4(light, transmittance)`. Blending
   `ONE, SRC_ALPHA` gives `scene * T + L` without copying the screen.
-- **Pipeline**: our own `RenderPipeline` (`pocketdimensions:pipeline/veil_fog`), shaders
-  `assets/pocketdimensions/shaders/core/veil_fog.vsh` and `.fsh`, one uniform block `VeilFog` written per frame.
+- **Pipeline**: our own `RenderPipeline` (`pocketkingdoms:pipeline/veil_fog`), shaders
+  `assets/pocketkingdoms/shaders/core/veil_fog.vsh` and `.fsh`, one uniform block `VeilFog` written per frame.
 - **Depth**: Iris uses Minecraft's main depth texture as its scene depth (`depthtex0`, verified in Iris's 1.21.11
   source), so reading the main target's depth is valid with and without a shader pack. The hand sits at almost zero
   depth, so even if it were in the depth buffer it would get no visible fog.
@@ -130,10 +130,10 @@ Veil in view.
 | `client/veil/VeilFogMath.java` | New: Java twins of the closed form, the half-amount point and the wall clipping (pure, tested) |
 | `client/veil/VeilFogRenderer.java` | New: the pipeline, atlas texture, uniform block, the draw, the timer |
 | `client/veil/VeilFogTimer.java` | New: GPU timings for `/pd test veilTime` (pure statistics, tested) |
-| `PocketDimensionsClientConfig.java` | New: client config `[veil] veil_fog`, `veil_fog_steps`; registered as `ModConfig.Type.CLIENT` |
+| `PocketKingdomsClientConfig.java` | New: client config `[veil] veil_fog`, `veil_fog_steps`; registered as `ModConfig.Type.CLIENT` |
 | `mixin/LevelRendererMixin.java` | Add the `RETURN` injection on `renderLevel` |
-| `command/PocketDimensionsCommand.java` | `/pd test veilTime [seconds]` |
-| `assets/pocketdimensions/shaders/core/veil_fog.{vsh,fsh}` | New shaders |
+| `command/PocketKingdomsCommand.java` | `/pd test veilTime [seconds]` |
+| `assets/pocketkingdoms/shaders/core/veil_fog.{vsh,fsh}` | New shaders |
 | `tools/anchor/veil.mjs` | The band textures become plain, still: no animation, no drifting mist, no glints |
 | `CLAUDE.md`, `README.md`, `PRD.md` | Document the fog, the config and the command |
 

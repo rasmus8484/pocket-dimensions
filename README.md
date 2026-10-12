@@ -1,19 +1,31 @@
-# Pocket Dimensions
+# Pocket Kingdoms
+
+> **Your own kingdom, hidden between worlds. Share it with your friends. Defend it from everyone else.**
+
+On a PvP server, every base ends the same way: someone finds it. You dig deeper, build farther out, hide the entrance, and still, one day, the chests are empty. The usual fix is a claim mod that makes your base untouchable. That works, until the server goes quiet because nothing is at risk any more.
+
+Pocket Kingdoms sits between the two. Plant a World Seed in a World Anchor, and a realm unfolds between worlds: land that belongs to you and the friends you let in. The world can't stumble into it, and griefers can't dig their way in.
+
+But it is never untouchable. Rivals can lay siege to your anchor and try to break through your wards, and you'll see them coming. Fuel your World Core, rally your friends, and hold the line.
+
+**No kingdom falls in a moment. Every siege is a fight you can see coming.**
+
+---
 
 A Minecraft Java 1.21.11 Forge mod for PvP sandbox servers, adding personal storage rooms and player-owned world regions with a lapis-fueled siege system.
 
 This mod is heavily written by **Claude** (Anthropic's AI coding assistant), with design direction and testing by the project owner.
 
-**Playing?** Read the **[Player Guide](GUIDE.md)**: every mechanic from the big picture down to the small rules, with a "How do I...?" section and troubleshooting. In game, `/pd help` shows a short summary and a link to it. You can also hand the guide to an AI assistant and ask it your question.
+**Playing?** Read the **[Player Guide](GUIDE.md)**: every mechanic from the big picture down to the small rules, with a "How do I...?" section and troubleshooting. In game, `/pk help` shows a short summary and a link to it. You can also hand the guide to an AI assistant and ask it your question.
 
 ## What Is This?
 
-Pocket Dimensions adds two spatial systems to Minecraft, both designed around PvP risk:
+Pocket Kingdoms adds two spatial systems to Minecraft, both designed around PvP risk:
 
 - **Pocket Rooms**: small sealed rooms inside a shared void dimension. Anyone can enter through your anchor, steal it, or destroy it. Nothing is truly safe.
 - **Realms**: persistent player-owned regions inside a shared overworld-like dimension. Protected by an indestructible WorldCore, but vulnerable to siege through lapis-fueled attack blocks.
 
-The mod uses only two shared dimensions (`pocketdimensions:pocket` and `pocketdimensions:realm`) rather than creating dimensions per player, so it scales with active players and loaded chunks.
+The mod uses only two shared dimensions (`pocketkingdoms:pocket` and `pocketkingdoms:realm`) rather than creating dimensions per player, so it scales with active players and loaded chunks.
 
 ---
 
@@ -24,7 +36,7 @@ The mod uses only two shared dimensions (`pocketdimensions:pocket` and `pocketdi
 A Pocket Anchor links to a 16x16x16 sealed room inside the pocket dimension, surrounded by unbreakable boundary blocks. It is one object with two forms (an item in your inventory and a block when placed), and every room has exactly one.
 
 **How to use:**
-1. Craft a **Pocket Anchor** (see Recipes), or take one from the Pocket Dimensions creative tab
+1. Craft a **Pocket Anchor** (see Recipes), or take one from the Pocket Kingdoms creative tab
 2. **Right-click** to enter your room: the mod allocates a room, places the anchor at your feet, and teleports you in
 3. **Crouch + right-click** a block face to place the anchor without entering
 4. **Crouch + jump** inside the room to exit back to the anchor (or next to whoever is carrying it, if it was stolen)
@@ -80,27 +92,27 @@ A linked World Anchor is indestructible by normal mining: it can only be removed
 
 **Respawning in a realm:** a bed or respawn anchor in a realm works for its owner and anyone on its access list (and anyone while a breach holds it open); anyone else who wakes there is cast out.
 
-**The Veil and the ceiling:** every realm is walled by the **Veil**, the realm's ward made visible: a wall of drifting mist along every edge, from bedrock to the build limit, that can't be broken, blown up or moved. It hides whatever lies beyond, so nobody sees into another realm (Distant Horizons included). Overhead the ward holds you with your feet at y 318, and nothing can be built at y 318 or 319, so nobody can look over the Veil. Along every edge, glowing smoke pours slowly down the Veil, thick against the wall and thinning out over about twenty blocks; players can turn it off or make it cheaper in the client config (veil_fog, veil_fog_steps), and /pd test veilTime measures its cost.
+**The Veil and the ceiling:** every realm is walled by the **Veil**, the realm's ward made visible: a wall of drifting mist along every edge, from bedrock to the build limit, that can't be broken, blown up or moved. It hides whatever lies beyond, so nobody sees into another realm (Distant Horizons included). Overhead the ward holds you with your feet at y 318, and nothing can be built at y 318 or 319, so nobody can look over the Veil. Along every edge, glowing smoke pours slowly down the Veil, thick against the wall and thinning out over about twenty blocks; players can turn it off or make it cheaper in the client config (veil_fog, veil_fog_steps), and /pk test veilTime measures its cost.
 
 **The ward's sigil:** high over every realm hangs the ward, a vault of glowing runes: a crown of three rings where the World Core's beam rises in, three tiers of runes curving down over the realm like a dome, each carrying small spinning worlds of runes that turn with it, and a band of runes over the Veil. Beneath it the ward's power streams outward from the crown as a soft, flowing field of light, clear near the crown and very faint toward the Veil. It shows the realm's state to everyone inside: blue at peace, pink while a World Breacher works, cracked once the breach is complete, red while an Anchor Breaker works, dim red, broken and still once the anchor is lost. It shines brightly while the Core holds lapis and dims without it, and it is faint by day and glows at night. It looks the same at every render distance.
 
 **Relinking:** Use a World Seed on a new World Anchor to rekey your realm's entry point. The old anchor must be gone first.
 
-**Help:** anyone can run `/pd help` for a short summary in chat and a link to the [Player Guide](GUIDE.md). Every other `/pd` command is for operators, and suggests player names as you type.
+**Help:** anyone can run `/pk help` for a short summary in chat and a link to the [Player Guide](GUIDE.md). Every other `/pk` command is for operators, and suggests player names as you type.
 
-**Ownership transfer:** Admins can run `/pd owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it; someone who already owns a realm can't be given a second), or at a placed Pocket Anchor to record its room as theirs.
+**Ownership transfer:** Admins can run `/pk owner <player|uuid>` while looking at a World Anchor or World Core (either half) to transfer the realm to another player (the old owner stays on the access list as a manager; the new owner leaves it; someone who already owns a realm can't be given a second), or at a placed Pocket Anchor to record its room as theirs.
 
-**Access by command:** looking at a World Anchor or World Core, admins can run `/pd allow <player>` to put someone on the realm's access list and `/pd deny <player>` to take them off. Add `man` to make them a manager (`/pd allow <player> man`) or take only the manager status away (`/pd deny <player> man`).
+**Access by command:** looking at a World Anchor or World Core, admins can run `/pk allow <player>` to put someone on the realm's access list and `/pk deny <player>` to take them off. Add `man` to make them a manager (`/pk allow <player> man`) or take only the manager status away (`/pk deny <player> man`).
 
-**Taking a realm away:** `/pd disown <player>` takes a player's realm from them: everyone inside is sent back out, the World Core is removed, their anchor is unlinked (it stays, and takes a new World Seed) and the old plot is never handed out again. They can grow a new realm with a new seed.
+**Taking a realm away:** `/pk disown <player>` takes a player's realm from them: everyone inside is sent back out, the World Core is removed, their anchor is unlinked (it stays, and takes a new World Seed) and the old plot is never handed out again. They can grow a new realm with a new seed.
 
-**A broken core:** `/pd regenCore` rebuilds the World Core where it stood, for the realm you're standing in or the World Anchor you're looking at (say, after it was broken by accident in creative).
+**A broken core:** `/pk regenCore` rebuilds the World Core where it stood, for the realm you're standing in or the World Anchor you're looking at (say, after it was broken by accident in creative).
 
-**Broken room walls:** `/pd regenRoom` puts back the walls of the pocket room you're standing in, or of the Pocket Anchor you're looking at (say, after breaking them by accident in creative), and the void they show with them. Nothing inside the room is touched.
+**Broken room walls:** `/pk regenRoom` puts back the walls of the pocket room you're standing in, or of the Pocket Anchor you're looking at (say, after breaking them by accident in creative), and the void they show with them. Nothing inside the room is touched.
 
-**A lost anchor:** `/pd regenAnchor <player>` puts their World Anchor back, linked, where it last stood (after an Anchor Breaker took it, or if it was broken in creative). Whatever is in those two blocks now is replaced. The owner can also link any new anchor with a World Seed, as always.
+**A lost anchor:** `/pk regenAnchor <player>` puts their World Anchor back, linked, where it last stood (after an Anchor Breaker took it, or if it was broken in creative). Whatever is in those two blocks now is replaced. The owner can also link any new anchor with a World Seed, as always.
 
-**Testing tools** (ops): `/pd test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost. `/pd test wardTime [seconds]`, run in a realm, has your own client measure the ward sigil for a while (10 s unless given) and report in your chat: time per frame (average, 95th percentile, worst), vertices, and its share of a 60 fps frame. Useful on ordinary hardware.
+**Testing tools** (ops): `/pk test mineAnchor [seconds]`, run from inside a pocket room, sets an invisible miner on that room's anchor (taking `pocket_anchor_mine_seconds` unless given) so the warnings and cracks can be seen without a second player. It finishes the job: the room is lost. `/pk test wardTime [seconds]`, run in a realm, has your own client measure the ward sigil for a while (10 s unless given) and report in your chat: time per frame (average, 95th percentile, worst), vertices, and its share of a 60 fps frame. Useful on ordinary hardware.
 
 ### Travelling with animals
 
@@ -188,7 +200,7 @@ A **Folded Space** tab opens the first time you enter the Nether. Its steps doub
 
 ### Configuration
 
-All timing values are configurable in `config/pocketdimensions-common.toml`:
+All timing values are configurable in `config/pocketkingdoms-common.toml`:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -201,7 +213,7 @@ All timing values are configurable in `config/pocketdimensions-common.toml`:
 | `siege.siege_bossbar_range` | 64 | Radius in blocks for seeing siege boss bars |
 | `access.max_allowed_players` | 0 | Max players on a realm's access list (0 = unlimited) |
 
-Per-world server settings live in `serverconfig/pocketdimensions-server.toml` inside the world folder. Forge sends them to every player who joins, so mining times and fuel limits match on both sides:
+Per-world server settings live in `serverconfig/pocketkingdoms-server.toml` inside the world folder. Forge sends them to every player who joins, so mining times and fuel limits match on both sides:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -218,7 +230,7 @@ Per-world server settings live in `serverconfig/pocketdimensions-server.toml` in
 | `realm.mobs.categories.<category>` | "group" | Per mob category: "group" follows the switch above, "true" / "false" overrides it |
 | `realm.mobs.exceptions.mob_whitelist` / `mob_blacklist` | [] | Single mobs or tags that always / never spawn naturally |
 
-Per-player display settings live in `config/pocketdimensions-client.toml`:
+Per-player display settings live in `config/pocketkingdoms-client.toml`:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -234,7 +246,7 @@ In every whitelist / blacklist, the blacklist wins; entries are ids (`minecraft:
 ## Planned Features
 
 - A check for item duplication around chunk unloading (a precaution; nothing is known)
-- More `/pd test` tools for testing alone
+- More `/pk test` tools for testing alone
 - Ports after 0.1.0: Forge 1.20.1; NeoForge 1.20.1, 1.21.1 and 1.21.11; Fabric 1.20.1, 1.21.1 and 1.21.11 (see [docs/porting-targets.md](docs/porting-targets.md))
 
 ---
@@ -255,7 +267,7 @@ On Windows use `gradlew.bat` or `./` in Git Bash.
 
 ## Project Info
 
-- **Mod ID:** `pocketdimensions`
+- **Mod ID:** `pocketkingdoms`
 - **Version:** 0.1.0
 - **Minecraft:** 1.21.11
 - **Forge:** 61.1.0+

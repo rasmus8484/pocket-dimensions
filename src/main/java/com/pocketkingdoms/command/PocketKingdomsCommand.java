@@ -1,0 +1,641 @@
+package com.pocketkingdoms.command;
+
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.pocketkingdoms.PocketKingdomsConfig;
+import com.pocketkingdoms.PocketKingdomsMod;
+import com.pocketkingdoms.block.WorldAnchorBlock;
+import com.pocketkingdoms.block.WorldCoreBlock;
+import com.pocketkingdoms.blockentity.PocketAnchorBlockEntity;
+import com.pocketkingdoms.blockentity.WorldAnchorBlockEntity;
+import com.pocketkingdoms.blockentity.WorldCoreBlockEntity;
+import com.pocketkingdoms.manager.RealmManager;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.server.players.StoredUserEntry;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.UsernameCache;
+
+import java.util.Collection;
+import java.util.UUID;
+
+/**
+ * Registers all "/pk" sub-commands. "/pd" (the mod was called Pocket Dimensions) redirects to "/pk".
+ *
+ * Syntax:
+ *   /pk owner <name>                               - look at a World Anchor or World Core (the realm) or a Pocket
+ *                                                    Anchor (the room) and give it to a player, resolved by name
+ *   /pk owner 550e8400-e29b-41d4-a716-446655440000 - resolve by raw UUID
+ *   /pk disown <name>                              - the player loses their realm: everyone in it is sent out, its
+ *                                                    core is removed, its anchor unlinked and its plot retired
+ *   /pk regenCore                                  - rebuild the World Core of the realm you're standing in, or of
+ *                                                    the World Anchor you're looking at
+ *   /pk regenRoom                                  - rebuild the walls (and the void they show) of the pocket room
+ *                                                    you're standing in, or of the Pocket Anchor you're looking at
+ *   /pk regenAnchor <name>                         - put the player's World Anchor back, linked, where it last stood
+ *   /pk allow <name> [man]                         - look at a World Anchor or World Core: put a player on the
+ *                                                    realm's access list (with man: also make them a manager)
+ *   /pk deny <name> [man]                          - take a player off the access list (with man: only take away
+ *                                                    their manager status; they stay on the list)
+ *   /pk test mineAnchor [seconds]                  - testing: mine the anchor of the room you're in, start to finish
+ *                                                    (default: pocket_anchor_mine_seconds from the server config)
+ *   /pk test wardTime [seconds]                    - testing: your client measures the ward sigil's time per frame
+ *                                                    for a while (default 10 s) and reports it in your chat
+ *   /pk test veilTime [seconds]                    - testing: your client times the Veil fog on the graphics card
+ *                                                    for a while (default 10 s) and reports it in your chat
+ *   /pk help                                       - anyone: a short summary and a link to GUIDE.md
+ *
+ * The argument is auto-detected: if it parses as a UUID it is used directly;
+ * otherwise it is treated as a player name and resolved via:
+ *   1. Online players
+ *   2. Op list  (covers previously-joined opped players stored in ops.json)
+ *   3. Whitelist (covers previously-joined whitelisted players)
+ *   4. Forge's username cache (anyone who has ever joined)
+ *
+ * Player names are suggested as you type (online players; for deny, anyone on an access list too; for disown and
+ * regenAnchor, realm owners), but any name or UUID is accepted.
+ *
+ * Every sub-command but help requires OP level 2 (GAMEMASTERS).
+ */
+public class PocketKingdomsCommand {
+
+    /** Where /pk help points: the player guide on the repository's main branch. */
+    public static final String GUIDE_URL = "https://github.com/rasmus8484/pocket-kingdoms/blob/main/GUIDE.md";
+
+    private static final java.util.function.Predicate<CommandSourceStack> OPS =
+            src -> src.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS));
+
+    // Name suggestions as you type, like vanilla's player arguments; the argument still takes any name or a UUID
+    private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> ONLINE =
+            (ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), b);
+
+    /** Online players and everyone on any realm's access list (they may be offline): who /pk deny can name. */
+    private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> LISTED = (ctx, b) -> {
+        MinecraftServer server = ctx.getSource().getServer();
+        RealmManager mgr = RealmManager.get(server);
+        java.util.Set<String> names = new java.util.TreeSet<>(java.util.List.of(server.getPlayerNames()));
+        for (UUID owner : mgr.owners()) for (UUID id : mgr.getAllowedPlayers(owner)) addName(names, id);
+        return net.minecraft.commands.SharedSuggestionProvider.suggest(names, b);
+    };
+
+    /** Everyone who owns a realm, online or not: who /pk disown and /pk regenAnchor can name. */
+    private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> REALM_OWNERS = (ctx, b) -> {
+        java.util.Set<String> names = new java.util.TreeSet<>();
+        for (UUID owner : RealmManager.get(ctx.getSource().getServer()).owners()) addName(names, owner);
+        return net.minecraft.commands.SharedSuggestionProvider.suggest(names, b);
+    };
+
+    private static void addName(java.util.Set<String> names, UUID id) {
+        String name = UsernameCache.getLastKnownUsername(id);
+        if (name != null) names.add(name);
+    }
+
+    // Brigadier's own builders (what Commands.literal and Commands.argument wrap), so tests can build the tree
+    // without starting the game
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> literal(String name) {
+        return com.mojang.brigadier.builder.LiteralArgumentBuilder.literal(name);
+    }
+
+    private static <T> com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, T> argument(
+            String name, com.mojang.brigadier.arguments.ArgumentType<T> type) {
+        return com.mojang.brigadier.builder.RequiredArgumentBuilder.argument(name, type);
+    }
+
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        com.mojang.brigadier.tree.LiteralCommandNode<CommandSourceStack> pk = dispatcher.register(
+            literal("pk")
+                .then(literal("help")
+                    .executes(PocketKingdomsCommand::executeHelp))
+                .then(literal("owner").requires(OPS)
+                    .then(argument("player", StringArgumentType.word()).suggests(ONLINE)
+                        .executes(PocketKingdomsCommand::executeSetOwner)))
+                .then(literal("disown").requires(OPS)
+                    .then(argument("player", StringArgumentType.word()).suggests(REALM_OWNERS)
+                        .executes(PocketKingdomsCommand::executeDisown)))
+                .then(literal("regenCore").requires(OPS)
+                    .executes(PocketKingdomsCommand::executeRegenCore))
+                .then(literal("regenRoom").requires(OPS)
+                    .executes(PocketKingdomsCommand::executeRegenRoom))
+                .then(literal("regenAnchor").requires(OPS)
+                    .then(argument("player", StringArgumentType.word()).suggests(REALM_OWNERS)
+                        .executes(PocketKingdomsCommand::executeRegenAnchor)))
+                .then(literal("allow").requires(OPS)
+                    .then(argument("player", StringArgumentType.word()).suggests(ONLINE)
+                        .executes(ctx -> executeAccess(ctx, true, false))
+                        .then(literal("man")
+                            .executes(ctx -> executeAccess(ctx, true, true)))))
+                .then(literal("deny").requires(OPS)
+                    .then(argument("player", StringArgumentType.word()).suggests(LISTED)
+                        .executes(ctx -> executeAccess(ctx, false, false))
+                        .then(literal("man")
+                            .executes(ctx -> executeAccess(ctx, false, true)))))
+                .then(literal("test").requires(OPS)
+                    .then(literal("mineAnchor")
+                        .executes(ctx -> executeTestMineAnchor(ctx,
+                                com.pocketkingdoms.PocketKingdomsServerConfig.POCKET_ANCHOR_MINE_SECONDS.get()))
+                        .then(argument("seconds", DoubleArgumentType.doubleArg(0, 3600))
+                            .executes(ctx -> executeTestMineAnchor(ctx, DoubleArgumentType.getDouble(ctx, "seconds")))))
+                    .then(literal("wardTime")
+                        .executes(ctx -> executeTestWardTime(ctx, 10))
+                        .then(argument("seconds", DoubleArgumentType.doubleArg(1, 120))
+                            .executes(ctx -> executeTestWardTime(ctx, DoubleArgumentType.getDouble(ctx, "seconds")))))
+                    .then(literal("veilTime")
+                        .executes(ctx -> executeTestVeilTime(ctx, 10))
+                        .then(argument("seconds", DoubleArgumentType.doubleArg(1, 120))
+                            .executes(ctx -> executeTestVeilTime(ctx, DoubleArgumentType.getDouble(ctx, "seconds"))))))
+        );
+        // The command's name from when the mod was called Pocket Dimensions: still works, leads to the same place
+        dispatcher.register(literal("pd").redirect(pk));
+    }
+
+    // -------------------------------------------------------------------------
+    // /pk help
+    // -------------------------------------------------------------------------
+
+    /** The essentials in a few lines, and a link to the full guide. Operators also see their commands. */
+    private static int executeHelp(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        net.minecraft.ChatFormatting gold = net.minecraft.ChatFormatting.GOLD, grey = net.minecraft.ChatFormatting.GRAY;
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+        lines.add(Component.literal("Pocket Kingdoms").withStyle(gold, net.minecraft.ChatFormatting.BOLD));
+        lines.add(Component.literal("Pocket rooms: ").withStyle(gold).append(Component.literal(
+                "right-click an anchor to enter. Crouch + jump to leave (riding: right-click a wall). "
+                + "Crouch + right-click a placed anchor with empty hands to take it.").withStyle(grey)));
+        lines.add(Component.literal("Realms: ").withStyle(gold).append(Component.literal(
+                "use a World Seed on a World Anchor, then right-click the anchor to enter. Right-click the World Core "
+                + "to leave; crouch + right-click it to let friends in and name your realm.").withStyle(grey)));
+        lines.add(Component.literal("Sieges: ").withStyle(gold).append(Component.literal(
+                "crouch + right-click a World Anchor with a World Breacher or Anchor Breaker, then feed it lapis. "
+                + "Lapis in the World Core slows a siege.").withStyle(grey)));
+        if (OPS.test(src))
+            lines.add(Component.literal("Operators: ").withStyle(gold).append(Component.literal(
+                    "/pk allow, deny, owner, disown, regenCore, regenRoom, regenAnchor, test").withStyle(grey)));
+        lines.add(Component.literal("Read the full guide").withStyle(s -> s.withColor(net.minecraft.ChatFormatting.AQUA)
+                .withUnderlined(true).withClickEvent(new net.minecraft.network.chat.ClickEvent.OpenUrl(java.net.URI.create(GUIDE_URL))))
+                .append(Component.literal(" (click to open)").withStyle(grey)));
+        for (Component line : lines) src.sendSuccess(() -> line, false);
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pk test mineAnchor [seconds]
+    // -------------------------------------------------------------------------
+
+    /**
+     * An invisible miner works the placed anchor of the room you're standing in, at the configured mining speed, so the
+     * warnings and cracks can be seen from inside without a second player. At 100 % it breaks: the room is gone.
+     * {@code seconds} is how long the whole mining takes (the server config's mining time unless given).
+     */
+    private static int executeTestMineAnchor(CommandContext<CommandSourceStack> ctx, double seconds)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer player = src.getPlayerOrException();
+        MinecraftServer server = src.getServer();
+        var mgr = com.pocketkingdoms.manager.PocketRoomManager.get(server);
+        UUID room = player.level().dimension().equals(PocketKingdomsMod.POCKET_DIM)
+                ? mgr.findRoomForOccupant(player.getUUID()) : null;
+        if (room == null) {
+            src.sendFailure(Component.literal("Stand inside a pocket room to test its anchor."));
+            return 0;
+        }
+        var anchor = mgr.getAnchorLocation(room).orElse(null);
+        ServerLevel level = anchor == null ? null : server.getLevel(anchor.getKey());
+        if (level == null || !com.pocketkingdoms.event.AnchorMiningHandler.startTestMiner(
+                player.getUUID(), level, anchor.getValue(), seconds)) {
+            src.sendFailure(Component.literal("This room's anchor isn't placed anywhere (it is being carried)."));
+            return 0;
+        }
+        BlockPos pos = anchor.getValue();
+        src.sendSuccess(() -> Component.literal(String.format(
+                "Test: mining this room's anchor at %d %d %d in %s. It breaks in %.1f s and the room is lost.",
+                pos.getX(), pos.getY(), pos.getZ(), anchor.getKey().identifier(), seconds)), false);
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pk test wardTime [seconds]
+    // -------------------------------------------------------------------------
+
+    /**
+     * Asks your client to measure how long the ward sigil takes each frame for {@code seconds}; it reports in your chat
+     * (time per frame, vertices, share of a 60 fps frame), so a player on ordinary hardware can read off a real figure.
+     */
+    private static int executeTestWardTime(CommandContext<CommandSourceStack> ctx, double seconds)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer player = src.getPlayerOrException();
+        if (!player.level().dimension().equals(PocketKingdomsMod.REALM_DIM)) {
+            src.sendFailure(Component.literal("Stand in a realm to measure its ward."));
+            return 0;
+        }
+        com.pocketkingdoms.network.ModNetworking.getChannel().send(
+                new com.pocketkingdoms.network.WardTimeS2C((float) seconds),
+                net.minecraftforge.network.PacketDistributor.PLAYER.with(player));
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pk test veilTime [seconds]
+    // -------------------------------------------------------------------------
+
+    /**
+     * Asks your client to time the Veil fog on the graphics card for {@code seconds}; it reports in your chat (time per
+     * frame and share of a 60 fps frame), so a player on ordinary hardware can read off a real figure.
+     */
+    private static int executeTestVeilTime(CommandContext<CommandSourceStack> ctx, double seconds)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer player = src.getPlayerOrException();
+        if (!player.level().dimension().equals(PocketKingdomsMod.REALM_DIM)) {
+            src.sendFailure(Component.literal("Stand in a realm to measure its Veil."));
+            return 0;
+        }
+        com.pocketkingdoms.network.ModNetworking.getChannel().send(
+                new com.pocketkingdoms.network.VeilTimeS2C((float) seconds),
+                net.minecraftforge.network.PacketDistributor.PLAYER.with(player));
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pk owner <name|uuid:UUID>
+    // -------------------------------------------------------------------------
+
+    private static int executeSetOwner(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+
+        BlockEntity target = lookedAt(src);
+        if (target == null) return 0;
+        if (target instanceof PocketAnchorBlockEntity pocketAnchor)
+            return setPocketOwner(ctx, server, pocketAnchor);
+
+        UUID oldOwner = realmOwnerOf(src, target);
+        if (oldOwner == null) return 0;
+
+        // -- Resolve new owner UUID from the argument --------------------------
+        NewOwner resolved = resolveNewOwner(ctx, server);
+        if (resolved == null) return 0;
+        UUID newOwner = resolved.id();
+
+        if (oldOwner.equals(newOwner)) {
+            src.sendFailure(Component.literal(resolved.name() + " already holds dominion over this realm."));
+            return 0;
+        }
+        RealmManager mgr = RealmManager.get(server);
+        if (mgr.realmExistsFor(newOwner)) {
+            src.sendFailure(Component.literal(resolved.name() + " already holds a realm of their own."
+                    + " A soul may hold only one; /pk disown theirs first."));
+            return 0;
+        }
+
+        // -- Transfer ownership across all three data holders ------------------
+        mgr.transferOwnership(oldOwner, newOwner);
+        if (target instanceof WorldAnchorBlockEntity anchor) anchor.setOwnerUUID(newOwner);
+        if (target instanceof WorldCoreBlockEntity core) core.setOwnerUUID(newOwner);
+
+        // The other half of the pair: the anchor out in the world, the core inside the realm
+        mgr.getAnchorLocation(newOwner).ifPresent(loc -> {
+            ServerLevel anchorLevel = server.getLevel(loc.getKey());
+            if (anchorLevel != null && anchorLevel.getBlockEntity(loc.getValue()) instanceof WorldAnchorBlockEntity a)
+                a.setOwnerUUID(newOwner);
+        });
+        BlockPos corePos = mgr.getWorldCorePos(newOwner);
+        if (corePos != null) {
+            ServerLevel realmLevel = server.getLevel(PocketKingdomsMod.REALM_DIM);
+            if (realmLevel != null && realmLevel.getBlockEntity(corePos) instanceof WorldCoreBlockEntity wc) {
+                wc.setOwnerUUID(newOwner);
+            }
+        }
+
+        src.sendSuccess(() -> Component.literal(
+                "Dominion over the realm has passed to " + resolved.name() + ". The former owner keeps the realm beside them."), true);
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // /pk disown <name>  /  /pk regenCore
+    // -------------------------------------------------------------------------
+
+    private static int executeDisown(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        NewOwner who = resolveNewOwner(ctx, server);
+        if (who == null) return 0;
+        RealmManager mgr = RealmManager.get(server);
+        ServerLevel realm = server.getLevel(PocketKingdomsMod.REALM_DIM);
+        if (!mgr.realmExistsFor(who.id()) || realm == null) {
+            src.sendFailure(Component.literal(who.name() + " holds no realm."));
+            return 0;
+        }
+        mgr.disown(who.id(), realm);
+        src.sendSuccess(() -> Component.literal("The bond breaks. " + who.name()
+                + "'s realm drifts loose and is lost to them; their anchor stands empty."), true);
+        return 1;
+    }
+
+    /** The realm you stand in, or else the one of the World Anchor or World Core you're looking at. */
+    private static int executeRegenCore(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        ServerPlayer player = src.getPlayerOrException();
+        RealmManager mgr = RealmManager.get(server);
+        ServerLevel realm = server.getLevel(PocketKingdomsMod.REALM_DIM);
+        if (realm == null) return 0;
+
+        UUID owner = player.level().dimension().equals(PocketKingdomsMod.REALM_DIM)
+                ? mgr.realmOwnerAt(player.getX(), player.getZ()) : null;
+        if (owner == null) {
+            BlockEntity target = lookedAt(src);
+            if (target == null) return 0;
+            if (target instanceof PocketAnchorBlockEntity) {
+                src.sendFailure(Component.literal("A pocket room has no core. Stand in a realm or look at its anchor."));
+                return 0;
+            }
+            owner = realmOwnerOf(src, target);
+            if (owner == null) return 0;
+        }
+
+        return switch (mgr.regenerateCore(owner, realm)) {
+            case NO_REALM -> { src.sendFailure(Component.literal("That realm no longer exists.")); yield 0; }
+            case STILL_STANDS -> { src.sendFailure(Component.literal("The realm's core still stands.")); yield 0; }
+            case REBUILT -> {
+                src.sendSuccess(() -> Component.literal("The realm's heart knits itself whole again."), true);
+                yield 1;
+            }
+        };
+    }
+
+    /** The pocket room you stand in, or else the one of the Pocket Anchor you're looking at: its walls put back. */
+    private static int executeRegenRoom(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        ServerPlayer player = src.getPlayerOrException();
+        var mgr = com.pocketkingdoms.manager.PocketRoomManager.get(server);
+        ServerLevel pocket = server.getLevel(PocketKingdomsMod.POCKET_DIM);
+        if (pocket == null) return 0;
+
+        UUID room = player.level().dimension().equals(PocketKingdomsMod.POCKET_DIM)
+                ? mgr.roomAt(player.blockPosition()) : null;
+        if (room == null) {
+            BlockEntity target = lookedAt(src);
+            if (target == null) return 0;
+            if (!(target instanceof PocketAnchorBlockEntity anchor) || anchor.getPocketId() == null) {
+                src.sendFailure(Component.literal("A realm has no walls to mend. Stand in a pocket room or look at its anchor."));
+                return 0;
+            }
+            room = anchor.getPocketId();
+        }
+
+        int put = mgr.regenerateShell(room, pocket);
+        if (put < 0) { src.sendFailure(Component.literal("That pocket room no longer exists.")); return 0; }
+        if (put == 0) { src.sendFailure(Component.literal("The room's walls already stand whole.")); return 0; }
+        src.sendSuccess(() -> Component.literal("The room's walls knit themselves whole again (" + put + " blocks)."), true);
+        return 1;
+    }
+
+    /** The owner's World Anchor, back where it last stood (RealmManager.regenerateAnchor). */
+    private static int executeRegenAnchor(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        NewOwner who = resolveNewOwner(ctx, server);
+        if (who == null) return 0;
+        RealmManager.AnchorRegen r = RealmManager.get(server).regenerateAnchor(who.id(), server);
+        String where = r.pos() == null ? "" : String.format(" at %d %d %d in %s", r.pos().getX(), r.pos().getY(),
+                r.pos().getZ(), r.dimension().identifier());
+        switch (r.result()) {
+            case NO_REALM -> { src.sendFailure(Component.literal(who.name() + " holds no realm.")); return 0; }
+            case NO_RECORD -> {
+                src.sendFailure(Component.literal("No one remembers where " + who.name() + "'s anchor stood" + where + "."));
+                return 0;
+            }
+            case STILL_STANDS -> {
+                src.sendFailure(Component.literal(who.name() + "'s anchor still stands" + where + "."));
+                return 0;
+            }
+            default -> {
+                src.sendSuccess(() -> Component.literal(who.name() + "'s anchor rises again" + where
+                        + ", bound to their realm as if it had never fallen."), true);
+                return 1;
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // /pk allow <name> [man]  /  /pk deny <name> [man]
+    // -------------------------------------------------------------------------
+
+    /**
+     * The realm of the World Anchor or World Core you're looking at. allow puts the player on its access list, deny
+     * takes them off (and their manager status with it). With man, allow also makes them a manager and deny only takes
+     * the manager status away.
+     */
+    private static int executeAccess(CommandContext<CommandSourceStack> ctx, boolean allow, boolean asManager)
+            throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        MinecraftServer server = src.getServer();
+        BlockEntity target = lookedAt(src);
+        if (target == null) return 0;
+        if (target instanceof PocketAnchorBlockEntity) {
+            src.sendFailure(Component.literal("A pocket room keeps no wards: anyone may enter it."));
+            return 0;
+        }
+        UUID owner = realmOwnerOf(src, target);
+        if (owner == null) return 0;
+        NewOwner who = resolveNewOwner(ctx, server);
+        if (who == null) return 0;
+        if (who.id().equals(owner)) {
+            src.sendFailure(Component.literal("The realm's owner needs no leave to enter, and cannot be kept out."));
+            return 0;
+        }
+
+        RealmManager mgr = RealmManager.get(server);
+        boolean listed = mgr.isAllowed(owner, who.id());
+        boolean manager = mgr.isManager(owner, who.id());
+        String message;
+        if (allow) {
+            if (listed && (!asManager || manager)) {
+                src.sendFailure(Component.literal(who.name() + (asManager
+                        ? " already keeps the realm."
+                        : " already walks freely through the realm's wards.")));
+                return 0;
+            }
+            if (!listed && !mgr.addAllowedPlayer(owner, who.id())) {
+                src.sendFailure(Component.literal("The realm's wards can hold no more names. The limit of "
+                        + PocketKingdomsConfig.MAX_ALLOWED_PLAYERS.get() + " has been reached."));
+                return 0;
+            }
+            if (asManager) mgr.toggleManager(owner, who.id());
+            message = asManager ? who.name() + " now keeps the realm."
+                          : who.name() + " has been granted passage through the realm's wards.";
+        } else {
+            if (asManager ? !manager : !listed) {
+                src.sendFailure(Component.literal(who.name() + (asManager
+                        ? " does not keep the realm."
+                        : " is not held in the realm's wards.")));
+                return 0;
+            }
+            if (asManager) mgr.toggleManager(owner, who.id());
+            else mgr.removeAllowedPlayer(owner, who.id());
+            message = asManager ? who.name() + " no longer keeps the realm."
+                          : who.name() + " has been cast from the realm's wards.";
+        }
+        src.sendSuccess(() -> Component.literal(message), true);
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // What the executor is looking at
+    // -------------------------------------------------------------------------
+
+    /**
+     * The block entity of the block the executor looks at (within 5 blocks). The World Anchor and World Core are two
+     * blocks tall with the block entity on the lower half, so either half counts. Tells the executor and returns null
+     * when there is nothing there.
+     */
+    private static BlockEntity lookedAt(CommandSourceStack src) throws CommandSyntaxException {
+        ServerPlayer executor = src.getPlayerOrException();
+        ServerLevel level = src.getLevel();
+        Vec3 eyePos = executor.getEyePosition();
+        Vec3 lookEnd = eyePos.add(executor.getLookAngle().scale(5.0));
+        BlockHitResult hit = level.clip(new ClipContext(
+                eyePos, lookEnd,
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, executor));
+        if (hit.getType() != HitResult.Type.BLOCK) {
+            src.sendFailure(Component.literal("You are not looking at a block."));
+            return null;
+        }
+        BlockPos pos = hit.getBlockPos();
+        BlockState state = level.getBlockState(pos);
+        if ((state.getBlock() instanceof WorldAnchorBlock && state.getValue(WorldAnchorBlock.HALF) == DoubleBlockHalf.UPPER)
+                || (state.getBlock() instanceof WorldCoreBlock && state.getValue(WorldCoreBlock.HALF) == DoubleBlockHalf.UPPER))
+            pos = pos.below();
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof WorldAnchorBlockEntity || be instanceof WorldCoreBlockEntity || be instanceof PocketAnchorBlockEntity)) {
+            src.sendFailure(Component.literal("That is not a World Anchor, a World Core or a Pocket Anchor."));
+            return null;
+        }
+        return be;
+    }
+
+    /** The owner of the realm a World Anchor or World Core belongs to; tells the executor and returns null if none. */
+    private static UUID realmOwnerOf(CommandSourceStack src, BlockEntity be) {
+        UUID owner = be instanceof WorldAnchorBlockEntity a ? a.getOwnerUUID()
+                : be instanceof WorldCoreBlockEntity c ? c.getOwnerUUID() : null;
+        if (owner == null || !RealmManager.get(src.getServer()).realmExistsFor(owner)) {
+            src.sendFailure(Component.literal(be instanceof WorldAnchorBlockEntity
+                    ? "This anchor has never been linked to a realm."
+                    : "This core belongs to no realm."));
+            return null;
+        }
+        return owner;
+    }
+
+    /**
+     * A Pocket Anchor you're looking at: its room is recorded as the new owner's, and so is the placed anchor. (Rooms
+     * stay open to anyone either way.)
+     */
+    private static int setPocketOwner(CommandContext<CommandSourceStack> ctx, MinecraftServer server,
+                                      PocketAnchorBlockEntity anchor) {
+        CommandSourceStack src = ctx.getSource();
+        UUID room = anchor.getPocketId();
+        var mgr = com.pocketkingdoms.manager.PocketRoomManager.get(server);
+        if (room == null || !mgr.roomExists(room)) {
+            src.sendFailure(Component.literal("This Pocket Anchor holds no room."));
+            return 0;
+        }
+        NewOwner resolved = resolveNewOwner(ctx, server);
+        if (resolved == null) return 0;
+        if (resolved.id().equals(mgr.getRoomOwner(room)) && resolved.id().equals(anchor.getOwnerUUID())) {
+            src.sendFailure(Component.literal(resolved.name() + " already holds this pocket."));
+            return 0;
+        }
+        mgr.setRoomOwner(room, resolved.id());
+        anchor.setOwnerUUID(resolved.id());
+        src.sendSuccess(() -> Component.literal("The pocket now answers to " + resolved.name() + "."), true);
+        return 1;
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private record NewOwner(UUID id, String name) {}
+
+    /**
+     * The "player" argument as a UUID and a name: a UUID is taken as given, a name is looked up (online, ops,
+     * whitelist). Tells the executor and returns null when no one matches.
+     */
+    private static NewOwner resolveNewOwner(CommandContext<CommandSourceStack> ctx, MinecraftServer server) {
+        String arg = StringArgumentType.getString(ctx, "player");
+        UUID parsedDirectly = tryParseUUID(arg);
+        if (parsedDirectly != null) {
+            ServerPlayer online = server.getPlayerList().getPlayer(parsedDirectly);
+            return new NewOwner(parsedDirectly, online != null ? online.getName().getString() : arg);
+        }
+        UUID byName = resolveByName(server, arg);
+        if (byName == null) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "No soul by the name '" + arg + "' could be found."
+                    + " They must have joined this world before, or you may pass their UUID"
+                    + " (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)."));
+            return null;
+        }
+        return new NewOwner(byName, arg);
+    }
+
+    /**
+     * Resolves a player name to a UUID.
+     * Checks: online players -> op list -> whitelist -> username cache.
+     * Returns null if the name cannot be found in any of those sources.
+     */
+    private static UUID resolveByName(MinecraftServer server, String name) {
+        // 1. Online players
+        ServerPlayer online = server.getPlayerList().getPlayerByName(name);
+        if (online != null) return online.getUUID();
+
+        // 2. Op list (covers previously-joined opped offline players)
+        UUID fromOps = findInEntries(server.getPlayerList().getOps().getEntries(), name);
+        if (fromOps != null) return fromOps;
+
+        // 3. Whitelist (covers previously-joined whitelisted offline players)
+        UUID fromWhitelist = findInEntries(server.getPlayerList().getWhiteList().getEntries(), name);
+        if (fromWhitelist != null) return fromWhitelist;
+
+        // 4. Forge's username cache (anyone who has ever joined)
+        for (var e : UsernameCache.getMap().entrySet())
+            if (e.getValue().equalsIgnoreCase(name)) return e.getKey();
+        return null;
+    }
+
+    /** Returns the UUID if {@code s} is a valid UUID string, otherwise null. */
+    private static UUID tryParseUUID(String s) {
+        try { return UUID.fromString(s); } catch (IllegalArgumentException e) { return null; }
+    }
+
+    /** Scans a StoredUserList entry collection for a case-insensitive name match. */
+    private static UUID findInEntries(
+            Collection<? extends StoredUserEntry<NameAndId>> entries, String name) {
+        for (StoredUserEntry<NameAndId> entry : entries) {
+            NameAndId nai = entry.getUser();
+            if (nai.name().equalsIgnoreCase(name)) return nai.id();
+        }
+        return null;
+    }
+}

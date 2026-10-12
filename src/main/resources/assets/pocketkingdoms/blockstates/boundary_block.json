@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "heart=false,part=void": {
+      "model": "pocketkingdoms:block/boundary_void"
+    },
+    "heart=true,part=void": {
+      "model": "pocketkingdoms:block/boundary_void"
+    },
+    "heart=false,part=edge": {
+      "model": "pocketkingdoms:block/boundary_edge"
+    },
+    "heart=true,part=edge": {
+      "model": "pocketkingdoms:block/boundary_edge"
+    },
+    "heart=false,part=corner": {
+      "model": "pocketkingdoms:block/boundary_corner"
+    },
+    "heart=true,part=corner": {
+      "model": "pocketkingdoms:block/boundary_corner"
+    }
+  }
+}

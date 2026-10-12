@@ -58,8 +58,8 @@
 ### Task 1: LandingDais: stone, and roots
 
 **Files:**
-- Modify: `src/main/java/com/pocketdimensions/manager/LandingDais.java`
-- Test: `src/test/java/com/pocketdimensions/manager/LandingDaisTest.java`
+- Modify: `src/main/java/com/pocketkingdoms/manager/LandingDais.java`
+- Test: `src/test/java/com/pocketkingdoms/manager/LandingDaisTest.java`
 
 **Interfaces:**
 - Produces:
@@ -134,7 +134,7 @@ In the existing tests:
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `./gradlew.bat test --tests "com.pocketdimensions.manager.LandingDaisTest"`
+Run: `./gradlew.bat test --tests "com.pocketkingdoms.manager.LandingDaisTest"`
 Expected: compilation FAILS with "cannot find symbol" for `Kind.STONE`, `roots()` and `ROOT_DEPTH`.
 
 - [ ] **Step 3: Implement**
@@ -218,13 +218,13 @@ inside it below the floor, and every plot has a vein under the pool.)
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `./gradlew.bat test --tests "com.pocketdimensions.manager.LandingDaisTest"`
+Run: `./gradlew.bat test --tests "com.pocketkingdoms.manager.LandingDaisTest"`
 Expected: PASS, 15 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/com/pocketdimensions/manager/LandingDais.java src/test/java/com/pocketdimensions/manager/LandingDaisTest.java
+git add src/main/java/com/pocketkingdoms/manager/LandingDais.java src/test/java/com/pocketkingdoms/manager/LandingDaisTest.java
 git commit -m "The Stone Dais is plain stone, and roots of aurora stone run down from its vines through the dais and into the ground below"
 ```
 
@@ -235,16 +235,16 @@ git commit -m "The Stone Dais is plain stone, and roots of aurora stone run down
 **Files:**
 - Modify: `tools/anchor/dais.mjs`, `tools/anchor/test/dais.test.mjs`, `tools/anchor/build.mjs` (the dais section)
 - Delete (generated; `git rm`):
-  - `src/main/resources/assets/pocketdimensions/textures/block/heartstone.png`;
+  - `src/main/resources/assets/pocketkingdoms/textures/block/heartstone.png`;
   - `models/block/heartstone.json`;
   - `blockstates/heartstone.json`;
   - `items/heartstone.json`.
-- Delete: `src/main/resources/data/pocketdimensions/loot_table/blocks/heartstone.json`
+- Delete: `src/main/resources/data/pocketkingdoms/loot_table/blocks/heartstone.json`
 - Modify:
   - `init/ModBlocks.java`, `init/ModItems.java` and `init/ModCreativeTabs.java` (remove heartstone);
   - `lang/en_us.json`;
   - `data/minecraft/tags/block/mineable/pickaxe.json`.
-- Test: `src/test/java/com/pocketdimensions/init/DaisBlocksResourcesTest.java`
+- Test: `src/test/java/com/pocketkingdoms/init/DaisBlocksResourcesTest.java`
 
 **Interfaces:**
 - Produces:
@@ -258,7 +258,7 @@ git commit -m "The Stone Dais is plain stone, and roots of aurora stone run down
 - In `eachHasANameABlockstateAndAnItem`, drop the Heartstone lang assertion and add:
 
 ```java
-        assertFalse(lang.has("block.pocketdimensions.heartstone"), "heartstone is gone: the dais is plain stone");
+        assertFalse(lang.has("block.pocketkingdoms.heartstone"), "heartstone is gone: the dais is plain stone");
         assertFalse(Files.exists(ASSETS.resolve("blockstates/heartstone.json")), "heartstone is gone");
 ```
 
@@ -285,10 +285,10 @@ test('the rim is mixed into vanilla stone grey (126, its average), not a rock of
 
 - [ ] **Step 2: Run them to verify they fail**
 
-Run: `node --test tools/anchor/test/dais.test.mjs` and `./gradlew.bat test --tests "com.pocketdimensions.init.DaisBlocksResourcesTest"`
+Run: `node --test tools/anchor/test/dais.test.mjs` and `./gradlew.bat test --tests "com.pocketkingdoms.init.DaisBlocksResourcesTest"`
 Expected:
 - Node FAILS: `STONE_GREY` is not exported.
-- JUnit FAILS: the heartstone lang key and blockstate still exist, and the rock is `pocketdimensions:block/heartstone`.
+- JUnit FAILS: the heartstone lang key and blockstate still exist, and the rock is `pocketkingdoms:block/heartstone`.
 
 - [ ] **Step 3: Implement**
 
@@ -326,15 +326,15 @@ In `tools/anchor/build.mjs`:
 Then remove heartstone everywhere else:
 
 ```bash
-git rm src/main/resources/assets/pocketdimensions/textures/block/heartstone.png src/main/resources/assets/pocketdimensions/models/block/heartstone.json src/main/resources/assets/pocketdimensions/blockstates/heartstone.json src/main/resources/assets/pocketdimensions/items/heartstone.json src/main/resources/data/pocketdimensions/loot_table/blocks/heartstone.json
+git rm src/main/resources/assets/pocketkingdoms/textures/block/heartstone.png src/main/resources/assets/pocketkingdoms/models/block/heartstone.json src/main/resources/assets/pocketkingdoms/blockstates/heartstone.json src/main/resources/assets/pocketkingdoms/items/heartstone.json src/main/resources/data/pocketkingdoms/loot_table/blocks/heartstone.json
 ```
 
 - **`ModBlocks.java`:** delete the `HEARTSTONE` entry. Its comment becomes "aurora stone, veining the Stone Dais the
   World Core lands on (RL-024): stone with the aurora flowing in thin veins".
 - **`ModItems.java`:** delete `HEARTSTONE_ITEM`.
 - **`ModCreativeTabs.java`:** delete `output.accept(ModItems.HEARTSTONE_ITEM.get());`.
-- **`en_us.json`:** delete the `block.pocketdimensions.heartstone` line.
-- **`pickaxe.json`:** delete `"pocketdimensions:heartstone",`.
+- **`en_us.json`:** delete the `block.pocketkingdoms.heartstone` line.
+- **`pickaxe.json`:** delete `"pocketkingdoms:heartstone",`.
 
 - [ ] **Step 4: Regenerate and run the tests**
 
@@ -345,14 +345,14 @@ Expected:
   files, and the edited sources;
 - `aurora_stone_veins.png` is unchanged (the veins never used the rock).
 
-Run: `./gradlew.bat test --tests "com.pocketdimensions.init.DaisBlocksResourcesTest"`
+Run: `./gradlew.bat test --tests "com.pocketkingdoms.init.DaisBlocksResourcesTest"`
 Expected: PASS. (`RealmManager` still uses `ModBlocks.HEARTSTONE` until Task 3, so the compile fails here. Do Task 3's
 Step 1 code edit before running Gradle, and commit Tasks 2 and 3 separately. Ruling ledgered if needed.)
 
 - [ ] **Step 5: Commit** (after Task 3 Step 1 makes the build compile)
 
 ```bash
-git add -A tools/anchor src/main/resources src/main/java/com/pocketdimensions/init src/test/java/com/pocketdimensions/init
+git add -A tools/anchor src/main/resources src/main/java/com/pocketkingdoms/init src/test/java/com/pocketkingdoms/init
 git commit -m "Aurora stone is vanilla stone with the veins on top; the heartstone block is gone"
 ```
 
@@ -460,7 +460,7 @@ Expected: all dais tests pass; `aurora_stone_veins.png` and `aurora_stone_rim.pn
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tools/anchor/dais.mjs tools/anchor/test/dais.test.mjs src/main/resources/assets/pocketdimensions/textures/block
+git add tools/anchor/dais.mjs tools/anchor/test/dais.test.mjs src/main/resources/assets/pocketkingdoms/textures/block
 git commit -m "Aurora stone's veins dance in teal with drifting swatches of pink, blue and purple, like a real aurora, instead of cycling through solid colours"
 ```
 
@@ -469,7 +469,7 @@ git commit -m "Aurora stone's veins dance in teal with drifting swatches of pink
 ### Task 3: RealmManager builds the dais of stone and sets the roots
 
 **Files:**
-- Modify: `src/main/java/com/pocketdimensions/manager/RealmManager.java` (`buildDais`)
+- Modify: `src/main/java/com/pocketkingdoms/manager/RealmManager.java` (`buildDais`)
 
 **Interfaces:**
 - Consumes:
@@ -516,7 +516,7 @@ Expected: BUILD SUCCESSFUL; all tests pass (180 before, plus the 4 new ones in T
 - [ ] **Step 3: Commit** (Task 2's commit first, then this one)
 
 ```bash
-git add src/main/java/com/pocketdimensions/manager/RealmManager.java
+git add src/main/java/com/pocketkingdoms/manager/RealmManager.java
 git commit -m "The dais is built of stone, and its aurora stone roots run down into natural ground below (never into caves, water or chests)"
 ```
 

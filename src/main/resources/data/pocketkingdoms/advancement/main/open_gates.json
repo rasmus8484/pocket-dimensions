@@ -1,0 +1,28 @@
+{
+  "parent": "pocketkingdoms:main/gatecrasher",
+  "display": {
+    "icon": {
+      "id": "pocketkingdoms:world_breacher"
+    },
+    "title": {
+      "translate": "advancements.pocketkingdoms.open_gates.title"
+    },
+    "description": {
+      "translate": "advancements.pocketkingdoms.open_gates.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "breach_entry": {
+      "trigger": "pocketkingdoms:event",
+      "conditions": {
+        "event": "breach_entry"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "breach_entry"
+    ]
+  ]
+}

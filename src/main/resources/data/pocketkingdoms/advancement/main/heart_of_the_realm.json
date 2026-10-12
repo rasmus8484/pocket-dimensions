@@ -1,0 +1,28 @@
+{
+  "parent": "pocketkingdoms:main/dominion",
+  "display": {
+    "icon": {
+      "id": "pocketkingdoms:world_core"
+    },
+    "title": {
+      "translate": "advancements.pocketkingdoms.heart_of_the_realm.title"
+    },
+    "description": {
+      "translate": "advancements.pocketkingdoms.heart_of_the_realm.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "name_realm": {
+      "trigger": "pocketkingdoms:event",
+      "conditions": {
+        "event": "name_realm"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "name_realm"
+    ]
+  ]
+}

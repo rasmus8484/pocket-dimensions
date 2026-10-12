@@ -10,7 +10,7 @@ Related:
 
 Pocket rooms exist in a single shared dimension:
 
-- `pocketdimensions:pocket`
+- `pocketkingdoms:pocket`
 
 No room is its own dimension.
 
@@ -61,8 +61,8 @@ This is required because the room is larger than a single chunk footprint (it st
 
 The **Pocket Anchor** is a single object with two forms:
 
-- **Item form**: carried in an inventory (`pocketdimensions:pocket_anchor` item)
-- **Placed form**: the anchor block in the world (`pocketdimensions:pocket_anchor` block)
+- **Item form**: carried in an inventory (`pocketkingdoms:pocket_anchor` item)
+- **Placed form**: the anchor block in the world (`pocketkingdoms:pocket_anchor` block)
 
 Each room has exactly one anchor, and it is always in one of the two forms.
 Placing it, entering with it, or stealing it simply toggles between them.
@@ -103,7 +103,7 @@ A player never enters while still carrying the anchor: entering always leaves th
 
 The anchor stores:
 - `pocket_id`
-- Owner UUID: always the room's owner (who made it, or who `/pd owner` gave it to), whoever places it, so a stolen anchor stays its owner's
+- Owner UUID: always the room's owner (who made it, or who `/pk owner` gave it to), whoever places it, so a stolen anchor stays its owner's
 
 ---
 

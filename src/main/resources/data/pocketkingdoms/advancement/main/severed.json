@@ -1,0 +1,28 @@
+{
+  "parent": "pocketkingdoms:main/the_unmaker",
+  "display": {
+    "icon": {
+      "id": "pocketkingdoms:anchor_breaker"
+    },
+    "title": {
+      "translate": "advancements.pocketkingdoms.severed.title"
+    },
+    "description": {
+      "translate": "advancements.pocketkingdoms.severed.description"
+    },
+    "frame": "challenge"
+  },
+  "criteria": {
+    "sever_anchor": {
+      "trigger": "pocketkingdoms:event",
+      "conditions": {
+        "event": "sever_anchor"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "sever_anchor"
+    ]
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "reality_crack": {
+    "subtitle": "subtitles.pocketkingdoms.reality_crack",
+    "sounds": [ { "name": "pocketkingdoms:reality_crack", "attenuation_distance": 48 } ]
+  }
+}

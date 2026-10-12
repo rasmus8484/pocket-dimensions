@@ -15,7 +15,7 @@ import { slab, polished, hollow, tablet } from './gui.mjs';
 import { voxelize, buildModel } from './mesh.mjs';
 import { encodePNG } from './png.mjs';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '../../src/main/resources/assets/pocketdimensions');
+const root = join(dirname(fileURLToPath(import.meta.url)), '../../src/main/resources/assets/pocketkingdoms');
 const write = (rel, data) => { const p = join(root, rel); mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, data); };
 const json = o => JSON.stringify(o, null, 2) + '\n';
 
@@ -47,12 +47,12 @@ function emitModel(name, voxels, yShift, other, coreY = SC) {
     if (m.elements.length > 200) throw new Error(`${name}: ${m.elements.length} elements (max 200)`);
     report.push(`${name}: ${m.elements.length} elements, atlas ${m.atlas.size}px`);
     write(`textures/block/${name}.png`, encodePNG(m.atlas.size, m.atlas.size, m.atlas.rgba));
-    const textures = { main: `pocketdimensions:block/${name}`, particle: `pocketdimensions:block/${name}` };
+    const textures = { main: `pocketkingdoms:block/${name}`, particle: `pocketkingdoms:block/${name}` };
     if (m.elements.some(e => Object.values(e.faces).some(f => f.texture === '#flow'))) {
       const s = flowStrip(m, voxels, coreY);
       write(`textures/block/${name}_flow.png`, encodePNG(s.w, s.h, s.rgba));
       write(`textures/block/${name}_flow.png.mcmeta`, json({ animation: { frametime: 8, interpolate: true } }));
-      textures.flow = `pocketdimensions:block/${name}_flow`;
+      textures.flow = `pocketkingdoms:block/${name}_flow`;
     }
     write(`models/block/${name}.json`, json({ parent: 'minecraft:block/block', ambientocclusion: false, textures, elements: m.elements }));
     return { m, textures };
@@ -124,21 +124,21 @@ for (const half of ['lower', 'upper']) for (let dmg = 0; dmg <= 4; dmg++) for (l
   const model = !linked ? `world_anchor_inert_${half}`
     : dmg > 0 ? `world_anchor_linked_d${dmg}_${half}`
     : inf > 0 ? `world_anchor_linked_i${inf}_${half}` : `world_anchor_linked_${half}`;
-  anchorVariantsJson[`damage=${dmg},half=${half},influence=${inf},linked=${linked}`] = { model: `pocketdimensions:block/${model}` };
+  anchorVariantsJson[`damage=${dmg},half=${half},influence=${inf},linked=${linked}`] = { model: `pocketkingdoms:block/${model}` };
 }
 write('blockstates/world_anchor.json', json({ variants: anchorVariantsJson }));
 write('blockstates/world_breacher.json', json({ variants: {
-  'complete=false': { model: 'pocketdimensions:block/world_breacher_breaching' },
-  'complete=true': { model: 'pocketdimensions:block/world_breacher_complete' },
+  'complete=false': { model: 'pocketkingdoms:block/world_breacher_breaching' },
+  'complete=true': { model: 'pocketkingdoms:block/world_breacher_complete' },
 } }));
 write('blockstates/world_core.json', json({ variants: Object.fromEntries(['lower', 'upper'].flatMap(half =>
-  CORE_ORDER.map((st, i) => [`half=${half},siege=${i}`, { model: `pocketdimensions:block/world_core_${st}_${half}` }]))) }));
+  CORE_ORDER.map((st, i) => [`half=${half},siege=${i}`, { model: `pocketkingdoms:block/world_core_${st}_${half}` }]))) }));
 write('blockstates/pocket_anchor.json', json({ variants: {
-  'cube=false': { model: 'pocketdimensions:block/pocket_anchor' },
-  'cube=true': { model: 'pocketdimensions:block/pocket_anchor_cube' },
+  'cube=false': { model: 'pocketkingdoms:block/pocket_anchor' },
+  'cube=true': { model: 'pocketkingdoms:block/pocket_anchor_cube' },
 } }));
 write('blockstates/anchor_breaker.json', json({ variants: Object.fromEntries(
-  [0, 1, 2, 3, 4].map(c => [`charge=${c}`, { model: `pocketdimensions:block/anchor_breaker_c${c}` }])) }));
+  [0, 1, 2, 3, 4].map(c => [`charge=${c}`, { model: `pocketkingdoms:block/anchor_breaker_c${c}` }])) }));
 
 // Item model: the inert monolith, both halves in one model
 const lo = halves.inert_lower, up = halves.inert_upper;
@@ -166,7 +166,7 @@ GLYPHS.forEach((g, i) => {
 });
 // Soft glow behind each rune (Pocket Anchor rune bands draw it additively over the glyph)
 GLYPHS.forEach((g, i) => write(`textures/particle/rune_glow_${i}.png`, encodePNG(8, 8, glowSprite(g))));
-const runeSprites = { textures: GLYPHS.map((_, i) => `pocketdimensions:rune_${i}`) };
+const runeSprites = { textures: GLYPHS.map((_, i) => `pocketkingdoms:rune_${i}`) };
 for (const n of ['rune', 'rune_pink', 'rune_gold', 'rune_red', 'rune_helix']) write(`particles/${n}.json`, json(runeSprites));
 for (const n of ['drain', 'unmake', 'siphon']) write(`particles/${n}.json`, json({ textures: ['minecraft:glow'] }));
 
@@ -233,12 +233,12 @@ write('models/item/pocket_anchor.json', json({
     firstperson_lefthand: { rotation: [0, 225, 0], scale: [0.6, 0.6, 0.6] },
   },
 }));
-write('items/pocket_anchor.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:item/pocket_anchor' } }));
+write('items/pocket_anchor.json', json({ model: { type: 'minecraft:model', model: 'pocketkingdoms:item/pocket_anchor' } }));
 
 // World Seed (Starseed): a flat item sprite, no 3D model
 write('textures/item/world_seed.png', encodePNG(16, 16, seedSprite()));
-write('models/item/world_seed.json', json({ parent: 'minecraft:item/generated', textures: { layer0: 'pocketdimensions:item/world_seed' } }));
-write('items/world_seed.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:item/world_seed' } }));
+write('models/item/world_seed.json', json({ parent: 'minecraft:item/generated', textures: { layer0: 'pocketkingdoms:item/world_seed' } }));
+write('items/world_seed.json', json({ model: { type: 'minecraft:model', model: 'pocketkingdoms:item/world_seed' } }));
 
 // World Core screen: the stone surfaces (everything carved or glowing on them is drawn by WorldCoreScreen)
 for (const [name, im] of [['core_slab', slab()], ['core_polished', polished()], ['core_hollow', hollow()], ['core_tablet', tablet()]]) {
@@ -254,11 +254,11 @@ for (let b = 0; b < 8; b++) {
   const face = dir => ({ uv: [0, 0, 16, 16], texture: '#all', cullface: dir });
   write(`models/block/veil_${b}.json`, json({
     ambientocclusion: false,
-    textures: { all: `pocketdimensions:block/veil_${b}`, particle: `pocketdimensions:block/veil_${b}` },
+    textures: { all: `pocketkingdoms:block/veil_${b}`, particle: `pocketkingdoms:block/veil_${b}` },
     elements: [{ from: [0, 0, 0], to: [16, 16, 16], shade: false,
       faces: { north: face('north'), south: face('south'), east: face('east'), west: face('west'), up: face('up'), down: face('down') } }],
   }));
-  veilVariants[`band=${b}`] = { model: `pocketdimensions:block/veil_${b}` };
+  veilVariants[`band=${b}`] = { model: `pocketkingdoms:block/veil_${b}` };
 }
 write('blockstates/veil.json', json({ variants: veilVariants }));
 
@@ -277,13 +277,13 @@ write('models/block/aurora_stone.json', json({
   render_type: 'minecraft:cutout',
   textures: {
     particle: 'minecraft:block/stone', rock: 'minecraft:block/stone',
-    rim: 'pocketdimensions:block/aurora_stone_rim', veins: 'pocketdimensions:block/aurora_stone_veins',
+    rim: 'pocketkingdoms:block/aurora_stone_rim', veins: 'pocketkingdoms:block/aurora_stone_veins',
   },
   elements: [cubeFaces('#rock'), cubeFaces('#rim', { shade: false, light_emission: 6 }), cubeFaces('#veins', { shade: false, light_emission: 15 })],
 }));
 for (const name of ['aurora_stone']) {
-  write(`blockstates/${name}.json`, json({ variants: { '': { model: `pocketdimensions:block/${name}` } } }));
-  write(`items/${name}.json`, json({ model: { type: 'minecraft:model', model: `pocketdimensions:block/${name}` } }));
+  write(`blockstates/${name}.json`, json({ variants: { '': { model: `pocketkingdoms:block/${name}` } } }));
+  write(`items/${name}.json`, json({ model: { type: 'minecraft:model', model: `pocketkingdoms:block/${name}` } }));
 }
 // aurora slate: vanilla deepslate with one overlay, flecks of the aurora that shift with aurora stone's veins and glow
 write('textures/block/aurora_slate_flecks.png', encodePNG(16, 16 * DAIS_FRAMES, slateStrip()));
@@ -292,11 +292,11 @@ const pillar = { from: [0, 0, 0], to: [16, 16, 16], faces: Object.fromEntries(['
 write('models/block/aurora_slate.json', json({
   parent: 'minecraft:block/block',
   render_type: 'minecraft:cutout',
-  textures: { particle: 'minecraft:block/deepslate', side: 'minecraft:block/deepslate', end: 'minecraft:block/deepslate_top', flecks: 'pocketdimensions:block/aurora_slate_flecks' },
+  textures: { particle: 'minecraft:block/deepslate', side: 'minecraft:block/deepslate', end: 'minecraft:block/deepslate_top', flecks: 'pocketkingdoms:block/aurora_slate_flecks' },
   elements: [pillar, cubeFaces('#flecks', { shade: false, light_emission: 15 })],
 }));
-write('blockstates/aurora_slate.json', json({ variants: { '': { model: 'pocketdimensions:block/aurora_slate' } } }));
-write('items/aurora_slate.json', json({ model: { type: 'minecraft:model', model: 'pocketdimensions:block/aurora_slate' } }));
+write('blockstates/aurora_slate.json', json({ variants: { '': { model: 'pocketkingdoms:block/aurora_slate' } } }));
+write('items/aurora_slate.json', json({ model: { type: 'minecraft:model', model: 'pocketkingdoms:block/aurora_slate' } }));
 console.log(`dais: aurora_stone (veins + rim), aurora_slate (flecks), ${DAIS_FRAMES} frames`);
 
 // The ward sigil's line and beam stroke

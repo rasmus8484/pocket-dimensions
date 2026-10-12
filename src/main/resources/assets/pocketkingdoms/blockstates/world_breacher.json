@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "complete=false": {
+      "model": "pocketkingdoms:block/world_breacher_breaching"
+    },
+    "complete=true": {
+      "model": "pocketkingdoms:block/world_breacher_complete"
+    }
+  }
+}

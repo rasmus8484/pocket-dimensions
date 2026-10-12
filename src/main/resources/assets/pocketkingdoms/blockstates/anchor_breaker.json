@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "charge=0": {
+      "model": "pocketkingdoms:block/anchor_breaker_c0"
+    },
+    "charge=1": {
+      "model": "pocketkingdoms:block/anchor_breaker_c1"
+    },
+    "charge=2": {
+      "model": "pocketkingdoms:block/anchor_breaker_c2"
+    },
+    "charge=3": {
+      "model": "pocketkingdoms:block/anchor_breaker_c3"
+    },
+    "charge=4": {
+      "model": "pocketkingdoms:block/anchor_breaker_c4"
+    }
+  }
+}

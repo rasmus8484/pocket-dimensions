@@ -1,0 +1,33 @@
+{
+  "parent": "pocketkingdoms:main/dominion",
+  "display": {
+    "icon": {
+      "id": "pocketkingdoms:world_breacher"
+    },
+    "title": {
+      "translate": "advancements.pocketkingdoms.gatecrasher.title"
+    },
+    "description": {
+      "translate": "advancements.pocketkingdoms.gatecrasher.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "placed": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:block_state_property",
+            "block": "pocketkingdoms:world_breacher"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "placed"
+    ]
+  ]
+}

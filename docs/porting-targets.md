@@ -1,6 +1,6 @@
 # Porting targets after 0.1.0
 
-Pocket Dimensions 0.1.0 is built for **Forge 61.x on Minecraft 1.21.11** (the version our own server runs). After that release, the plan is to port to where modded players are.
+Pocket Kingdoms 0.1.0 is built for **Forge 61.x on Minecraft 1.21.11** (the version our own server runs). After that release, the plan is to port to where modded players are.
 
 ## Targets
 

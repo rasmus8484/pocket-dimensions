@@ -1,0 +1,101 @@
+package com.pocketkingdoms;
+
+import net.minecraftforge.common.ForgeConfigSpec;
+
+/**
+ * Common config for Pocket Kingdoms - saved to config/pocketkingdoms-common.toml.
+ *
+ * Changing realm geometry settings while a world already has generated realms
+ * will break boundary enforcement for existing realms. Treat these as set-once values.
+ */
+public class PocketKingdomsConfig {
+
+    public static final ForgeConfigSpec SPEC;
+
+    /** Radius in chunks. Side length per plot = 2*radius-1 chunks. Default 2 -> 3x3 chunks (48x48 blocks). */
+    public static final ForgeConfigSpec.IntValue REALM_RADIUS_CHUNKS;
+
+    /** Dead-space gap between adjacent plots in chunks. Default 1. */
+    public static final ForgeConfigSpec.IntValue REALM_PADDING_CHUNKS;
+
+    /** Maximum chunk search radius when scanning for dry land to place WorldCore. Default 16. */
+
+    // ---- Siege config ----
+
+    /** World Breacher full-breach duration in ticks (1 MC day = 24000). */
+    public static final ForgeConfigSpec.IntValue BREACH_DURATION_TICKS;
+
+    /** Anchor Breaker anchor-destroy duration in ticks (1 MC day = 24000). */
+    public static final ForgeConfigSpec.IntValue BREAKER_DURATION_TICKS;
+
+    /** WorldCore defense: advance attacker progress 1/N ticks (N=3 -> 3x slowdown). */
+    public static final ForgeConfigSpec.IntValue CORE_SLOW_FACTOR;
+
+    /** Ticks between each attacker lapis consumed. Default 200. */
+    public static final ForgeConfigSpec.IntValue CORE_FUEL_BURN_TICKS;
+
+    /** Radius in blocks within which players see siege boss bars. */
+    public static final ForgeConfigSpec.IntValue SIEGE_BOSSBAR_RANGE;
+
+    // ---- Access config ----
+
+    /** Maximum players on a realm's allowlist. 0 = unlimited. */
+    public static final ForgeConfigSpec.IntValue MAX_ALLOWED_PLAYERS;
+
+    static {
+        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+
+        builder.comment("Realm dimension settings").push("realm");
+
+        REALM_RADIUS_CHUNKS = builder
+                .comment("Realm radius in chunks. Side length per plot = 2*radius-1 chunks.",
+                         "Default: 50 -> 99x99 chunk plot (1584x1584 blocks): a realm, not a room.",
+                         "Set it before the world first uses the mod; changing it later breaks existing realms.")
+                .defineInRange("realm_radius_chunks", 50, 1, 10000);
+
+        REALM_PADDING_CHUNKS = builder
+                .comment("Dead-space gap between adjacent realm plots in chunks.",
+                         "Prevents terrain bleed between neighbours.",
+                         "Default: 1.",
+                         "At least 1: the Veil stands in the gap.")
+                .defineInRange("realm_padding_chunks", 1, 1, 10000);
+
+        builder.pop();
+
+        builder.comment("Siege mechanics settings").push("siege");
+
+        BREACH_DURATION_TICKS = builder
+                .comment("World Breacher full-breach duration in ticks, unwarded (24000 = 1 MC day, 20 min).",
+                         "Default: 12000 (half a day, 10 min; a full day while the World Core wards).")
+                .defineInRange("breach_duration_ticks", 12000, 1, Integer.MAX_VALUE);
+
+        BREAKER_DURATION_TICKS = builder
+                .comment("Anchor Breaker anchor-destroy duration in ticks, unwarded (24000 = 1 MC day, 20 min).",
+                         "Default: 12000 (half a day, 10 min; a full day while the World Core wards).")
+                .defineInRange("breaker_duration_ticks", 12000, 1, Integer.MAX_VALUE);
+
+        CORE_SLOW_FACTOR = builder
+                .comment("WorldCore defense: while it holds lapis, attacker progress advances every N ticks (N=2 -> 2x slower).")
+                .defineInRange("core_slow_factor", 2, 1, 100);
+
+        CORE_FUEL_BURN_TICKS = builder
+                .comment("Ticks between each attacker lapis consumed.")
+                .defineInRange("core_fuel_burn_ticks", 200, 1, Integer.MAX_VALUE);
+
+        SIEGE_BOSSBAR_RANGE = builder
+                .comment("Radius in blocks within which players see siege boss bars.")
+                .defineInRange("siege_bossbar_range", 64, 8, 256);
+
+        builder.pop();
+
+        builder.comment("Access control settings").push("access");
+
+        MAX_ALLOWED_PLAYERS = builder
+                .comment("Maximum players on a realm's allowlist. 0 = unlimited.")
+                .defineInRange("max_allowed_players", 0, 0, 1000);
+
+        builder.pop();
+
+        SPEC = builder.build();
+    }
+}

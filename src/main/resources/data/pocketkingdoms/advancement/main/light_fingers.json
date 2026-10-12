@@ -1,0 +1,29 @@
+{
+  "parent": "pocketkingdoms:main/a_room_of_ones_own",
+  "display": {
+    "icon": {
+      "id": "pocketkingdoms:pocket_anchor"
+    },
+    "title": {
+      "translate": "advancements.pocketkingdoms.light_fingers.title"
+    },
+    "description": {
+      "translate": "advancements.pocketkingdoms.light_fingers.description"
+    },
+    "frame": "goal",
+    "hidden": true
+  },
+  "criteria": {
+    "steal_anchor": {
+      "trigger": "pocketkingdoms:event",
+      "conditions": {
+        "event": "steal_anchor"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "steal_anchor"
+    ]
+  ]
+}

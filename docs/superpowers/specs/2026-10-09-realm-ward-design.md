@@ -49,7 +49,7 @@ y 319), which the ceiling would push down into that block. Building reaches y 31
 
 ### The Veil block
 
-New block `pocketdimensions:veil` (no item in the creative tab; ops can still `/setblock` it):
+New block `pocketkingdoms:veil` (no item in the creative tab; ops can still `/setblock` it):
 
 - Unbreakable and blast-proof like the Boundary block (`strength(-1, 3600000)`), `PushReaction.BLOCK`, no drops, in the
   `wither_immune` and `dragon_immune` tags, not flammable, mobs never spawn on it, endermen can't take it.
@@ -194,7 +194,7 @@ needs a different inject point, only the hook moves.
   soft chime. Everyone nearby sees and hears it.
 - **Ceiling**: when the ceiling holds a player, the server sends `WardRippleS2C(x, z)` to the realm's players; the
   sigil draws an expanding ring of light from that point, and the chime plays at the player.
-- New sound `pocketdimensions:ward_chime` (synthesised like `reality_crack`, in `tools/sound/`).
+- New sound `pocketkingdoms:ward_chime` (synthesised like `reality_crack`, in `tools/sound/`).
 
 ## Testing
 

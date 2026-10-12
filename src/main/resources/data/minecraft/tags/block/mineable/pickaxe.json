@@ -1,10 +1,10 @@
 {
   "values": [
-    "pocketdimensions:pocket_anchor",
-    "pocketdimensions:world_breacher",
-    "pocketdimensions:anchor_breaker",
-    "pocketdimensions:world_anchor",
-    "pocketdimensions:aurora_stone",
-    "pocketdimensions:aurora_slate"
+    "pocketkingdoms:pocket_anchor",
+    "pocketkingdoms:world_breacher",
+    "pocketkingdoms:anchor_breaker",
+    "pocketkingdoms:world_anchor",
+    "pocketkingdoms:aurora_stone",
+    "pocketkingdoms:aurora_slate"
   ]
 }

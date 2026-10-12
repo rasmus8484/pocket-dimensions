@@ -1,0 +1,11 @@
+{
+    "type": "pocketkingdoms:realm_type",
+    "generator": {
+        "type": "pocketkingdoms:seeded_noise_no_structures",
+        "biome_source": {
+            "type": "minecraft:multi_noise",
+            "preset": "minecraft:overworld"
+        },
+        "settings": "pocketkingdoms:realm"
+    }
+}

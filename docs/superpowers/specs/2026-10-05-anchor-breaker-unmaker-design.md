@@ -16,7 +16,7 @@ Replace the Anchor Breaker's redstone placeholder with the Unmaker and show the 
   static (seeded by block position), staying while the breaker is attached.
 - **Particles:** red motes from the black hole through the windows to the clamp feet; siphon motes
   rising into the funnel; rune particles red/orange while being broken.
-- **Sound:** `pocketdimensions:reality_crack` (our synthesized `crack_near`, mono OGG) plays at the
+- **Sound:** `pocketkingdoms:reality_crack` (our synthesized `crack_near`, mono OGG) plays at the
   anchor each time a lightning set appears (25/50/75 %) and when the anchor is destroyed (100 %).
 
 ## 2. Architecture

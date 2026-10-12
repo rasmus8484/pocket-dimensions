@@ -1,34 +1,40 @@
 modLoader="javafml"
 loaderVersion="[61,)"
 license="MIT"
-issueTrackerURL="https://github.com/rasmus8484/pocket-dimensions/issues"
+issueTrackerURL="https://github.com/rasmus8484/pocket-kingdoms/issues"
 
 [[mods]]
-modId="pocketdimensions"
+modId="pocketkingdoms"
 version="0.1.0"
-displayName="Pocket Dimensions"
-logoFile="pocketdimensions_logo.png"
+displayName="Pocket Kingdoms"
+logoFile="pocketkingdoms_logo.png"
 logoBlur=false
-displayURL="https://github.com/rasmus8484/pocket-dimensions"
+displayURL="https://github.com/rasmus8484/pocket-kingdoms"
 authors="rasmus8484"
 credits="Written largely with Claude (Anthropic's AI coding assistant), with design direction and testing by rasmus8484."
 description='''
-Pocket rooms and player-owned realms for PvP servers, where nothing is ever truly safe.
+Your own kingdom, hidden between worlds. Share it with your friends. Defend it from everyone else.
 
-Pocket Rooms: a Pocket Anchor opens a sealed room, bigger on the inside, that anyone can walk into. Anchors can be stolen or broken.
+On a PvP server, every base ends the same way: someone finds it. You dig deeper, build farther out, hide the entrance, and still, one day, the chests are empty. The usual fix is a claim mod that makes your base untouchable. That works, until the server goes quiet because nothing is at risk any more.
 
-Realms: a World Anchor and a World Seed bind a piece of a shared world to you, guarded by its World Core. Rivals can lay siege with a World Breacher, to force the realm open, or an Anchor Breaker, to destroy its anchor. Both burn lapis, and the core's lapis slows them down.
-How to play: type /pd help in game, or read the Player Guide at github.com/rasmus8484/pocket-dimensions/blob/main/GUIDE.md
+Pocket Kingdoms sits between the two. Plant a World Seed in a World Anchor, and a realm unfolds between worlds: land that belongs to you and the friends you let in. The world can't stumble into it, and griefers can't dig their way in.
+
+But it is never untouchable. Rivals can lay siege to your anchor and try to break through your wards, and you'll see them coming. Fuel your World Core, rally your friends, and hold the line.
+
+No kingdom falls in a moment. Every siege is a fight you can see coming.
+
+Also inside: Pocket Anchors, sealed rooms bigger on the inside that anyone can walk into, and that can be stolen or broken.
+How to play: type /pk help in game, or read the Player Guide at github.com/rasmus8484/pocket-kingdoms/blob/main/GUIDE.md
 '''
 
-[[dependencies.pocketdimensions]]
+[[dependencies.pocketkingdoms]]
     modId="forge"
     mandatory=true
     versionRange="[61.1,62)"
     ordering="NONE"
     side="BOTH"
 
-[[dependencies.pocketdimensions]]
+[[dependencies.pocketkingdoms]]
     modId="minecraft"
     mandatory=true
     versionRange="[1.21.11,1.22)"

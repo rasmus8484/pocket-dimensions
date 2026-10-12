@@ -1,0 +1,33 @@
+{
+  "parent": "pocketkingdoms:main/dominion",
+  "display": {
+    "icon": {
+      "id": "pocketkingdoms:anchor_breaker"
+    },
+    "title": {
+      "translate": "advancements.pocketkingdoms.the_unmaker.title"
+    },
+    "description": {
+      "translate": "advancements.pocketkingdoms.the_unmaker.description"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "placed": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:block_state_property",
+            "block": "pocketkingdoms:anchor_breaker"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "placed"
+    ]
+  ]
+}

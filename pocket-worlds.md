@@ -10,7 +10,7 @@ Related:
 
 All player realms exist as regions inside a single shared dimension:
 
-- `pocketdimensions:realm`
+- `pocketkingdoms:realm`
 
 No realm is its own dimension.
 
@@ -30,7 +30,7 @@ Players must not be able to cross into other players' regions.
 
 ## 3. Realm dimension rules
 
-A realm is meant to be a safe, untouched place for a base: never found by a village, raided from an outpost or dug into by a dungeon's spawner. Server owners decide what else they want in the `[realm]` section of the per-world server config (`serverconfig/pocketdimensions-server.toml`). Every part has a switch, then exceptions: the whitelist lets things through whatever the switch says, the blacklist keeps things out whatever else says (it beats the whitelist). Entries are ids (`minecraft:igloo`) or tags (`#minecraft:village`).
+A realm is meant to be a safe, untouched place for a base: never found by a village, raided from an outpost or dug into by a dungeon's spawner. Server owners decide what else they want in the `[realm]` section of the per-world server config (`serverconfig/pocketkingdoms-server.toml`). Every part has a switch, then exceptions: the whitelist lets things through whatever the switch says, the blacklist keeps things out whatever else says (it beats the whitelist). Entries are ids (`minecraft:igloo`) or tags (`#minecraft:village`).
 
 ### World generation
 
